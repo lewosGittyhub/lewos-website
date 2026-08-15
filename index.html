@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Lewos | There's Always a Way</title>
+  <meta name="description" content="Lewos creates experiences, projects and ideas with one belief: whatever it is, there's always a way — and Lewos finds it.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green: #0F3B35;
+      --orange: #E5643A;
+      --cream: #F7F3EC;
+      --beige: #EDE6DA;
+      --brown: #4B2E20;
+      --grey: #6B6F72;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "Inter", sans-serif;
+      background: var(--cream);
+      color: var(--green);
+    }
+
+    /* NAVIGATION */
+
+    nav {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 28px 7%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: "Poppins", sans-serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--cream);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      color: var(--cream);
+      text-decoration: none;
+      font-family: "Poppins", sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .nav-links a:hover {
+      color: var(--orange);
+    }
+
+    /* HERO */
+
+    .hero {
+      min-height: 100vh;
+      background: var(--green);
+      color: var(--cream);
+      display: flex;
+      align-items: center;
+      padding: 130px 7% 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: var(--orange);
+      opacity: 0.08;
+      right: -180px;
+      bottom: -180px;
+    }
+
+    .hero-content {
+      max-width: 950px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eyebrow {
+      font-family: "Poppins", sans-serif;
+      font-weight: 500;
+      color: var(--orange);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.85rem;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      font-family: "Poppins", sans-serif;
+      font-weight: 600;
+      font-size: clamp(3.2rem, 8vw, 7.5rem);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      margin-bottom: 30px;
+    }
+
+    .hero-text {
+      max-width: 700px;
+      font-size: clamp(1.1rem, 2vw, 1.45rem);
+      line-height: 1.65;
+      color: var(--beige);
+      margin-bottom: 42px;
+    }
+
+    .button {
+      display: inline-block;
+      background: var(--orange);
+      color: var(--cream);
+      text-decoration: none;
+      padding: 16px 28px;
+      border-radius: 4px;
+      font-family: "Poppins", sans-serif;
+      font-weight: 600;
+      transition: transform 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-3px);
+    }
+
+    /* INTRO */
+
+    .intro {
+      padding: 120px 7%;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .intro h2 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(2.2rem, 5vw, 4.2rem);
+      line-height: 1.1;
+      max-width: 900px;
+      margin-bottom: 30px;
+    }
+
+    .intro p {
+      max-width: 700px;
+      font-size: 1.15rem;
+      line-height: 1.8;
+      color: var(--grey);
+    }
+
+    /* PROJECTS */
+
+    .projects {
+      background: var(--beige);
+      padding: 100px 7%;
+    }
+
+    .projects-inner {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .projects h2 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      margin-bottom: 50px;
+    }
+
+    .project-card {
+      background: var(--green);
+      color: var(--cream);
+      padding: clamp(35px, 7vw, 80px);
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: "01";
+      position: absolute;
+      right: 35px;
+      top: 25px;
+      font-family: "Poppins", sans-serif;
+      font-size: 7rem;
+      font-weight: 600;
+      opacity: 0.06;
+    }
+
+    .project-label {
+      color: var(--orange);
+      font-family: "Poppins", sans-serif;
+      font-weight: 500;
+      margin-bottom: 15px;
+    }
+
+    .project-card h3 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      line-height: 1.05;
+      margin-bottom: 18px;
+    }
+
+    .project-card p {
+      max-width: 620px;
+      line-height: 1.7;
+      color: var(--beige);
+      margin-bottom: 30px;
+    }
+
+    .text-link {
+      color: var(--cream);
+      font-family: "Poppins", sans-serif;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .text-link:hover {
+      color: var(--orange);
+    }
+
+    /* PHILOSOPHY */
+
+    .philosophy {
+      padding: 130px 7%;
+      text-align: center;
+      background: var(--cream);
+    }
+
+    .philosophy p {
+      color: var(--orange);
+      font-family: "Poppins", sans-serif;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+
+    .philosophy h2 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 1.1;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    /* FOOTER */
+
+    footer {
+      background: var(--green);
+      color: var(--cream);
+      padding: 60px 7%;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      align-items: flex-end;
+    }
+
+    .footer-logo {
+      font-family: "Poppins", sans-serif;
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    .footer-tagline {
+      color: var(--beige);
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+
+    .copyright {
+      color: var(--beige);
+      font-size: 0.8rem;
+    }
+
+    /* MOBILE */
+
+    @media (max-width: 700px) {
+
+      nav {
+        padding: 22px 6%;
+      }
+
+      .nav-links a:not(.nav-tavern) {
+        display: none;
+      }
+
+      .hero {
+        padding-left: 6%;
+        padding-right: 6%;
+      }
+
+      .intro,
+      .projects,
+      .philosophy {
+        padding-left: 6%;
+        padding-right: 6%;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <a href="/" class="logo">Lewos</a>
+
+    <div class="nav-links">
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="/tavern/" class="nav-tavern">The Tavern</a>
+    </div>
+  </nav>
+
+
+  <main>
+
+    <section class="hero">
+
+      <div class="hero-content">
+
+        <div class="eyebrow">Ideas · Experiences · Possibilities</div>
+
+        <h1>
+          There's always<br>
+          a way.
+        </h1>
+
+        <p class="hero-text">
+          Whatever it is, there's always a way — and Lewos finds it.
+        </p>
+
+        <a href="#projects" class="button">
+          Discover Lewos →
+        </a>
+
+      </div>
+
+    </section>
+
+
+    <section class="intro" id="about">
+
+      <div class="eyebrow">What is Lewos?</div>
+
+      <h2>
+        Some ideas don't fit neatly into a box.
+        We like those.
+      </h2>
+
+      <p>
+        Lewos turns ideas into something real. From unforgettable
+        experiences to projects that begin with a simple question:
+        what if we actually did it?
+      </p>
+
+    </section>
+
+
+    <section class="projects" id="projects">
+
+      <div class="projects-inner">
+
+        <div class="eyebrow">Currently at Lewos</div>
+
+        <h2>Come see what we're building.</h2>
+
+        <article class="project-card">
+
+          <div class="project-label">
+            Now entering its first chapter
+          </div>
+
+          <h3>
+            The Lewos Tavern
+          </h3>
+
+          <p>
+            Three nights in the mountains of Asturias.
+            One table. One story. An adventure you don't just play —
+            you become part of it.
+          </p>
+
+          <a href="/tavern/" class="text-link">
+            Enter the Tavern →
+          </a>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <section class="philosophy">
+
+      <p>#TheresAlwaysAWay</p>
+
+      <h2>
+        The interesting things usually start with
+        “could we?”
+      </h2>
+
+    </section>
+
+  </main>
+
+
+  <footer>
+
+    <div class="footer-inner">
+
+      <div>
+        <div class="footer-logo">Lewos</div>
+
+        <div class="footer-tagline">
+          Whatever it is, there's always a way — and Lewos finds it.
+        </div>
+      </div>
+
+      <div class="copyright">
+        © 2026 Lewos
+      </div>
+
+    </div>
+
+  </footer>
+
+</body>
+</html>
