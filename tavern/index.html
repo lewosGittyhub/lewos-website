@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Lewos Tavern | First Access Weekends in Asturias</title>
+  <meta name="description" content="Be first at the table for The Lewos Tavern: intimate D&amp;D weekends in Asturias, each limited to six guests. Featured dates and additional weekends on request.">
+  <meta name="theme-color" content="#0F3B35">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="The Lewos Tavern — Be First at the Table">
+  <meta property="og:description" content="Featured Tavern weekends, six guests at each table and further dates on request. Join the first-access list.">
+  <link rel="canonical" href="https://lewos.com/tavern/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Poppins:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #0F3B35;
+      --orange: #E5643A;
+      --cream: #F7F3EC;
+      --beige: #EDE6DA;
+      --brown: #4B2E20;
+      --grey: #6B6F72;
+      --white: #FFFCF7;
+      --max: 1180px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: "Inter", sans-serif; color: var(--green); background: var(--cream); line-height: 1.65; }
+    body, button, a { -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: "Poppins", sans-serif; line-height: 1.08; letter-spacing: -0.035em; }
+    .wrap { width: min(calc(100% - 48px), var(--max)); margin-inline: auto; }
+    .eyebrow { margin-bottom: 18px; color: var(--orange); font: 600 .78rem/1.2 "Poppins", sans-serif; letter-spacing: .18em; text-transform: uppercase; }
+    .button { display: inline-flex; justify-content: center; align-items: center; min-height: 54px; padding: 14px 24px; border: 2px solid var(--orange); border-radius: 4px; background: var(--orange); color: var(--white); font: 600 .94rem/1.2 "Poppins", sans-serif; text-decoration: none; transition: transform .2s, background .2s, color .2s; }
+    .button:hover { transform: translateY(-2px); background: #d7542d; border-color: #d7542d; }
+    .button:focus-visible, a:focus-visible { outline: 3px solid #f4a285; outline-offset: 4px; }
+    .button--ghost { background: transparent; color: var(--cream); border-color: rgba(247,243,236,.5); }
+    .button--ghost:hover { background: var(--cream); border-color: var(--cream); color: var(--green); }
+
+    .site-header { position: absolute; inset: 0 0 auto; z-index: 10; padding: 26px 0; color: var(--cream); }
+    .nav { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+    .logo { font: 700 1.9rem/1 "Poppins", sans-serif; letter-spacing: -.04em; text-decoration: none; }
+    .nav__links { display: flex; align-items: center; gap: 28px; }
+    .nav__links a { font: 500 .9rem/1.2 "Poppins", sans-serif; text-decoration: none; }
+    .nav__links a:hover { color: var(--orange); }
+    .nav__cta { padding: 11px 17px; border: 1px solid rgba(247,243,236,.45); border-radius: 4px; }
+
+    .hero { position: relative; min-height: 760px; display: grid; align-items: end; overflow: hidden; color: var(--cream); background: var(--green); }
+    .hero::before { content: ""; position: absolute; width: 720px; height: 720px; top: -220px; right: -170px; border: 1px solid rgba(237,230,218,.13); border-radius: 50%; box-shadow: 0 0 0 80px rgba(229,100,58,.035), 0 0 0 180px rgba(237,230,218,.025); }
+    .hero::after { content: "D20"; position: absolute; right: 4vw; bottom: -8vw; color: rgba(247,243,236,.035); font: 700 clamp(12rem, 28vw, 25rem)/.8 "Poppins", sans-serif; letter-spacing: -.1em; }
+    .hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .6fr); align-items: end; gap: 72px; padding-top: 160px; padding-bottom: 76px; }
+    .hero h1 { max-width: 900px; margin-bottom: 28px; font-size: clamp(3.5rem, 7.7vw, 7rem); }
+    .hero h1 span { color: var(--orange); }
+    .hero__lead { max-width: 680px; margin-bottom: 36px; color: var(--beige); font-size: clamp(1.08rem, 1.8vw, 1.35rem); }
+    .hero__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .edition-card { padding: 30px; border-top: 4px solid var(--orange); background: rgba(247,243,236,.08); backdrop-filter: blur(8px); }
+    .edition-card__label { margin-bottom: 22px; color: var(--orange); font: 600 .75rem/1.2 "Poppins", sans-serif; letter-spacing: .15em; text-transform: uppercase; }
+    .edition-card dl { margin: 0; }
+    .edition-card div { display: grid; grid-template-columns: 86px 1fr; gap: 12px; padding: 13px 0; border-top: 1px solid rgba(237,230,218,.16); }
+    .edition-card dt { color: rgba(237,230,218,.68); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+    .edition-card dd { margin: 0; font-weight: 600; line-height: 1.4; }
+    .release { padding: 104px 0; color: var(--cream); background: #0a2a26; }
+    .release__head { display: grid; grid-template-columns: 1fr .72fr; gap: 70px; align-items: end; margin-bottom: 48px; }
+    .release__head h2 { margin-bottom: 0; font-size: clamp(2.4rem, 4.8vw, 4.4rem); }
+    .release__head p:last-child { margin-bottom: 5px; color: var(--beige); }
+    .weekends { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .weekend { position: relative; padding: clamp(32px, 5vw, 54px); border: 1px solid rgba(247,243,236,.18); background: rgba(247,243,236,.055); }
+    .weekend::after { content: "6 places"; position: absolute; top: 28px; right: 28px; color: var(--orange); font: 600 .72rem/1 "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    .weekend__number { display: block; margin-bottom: 54px; color: rgba(237,230,218,.55); font: 600 .76rem/1 "Poppins", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+    .weekend h3 { margin-bottom: 10px; font-size: clamp(2rem, 3.8vw, 3.2rem); }
+    .weekend p { margin-bottom: 0; color: var(--beige); }
+    .release__rule { margin: 28px 0 0; padding-left: 20px; border-left: 3px solid var(--orange); color: var(--beige); }
+
+    .manifesto { padding: 120px 0; }
+    .manifesto__grid { display: grid; grid-template-columns: .72fr 1.28fr; gap: 80px; }
+    .manifesto h2 { max-width: 760px; margin-bottom: 28px; font-size: clamp(2.5rem, 5vw, 4.8rem); }
+    .manifesto__copy { max-width: 710px; color: var(--grey); font-size: 1.12rem; }
+    .manifesto__copy strong { color: var(--green); }
+    .play-space { padding: 30px 0 110px; }
+    .play-board { position: relative; min-height: 620px; overflow: hidden; border: 1px solid rgba(15,59,53,.12); background: #f9f0ed; isolation: isolate; }
+    .play-board::before, .play-board::after { content: ""; position: absolute; pointer-events: none; }
+    .play-board::before { width: 210px; height: 210px; left: 8%; top: 11%; border: 3px solid rgba(75,46,32,.55); border-radius: 44% 56% 63% 37%; transform: rotate(18deg); opacity: .28; }
+    .play-board::after { width: 280px; height: 120px; right: 9%; bottom: 10%; border: solid rgba(75,46,32,.48); border-width: 3px 0; transform: rotate(-8deg) skewX(-14deg); opacity: .25; }
+    .play-board__intro { position: absolute; z-index: 1; left: clamp(24px, 5vw, 64px); bottom: clamp(24px, 5vw, 58px); max-width: 380px; pointer-events: none; }
+    .play-board__intro h2 { margin-bottom: 10px; font-size: clamp(2rem, 4vw, 3.6rem); }
+    .play-board__intro p:last-child { margin-bottom: 0; color: var(--grey); }
+    .draggable { --x: 0px; --y: 0px; position: absolute; z-index: 3; left: 0; top: 0; border: 0; padding: 0; background: transparent; cursor: grab; touch-action: none; user-select: none; transform: translate3d(var(--x), var(--y), 0) rotate(var(--rotate, 0deg)); filter: drop-shadow(0 16px 12px rgba(75,46,32,.18)); transition: filter .15s, scale .15s; }
+    .draggable:hover { filter: drop-shadow(0 20px 15px rgba(75,46,32,.25)); scale: 1.025; }
+    .draggable.is-dragging { z-index: 8; cursor: grabbing; filter: drop-shadow(0 25px 18px rgba(75,46,32,.3)); scale: 1.045; }
+    .draggable img { width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+    .draggable--die { --x: clamp(430px, 67vw, 790px); --y: 90px; --rotate: 9deg; width: clamp(130px, 17vw, 200px); }
+    .draggable--die.is-rolling img { animation: dice-roll .72s cubic-bezier(.22,.8,.28,1); }
+    .adventurer { position: absolute; z-index: 2; right: clamp(32px, 7vw, 92px); bottom: -18px; width: clamp(190px, 26vw, 310px); transform-origin: 50% 100%; filter: drop-shadow(0 18px 14px rgba(75,46,32,.2)); pointer-events: none; }
+    .adventurer img { width: 100%; }
+    .adventurer.action-critical { animation: action-critical 1.05s ease; }
+    .adventurer.action-strike { animation: action-strike .8s ease; }
+    .adventurer.action-dodge { animation: action-dodge .8s ease; }
+    .adventurer.action-fumble { animation: action-fumble 1s ease; }
+    .roll-result { position: absolute; z-index: 5; right: clamp(205px, 31vw, 375px); bottom: 245px; min-width: 150px; padding: 14px 18px; border-radius: 4px; color: var(--cream); background: var(--green); font: 600 .86rem/1.35 "Poppins", sans-serif; opacity: 0; transform: translateY(10px) scale(.95); transition: opacity .2s, transform .2s; pointer-events: none; }
+    .roll-result.is-visible { opacity: 1; transform: translateY(0) scale(1); }
+    .roll-result strong { display: block; color: var(--orange); font-size: 1.25rem; }
+    .drag-reset { position: absolute; z-index: 4; right: 22px; bottom: 20px; border: 0; border-bottom: 1px solid currentColor; padding: 4px 0; color: var(--grey); background: transparent; font: 600 .72rem/1.2 "Poppins", sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+    @keyframes dice-roll { 0% { transform: rotate(0) scale(1); } 35% { transform: rotate(270deg) scale(1.22) translateY(-28px); } 72% { transform: rotate(610deg) scale(.94) translateY(5px); } 100% { transform: rotate(720deg) scale(1); } }
+    @keyframes action-critical { 0%,100% { transform: translateY(0) rotate(0); } 35% { transform: translateY(-46px) rotate(-6deg) scale(1.08); filter: drop-shadow(0 0 26px var(--orange)); } 65% { transform: translateY(-10px) rotate(5deg); } }
+    @keyframes action-strike { 0%,100% { transform: translateX(0) rotate(0); } 45% { transform: translateX(-65px) rotate(-8deg) scale(1.04); } 65% { transform: translateX(-20px) rotate(4deg); } }
+    @keyframes action-dodge { 0%,100% { transform: translateX(0); } 30% { transform: translateX(35px) rotate(6deg); } 58% { transform: translateX(-24px) rotate(-4deg); } }
+    @keyframes action-fumble { 0%,100% { transform: rotate(0) translateY(0); } 35% { transform: rotate(13deg) translateY(13px); } 58% { transform: rotate(-6deg) translateY(5px); } }
+
+    .details { padding: 104px 0; background: var(--beige); }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 40px; margin-bottom: 56px; }
+    .section-head h2 { max-width: 680px; margin-bottom: 0; font-size: clamp(2.3rem, 4.5vw, 4.1rem); }
+    .section-head p { max-width: 360px; margin-bottom: 5px; color: var(--grey); }
+    .details__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: rgba(15,59,53,.12); }
+    .detail { min-height: 290px; padding: 38px; background: var(--cream); }
+    .detail__number { display: block; margin-bottom: 52px; color: var(--orange); font: 600 .8rem/1 "Poppins", sans-serif; }
+    .detail h3 { margin-bottom: 14px; font-size: 1.4rem; }
+    .detail p { margin-bottom: 0; color: var(--grey); }
+
+    .included { padding: 120px 0; color: var(--cream); background: var(--brown); }
+    .included__grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 90px; align-items: start; }
+    .included h2 { font-size: clamp(2.5rem, 4.6vw, 4.2rem); }
+    .included__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid rgba(247,243,236,.22); }
+    .included__list li { display: grid; grid-template-columns: 32px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid rgba(247,243,236,.18); }
+    .included__list li::before { content: "✓"; color: var(--orange); font-weight: 700; }
+    .included__note { margin: 24px 0 0 46px; color: var(--beige); font-size: .9rem; }
+
+    .stay { padding: 120px 0; }
+    .stay__panel { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; background: var(--green); color: var(--cream); }
+    .stay__content { padding: clamp(42px, 7vw, 86px); }
+    .stay h2 { margin-bottom: 24px; font-size: clamp(2.4rem, 4.6vw, 4.2rem); }
+    .stay p { color: var(--beige); }
+    .stay__rule { display: grid; place-items: center; min-height: 440px; padding: 50px; background: var(--orange); color: var(--green); text-align: center; }
+    .stay__rule strong { display: block; max-width: 360px; font: 600 clamp(1.7rem, 3.2vw, 2.8rem)/1.2 "Poppins", sans-serif; letter-spacing: -.04em; }
+
+    .private { padding: 0 0 120px; }
+    .private__box { display: grid; grid-template-columns: 1.25fr .75fr; gap: 70px; align-items: center; padding: clamp(42px, 7vw, 82px); border: 2px solid var(--green); }
+    .private h2 { margin-bottom: 20px; font-size: clamp(2.4rem, 4.5vw, 4rem); }
+    .private p { max-width: 700px; margin-bottom: 0; color: var(--grey); }
+    .private__aside { padding-left: 42px; border-left: 1px solid rgba(15,59,53,.2); }
+    .private__count { display: block; color: var(--orange); font: 700 clamp(3.4rem, 7vw, 5.8rem)/1 "Poppins", sans-serif; letter-spacing: -.07em; }
+    .private__aside p { margin-bottom: 24px; color: var(--green); font-weight: 600; }
+
+    .booking { padding: 110px 0; text-align: center; color: var(--cream); background: var(--green); }
+    .booking h2 { max-width: 840px; margin: 0 auto 22px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
+    .booking__lead { max-width: 610px; margin: 0 auto 35px; color: var(--beige); font-size: 1.08rem; }
+    .booking__micro { margin: 18px 0 0; color: rgba(237,230,218,.68); font-size: .8rem; }
+    footer { padding: 48px 0; color: var(--cream); background: #0a2a26; }
+    .footer__inner { display: flex; justify-content: space-between; align-items: end; gap: 30px; }
+    .footer__brand { font: 700 1.8rem/1 "Poppins", sans-serif; }
+    .footer__tag { margin: 9px 0 0; color: rgba(237,230,218,.7); font-size: .85rem; }
+    .footer__links { display: flex; gap: 22px; font-size: .82rem; }
+
+    @media (max-width: 900px) {
+      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head { grid-template-columns: 1fr; }
+      .hero__inner { gap: 46px; }
+      .edition-card { max-width: 560px; }
+      .details__grid { grid-template-columns: 1fr; }
+      .weekends { grid-template-columns: 1fr; }
+      .play-board { min-height: 700px; }
+      .draggable--die { --x: 55vw; --y: 125px; }
+      .detail { min-height: auto; }
+      .detail__number { margin-bottom: 28px; }
+      .included__grid { gap: 42px; }
+      .stay__rule { min-height: 300px; }
+      .private__aside { padding: 32px 0 0; border-left: 0; border-top: 1px solid rgba(15,59,53,.2); }
+    }
+
+    @media (max-width: 650px) {
+      .wrap { width: min(calc(100% - 32px), var(--max)); }
+      .site-header { padding-top: 20px; }
+      .nav__links a:not(.nav__cta) { display: none; }
+      .nav__cta { padding: 10px 13px; }
+      .hero { min-height: auto; }
+      .hero__inner { padding-top: 135px; padding-bottom: 52px; }
+      .hero h1 { font-size: clamp(3.15rem, 16vw, 5rem); }
+      .hero__actions, .hero__actions .button { width: 100%; }
+      .manifesto, .details, .included, .stay, .booking, .release { padding-top: 82px; padding-bottom: 82px; }
+      .manifesto__grid { gap: 20px; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 20px; }
+      .detail { padding: 30px; }
+      .stay__content, .private__box { padding: 38px 26px; }
+      .private { padding-bottom: 82px; }
+      .play-space { padding-bottom: 82px; }
+      .play-board { min-height: 670px; }
+      .play-board__intro { max-width: 250px; }
+      .draggable--die { --x: calc(100vw - 175px); --y: 80px; width: 135px; }
+      .adventurer { right: -5px; width: 220px; }
+      .roll-result { right: 125px; bottom: 250px; }
+      .footer__inner { align-items: flex-start; flex-direction: column; }
+      .footer__links { flex-wrap: wrap; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav wrap" aria-label="Main navigation">
+      <a class="logo" href="/" aria-label="Lewos home">Lewos</a>
+      <div class="nav__links">
+        <a href="#experience">The experience</a>
+        <a href="#details">Details</a>
+        <a class="nav__cta" href="#book">Get first access</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__inner wrap">
+        <div>
+          <p class="eyebrow">The Lewos Tavern · The first chapters</p>
+          <h1 id="hero-title">Your next great story begins <span>here.</span></h1>
+          <p class="hero__lead">A weekend in Asturias. One table, six players and a dedicated D&amp;D experience built to pull you out of the everyday—and into the adventure.</p>
+          <div class="hero__actions">
+            <a class="button" href="#book">Be first at the table →</a>
+            <a class="button button--ghost" href="#experience">Discover the experience</a>
+          </div>
+        </div>
+        <aside class="edition-card" aria-label="Opening weekend details">
+          <p class="edition-card__label">Opening weekends · 2026</p>
+          <dl>
+            <div><dt>Dates</dt><dd>30 Oct–2 Nov<br>6–8 Nov</dd></div>
+            <div><dt>Places</dt><dd>6 guests per weekend</dd></div>
+            <div><dt>Status</dt><dd>First access opening soon</dd></div>
+            <div><dt>Price</dt><dd>€1,675 excl. VAT per person</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section class="release" aria-labelledby="release-title">
+      <div class="wrap">
+        <div class="release__head">
+          <div>
+            <p class="eyebrow">Two tables open first</p>
+            <h2 id="release-title">Choose the chapter you want to enter.</h2>
+          </div>
+          <p>These are the first two featured dates. Join first access now and you will be among the first invited to claim one of the twelve opening places.</p>
+        </div>
+        <div class="weekends">
+          <article class="weekend">
+            <span class="weekend__number">Weekend 01</span>
+            <h3>30 Oct–2 Nov</h3>
+            <p>Friday evening through Monday morning · Asturias · 2026</p>
+          </article>
+          <article class="weekend">
+            <span class="weekend__number">Weekend 02</span>
+            <h3>6–8 November</h3>
+            <p>Friday evening through Sunday · Asturias · 2026</p>
+          </article>
+        </div>
+        <p class="release__rule"><strong>The Tavern continues beyond these two dates.</strong> New featured weekends will be announced regularly, and following weekends may also be available on request. Every table remains intimate: never more than six guests.</p>
+      </div>
+    </section>
+
+    <section class="manifesto" id="experience">
+      <div class="manifesto__grid wrap">
+        <p class="eyebrow">Not just a game night</p>
+        <div>
+          <h2>Leave the real world at the tavern door.</h2>
+          <p class="manifesto__copy">This is a whole weekend shaped around the table: arriving as six players, sharing food, settling into the story and watching the party become something real. <strong>No rushing home. No packing the adventure into four hours.</strong> Just time, atmosphere and a campaign created to be remembered.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="play-space" aria-labelledby="play-title">
+      <div class="play-board wrap" data-drag-board>
+        <div class="play-board__intro">
+          <p class="eyebrow">The table is yours</p>
+          <h2 id="play-title">Move the pieces.</h2>
+          <p>Pick up the D20 with your mouse—or your finger. Drop it and let fate choose the action.</p>
+        </div>
+        <button class="draggable draggable--die" type="button" data-draggable data-key="die" aria-label="Move the twenty-sided die">
+          <img src="assets/lewos-d20.png" alt="Green and orange twenty-sided die" width="1349" height="1166" draggable="false">
+        </button>
+        <div class="roll-result" data-roll-result aria-live="polite"><strong>Roll the D20</strong>Fate is waiting.</div>
+        <div class="adventurer" data-adventurer aria-hidden="true">
+          <img src="assets/tavern-adventurer.png" alt="" width="480" height="720">
+        </div>
+        <button class="drag-reset" type="button" data-drag-reset>Reset the table</button>
+      </div>
+    </section>
+
+    <section class="details" id="details" aria-labelledby="details-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The long weekend</p>
+            <h2 id="details-title">A world waiting for six.</h2>
+          </div>
+          <p>From the first dinner to the final breakfast, the weekend is designed so the story has room to breathe.</p>
+        </div>
+        <div class="details__grid">
+          <article class="detail">
+            <span class="detail__number">01 / ARRIVE</span>
+            <h3>Friday evening</h3>
+            <p>Check in, meet your party and gather for dinner. The first clues may already be waiting.</p>
+          </article>
+          <article class="detail">
+            <span class="detail__number">02 / PLAY</span>
+            <h3>A weekend in character</h3>
+            <p>A dedicated Dungeon Master leads an immersive D&amp;D experience, with space for shared meals and mountain air.</p>
+          </article>
+          <article class="detail">
+            <span class="detail__number">03 / DEPART</span>
+            <h3>Monday morning</h3>
+            <p>One last breakfast together before the party heads home—with stories nobody else can quite understand.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="included" aria-labelledby="included-title">
+      <div class="included__grid wrap">
+        <div>
+          <p class="eyebrow">Everything around the table</p>
+          <h2 id="included-title">Come ready to play. We take care of the rest.</h2>
+        </div>
+        <div>
+          <ul class="included__list">
+            <li>Accommodation for the duration of your selected Tavern weekend</li>
+            <li>Meals and non-alcoholic drinks, from the arrival dinner through departure breakfast</li>
+            <li>A dedicated D&amp;D experience and Dungeon Master</li>
+            <li>A place at your selected Tavern table—always limited to six guests</li>
+          </ul>
+          <p class="included__note">Flights are not included. Practical arrival and transfer details will be confirmed with guests before the weekend.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="stay" aria-labelledby="stay-title">
+      <div class="stay__panel wrap">
+        <div class="stay__content">
+          <p class="eyebrow">Make more of the journey</p>
+          <h2 id="stay-title">Want to stay a little longer?</h2>
+          <p>The adventure does not have to begin on Friday or end on Monday. Depending on availability, extra nights can be requested from the Monday before your playing weekend through the Friday after it.</p>
+          <p>Rooms must be ready in time for the next party—but if you want to stay across two playing weekends, talk to us. That may be possible too.</p>
+        </div>
+        <div class="stay__rule">
+          <strong>Asturias deserves more than a hurried goodbye.</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="private" aria-labelledby="private-title">
+      <div class="private__box wrap">
+        <div>
+          <p class="eyebrow">Your party. Your possibility.</p>
+          <h2 id="private-title">Have something bigger in mind?</h2>
+          <p>A longer campaign, a private Tavern, several days around the same table—or an idea we have not thought of yet. Lewos stays open to possibilities. Tell us what your group has in mind and we will explore what it could become.</p>
+        </div>
+        <aside class="private__aside">
+          <span class="private__count">4–12</span>
+          <p>players · custom experience · price on request</p>
+          <a class="button" href="#book" data-integration="make-private-inquiry">Plan a private Tavern →</a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="booking" id="book" aria-labelledby="book-title">
+      <div class="wrap">
+        <p class="eyebrow">Twelve opening places. First access.</p>
+        <h2 id="book-title">Be first at the table.</h2>
+        <p class="booking__lead">The Tavern is not open for booking just yet. Join the first-access list and be among the first invited to choose Weekend 01 or Weekend 02 when booking opens.</p>
+        <a class="button" href="#book" data-integration="make-first-access" aria-describedby="booking-note">Get first access →</a>
+        <p class="booking__micro" id="booking-note">No payment. No commitment. You will be the first to know when booking opens.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer__inner wrap">
+      <div>
+        <a class="footer__brand" href="/">Lewos</a>
+        <p class="footer__tag">Whatever it is, there's always a way—and Lewos finds it.</p>
+      </div>
+      <div class="footer__links">
+        <a href="/">Home</a>
+        <a href="#book">Contact</a>
+        <span>© 2026 Lewos</span>
+      </div>
+    </div>
+  </footer>
+  <script>
+    (() => {
+      const board = document.querySelector('[data-drag-board]');
+      if (!board) return;
+      const pieces = [...board.querySelectorAll('[data-draggable]')];
+      const die = board.querySelector('.draggable--die');
+      const adventurer = board.querySelector('[data-adventurer]');
+      const result = board.querySelector('[data-roll-result]');
+      const saved = JSON.parse(localStorage.getItem('lewos-tavern-pieces') || '{}');
+      let rollTimer;
+
+      const rollDie = () => {
+        const roll = Math.floor(Math.random() * 20) + 1;
+        const outcome = roll === 20
+          ? { action: 'critical', title: 'Natural 20!', text: 'A burst of Tavern magic.' }
+          : roll >= 14
+            ? { action: 'strike', title: `You rolled ${roll}`, text: 'The bard strikes with style.' }
+            : roll >= 7
+              ? { action: 'dodge', title: `You rolled ${roll}`, text: 'A nimble escape.' }
+              : { action: 'fumble', title: `You rolled ${roll}`, text: 'A glorious little fumble.' };
+
+        clearTimeout(rollTimer);
+        die.classList.remove('is-rolling');
+        adventurer.className = 'adventurer';
+        result.classList.remove('is-visible');
+        void die.offsetWidth;
+        die.classList.add('is-rolling');
+
+        setTimeout(() => {
+          adventurer.classList.add(`action-${outcome.action}`);
+          result.innerHTML = `<strong>${outcome.title}</strong>${outcome.text}`;
+          result.classList.add('is-visible');
+        }, 500);
+
+        rollTimer = setTimeout(() => {
+          die.classList.remove('is-rolling');
+          adventurer.className = 'adventurer';
+        }, 1600);
+      };
+
+      const position = (piece, x, y) => {
+        const maxX = Math.max(0, board.clientWidth - piece.offsetWidth);
+        const maxY = Math.max(0, board.clientHeight - piece.offsetHeight);
+        const nextX = Math.min(Math.max(0, x), maxX);
+        const nextY = Math.min(Math.max(0, y), maxY);
+        piece.style.setProperty('--x', `${nextX}px`);
+        piece.style.setProperty('--y', `${nextY}px`);
+        piece.dataset.x = nextX;
+        piece.dataset.y = nextY;
+      };
+
+      const readPosition = piece => {
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(piece).transform);
+        return { x: matrix.m41, y: matrix.m42 };
+      };
+
+      const save = () => {
+        const state = {};
+        pieces.forEach(piece => state[piece.dataset.key] = { x: Number(piece.dataset.x), y: Number(piece.dataset.y) });
+        localStorage.setItem('lewos-tavern-pieces', JSON.stringify(state));
+      };
+
+      pieces.forEach(piece => {
+        const start = readPosition(piece);
+        piece.dataset.initialX = start.x;
+        piece.dataset.initialY = start.y;
+        const remembered = saved[piece.dataset.key];
+        position(piece, remembered?.x ?? start.x, remembered?.y ?? start.y);
+
+        piece.addEventListener('pointerdown', event => {
+          if (event.button !== 0 && event.pointerType === 'mouse') return;
+          event.preventDefault();
+          piece.setPointerCapture(event.pointerId);
+          const origin = { pointerX: event.clientX, pointerY: event.clientY, ...readPosition(piece) };
+          piece.classList.add('is-dragging');
+
+          const move = moveEvent => position(piece, origin.x + moveEvent.clientX - origin.pointerX, origin.y + moveEvent.clientY - origin.pointerY);
+          const finish = () => {
+            piece.classList.remove('is-dragging');
+            piece.removeEventListener('pointermove', move);
+            piece.removeEventListener('pointerup', finish);
+            piece.removeEventListener('pointercancel', finish);
+            save();
+            if (piece === die) rollDie();
+          };
+
+          piece.addEventListener('pointermove', move);
+          piece.addEventListener('pointerup', finish);
+          piece.addEventListener('pointercancel', finish);
+        });
+      });
+
+      board.querySelector('[data-drag-reset]').addEventListener('click', () => {
+        localStorage.removeItem('lewos-tavern-pieces');
+        pieces.forEach(piece => position(piece, Number(piece.dataset.initialX), Number(piece.dataset.initialY)));
+        result.classList.remove('is-visible');
+      });
+
+      die.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') rollDie();
+      });
+
+      window.addEventListener('resize', () => pieces.forEach(piece => position(piece, Number(piece.dataset.x), Number(piece.dataset.y))));
+    })();
+  </script>
+</body>
+</html>
