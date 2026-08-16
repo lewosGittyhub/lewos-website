@@ -128,10 +128,42 @@
     .private__count { display: block; color: var(--orange); font: 700 clamp(3.4rem, 7vw, 5.8rem)/1 "Poppins", sans-serif; letter-spacing: -.07em; }
     .private__aside p { margin-bottom: 24px; color: var(--cream); font-weight: 600; }
 
-    .booking { padding: 110px 0; text-align: center; color: var(--cream); background: linear-gradient(rgba(9,35,32,.94), rgba(9,35,32,.97)), url("assets/dice-character-sheet.webp?v=1") center / cover; }
-    .booking h2 { max-width: 840px; margin: 0 auto 22px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
-    .booking__lead { max-width: 610px; margin: 0 auto 35px; color: var(--beige); font-size: 1.08rem; }
-    .booking__micro { margin: 18px 0 0; color: rgba(237,230,218,.68); font-size: .8rem; }
+    .good-to-know { padding: 110px 0; color: var(--cream); background: var(--brown); }
+    .good-to-know h2, .faq h2 { margin-bottom: 48px; font-size: clamp(2.5rem, 5vw, 4.6rem); }
+    .know-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .know-card { padding: clamp(28px, 4vw, 42px); border: 1px solid rgba(237,230,218,.24); border-radius: var(--radius-medium); background: rgba(247,243,236,.07); }
+    .know-card:last-child { grid-column: 1 / -1; }
+    .know-card h3 { margin-bottom: 13px; color: var(--cream); font-size: 1.32rem; }
+    .know-card p { margin: 0; color: var(--beige); }
+
+    .booking { padding: 110px 0; color: var(--cream); background: linear-gradient(rgba(9,35,32,.90), rgba(9,35,32,.96)), url("assets/dice-character-sheet.webp?v=1") center / cover; }
+    .booking__grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(50px, 8vw, 110px); align-items: start; }
+    .booking h2 { max-width: 620px; margin-bottom: 24px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
+    .booking__lead { max-width: 570px; color: var(--beige); font-size: 1.08rem; }
+    .booking__lead strong { display: block; margin-bottom: 12px; color: var(--cream); }
+    .signup-form { display: grid; gap: 22px; padding: clamp(26px, 4vw, 42px); border: 1px solid rgba(237,230,218,.28); border-radius: var(--radius-medium); background: rgba(15,59,53,.78); box-shadow: 0 24px 65px rgba(0,0,0,.3); backdrop-filter: blur(8px); }
+    .form-field { display: grid; gap: 8px; }
+    .form-field label, .consent label { font: 600 .86rem/1.4 "Poppins", sans-serif; }
+    .form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 52px; padding: 13px 14px; border: 1px solid rgba(247,243,236,.5); border-radius: var(--radius-small); background: rgba(247,243,236,.12); color: var(--cream); font: inherit; }
+    .form-field select option { color: var(--green); background: var(--cream); }
+    .form-field textarea { min-height: 120px; resize: vertical; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus, .consent input:focus-visible { outline: 3px solid #f4a285; outline-offset: 3px; border-color: var(--orange); }
+    .consent { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; }
+    .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--orange); }
+    .consent a { color: var(--orange); }
+    .signup-form .button { width: fit-content; cursor: pointer; }
+    .booking__micro { max-width: 690px; margin: -5px 0 0; color: rgba(237,230,218,.72); font-size: .8rem; }
+    .bot-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+    .faq { padding: 110px 0; background: var(--cream); }
+    .faq h2 { color: var(--green); }
+    .faq__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .faq details { padding: 0 26px; border: 1px solid rgba(15,59,53,.2); border-radius: var(--radius-medium); background: var(--beige); }
+    .faq summary { position: relative; padding: 24px 34px 24px 0; color: var(--green); font: 600 1rem/1.4 "Poppins", sans-serif; cursor: pointer; list-style: none; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: "+"; position: absolute; top: 20px; right: 0; color: var(--orange); font: 500 1.6rem/1 "Poppins", sans-serif; }
+    .faq details[open] summary::after { content: "−"; }
+    .faq details p { padding: 0 0 24px; color: var(--grey); }
     footer { padding: 48px 0; color: var(--cream); background: #0a2a26; }
     .footer__inner { display: flex; justify-content: space-between; align-items: end; gap: 30px; }
     .footer__brand { font: 700 1.8rem/1 "Poppins", sans-serif; }
@@ -139,7 +171,7 @@
     .footer__links { display: flex; gap: 22px; font-size: .82rem; }
 
     @media (max-width: 900px) {
-      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head { grid-template-columns: 1fr; }
+      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head, .booking__grid { grid-template-columns: 1fr; }
       .hero__inner { gap: 46px; }
       .edition-card { max-width: 560px; }
       .details__grid { grid-template-columns: 1fr; }
@@ -150,6 +182,7 @@
       .included__grid > div:first-child { min-height: auto; }
       .stay__rule { min-height: 300px; }
       .private__aside { padding: 32px 0 0; border-left: 0; border-top: 1px solid rgba(247,243,236,.42); }
+      .faq__list { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 650px) {
@@ -171,6 +204,10 @@
       .section-head { display: block; }
       .section-head p { margin-top: 20px; }
       .detail { padding: 30px; }
+      .good-to-know, .faq { padding: 82px 0; }
+      .know-grid { grid-template-columns: 1fr; }
+      .know-card:last-child { grid-column: auto; }
+      .signup-form { padding: 24px 20px; }
       .stay__content, .private__box { padding: 38px 26px; }
       .private { padding-bottom: 82px; }
       .footer__inner { align-items: flex-start; flex-direction: column; }
@@ -327,13 +364,108 @@
       </div>
     </section>
 
-    <section class="booking" id="book" aria-labelledby="book-title">
+    <section class="good-to-know" aria-labelledby="know-title">
       <div class="wrap">
-        <p class="eyebrow">The first twelve places</p>
-        <h2 id="book-title">Your place at the table is waiting.</h2>
-        <p class="booking__lead">The Tavern is not open for booking just yet. Join the first-access list and be among the first invited to choose Weekend 01 or Weekend 02 when booking opens.</p>
-        <a class="button" href="#book" data-integration="make-first-access" aria-describedby="booking-note">Get first access →</a>
-        <p class="booking__micro" id="booking-note">No payment. No commitment. You will be the first to know when booking opens.</p>
+        <p class="eyebrow">Before you set out</p>
+        <h2 id="know-title">Good to know.</h2>
+        <div class="know-grid">
+          <article class="know-card">
+            <h3>Your own room. A shared house.</h3>
+            <p>Everyone at the table gets their own bedroom. You'll share the apartment with one other player — who, after three days at the same table, won't be a stranger anymore.</p>
+          </article>
+          <article class="know-card">
+            <h3>Food</h3>
+            <p>Every meal and all non-alcoholic drinks are included, prepared by a local restaurant. Vegetarian, allergies, anything else — tell us once you've booked and it's handled.</p>
+          </article>
+          <article class="know-card">
+            <h3>Getting here</h3>
+            <p>The nearest airport is Asturias (OVD). Flights are not included, but tell us your arrival time and we'll help you sort the rest.</p>
+          </article>
+          <article class="know-card">
+            <h3>Staying longer</h3>
+            <p>Extra nights before or after your weekend are available on request, subject to availability.</p>
+          </article>
+          <article class="know-card">
+            <h3>We'll be filming the opening weekend</h3>
+            <p>Weekend 01 is the first story ever told in this Tavern, and we want a record of it. Expect a camera around — you'll end up in whatever this place becomes. Not your thing? Tell us and you stay out of every frame. No explanation needed, and it changes nothing else about your weekend.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="booking" id="book" aria-labelledby="book-title">
+      <div class="booking__grid wrap">
+        <div>
+          <p class="eyebrow">Six seats. First access.</p>
+          <h2 id="book-title">Claim your seat at the table.</h2>
+          <p class="booking__lead"><strong>Six seats per weekend.</strong>Booking opens the moment everything is in place — and the list decides who goes first. Put your name down now and you get first pick of your weekend, at the first-access price on this page.</p>
+        </div>
+        <form class="signup-form" name="tavern-signup" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/thanks/">
+          <input type="hidden" name="form-name" value="tavern-signup">
+          <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
+          <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
+          <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+          <div class="form-field">
+            <label for="weekend">Which weekend?</label>
+            <select id="weekend" name="weekend" required>
+              <option value="" selected disabled>Choose an option</option>
+              <option>Weekend 01 — 30 Oct to 2 Nov 2026</option>
+              <option>Weekend 02 — 6 to 9 Nov 2026</option>
+              <option>Either one works for me</option>
+              <option>A private Tavern for my own group (4–12 players)</option>
+            </select>
+          </div>
+          <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
+          <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>
+          <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
+          <button class="button" type="submit" aria-describedby="booking-note">Claim my seat →</button>
+          <p class="booking__micro" id="booking-note">No payment now, and nothing is locked in yet. When booking opens you hear from us before anyone else, in the order names came in — and the first-access price on this page is the one you keep.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-title">
+      <div class="wrap">
+        <p class="eyebrow">Around the table</p>
+        <h2 id="faq-title">Questions people ask.</h2>
+        <div class="faq__list">
+          <details>
+            <summary>Do I need to have played D&amp;D before?</summary>
+            <p>No. Half the table usually hasn't. The Dungeon Master builds the story around who shows up, and you'll be playing within ten minutes of sitting down.</p>
+          </details>
+          <details>
+            <summary>What language is it in?</summary>
+            <p>English.</p>
+          </details>
+          <details>
+            <summary>Where do I sleep?</summary>
+            <p>In your own bedroom, in an apartment a few minutes from the Tavern. Two bedrooms per apartment, so you'll share the place with one other player. Travelling as a couple? You can share a room instead.</p>
+          </details>
+          <details>
+            <summary>I'm coming alone. Will I know anyone?</summary>
+            <p>Nobody knows anyone. Six people meet on Friday evening and spend three days building one story together — that's the whole point. People arrive as strangers and leave as a party.</p>
+          </details>
+          <details>
+            <summary>Who runs the game?</summary>
+            <p>A professional Dungeon Master, hired for the weekend. Not a friend who plays a bit — someone who does this for a living.</p>
+          </details>
+          <details>
+            <summary>What's included?</summary>
+            <p>Three nights, every meal, all non-alcoholic drinks, the game, the Dungeon Master, your welcome kit and the run of the Tavern. Flights and anything you drink at the bar are not.</p>
+          </details>
+          <details>
+            <summary>Will I be filmed?</summary>
+            <p>At the opening weekend, yes — we're filming to show what this place is. Nothing is published without your written approval, and if you'd rather stay off camera we'll keep you out of every shot. Just say so when you book.</p>
+          </details>
+          <details>
+            <summary>What if the weekend doesn't go ahead?</summary>
+            <p>A weekend runs with a minimum of four players. If we don't reach that, the weekend doesn't happen and you get every euro back. You'll know well in advance.</p>
+          </details>
+          <details>
+            <summary>Can I book the whole thing for my own group?</summary>
+            <p>Yes. Private Tavern weekends run for 4 to 12 players, tailored to your group. Tell us what you have in mind through the form and we'll come back with a proposal.</p>
+          </details>
+        </div>
       </div>
     </section>
   </main>
