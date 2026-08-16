@@ -116,10 +116,24 @@
     .private__count { display: block; color: var(--orange); font: 700 clamp(3.4rem, 7vw, 5.8rem)/1 "Poppins", sans-serif; letter-spacing: -.07em; }
     .private__aside p { margin-bottom: 24px; color: var(--green); font-weight: 600; }
 
-    .booking { padding: 110px 0; text-align: center; color: var(--cream); background: var(--green); }
-    .booking h2 { max-width: 840px; margin: 0 auto 22px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
-    .booking__lead { max-width: 610px; margin: 0 auto 35px; color: var(--beige); font-size: 1.08rem; }
-    .booking__micro { margin: 18px 0 0; color: rgba(237,230,218,.68); font-size: .8rem; }
+    .booking { padding: 110px 0; color: var(--cream); background: var(--green); }
+    .booking__grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(50px, 8vw, 110px); align-items: start; }
+    .booking h2 { max-width: 620px; margin-bottom: 24px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
+    .booking__lead { max-width: 570px; color: var(--beige); font-size: 1.08rem; }
+    .booking__lead strong { display: block; margin-bottom: 12px; color: var(--cream); }
+    .signup-form { display: grid; gap: 22px; }
+    .form-field { display: grid; gap: 8px; }
+    .form-field label, .consent label { font: 600 .86rem/1.4 "Poppins", sans-serif; }
+    .form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 52px; padding: 13px 14px; border: 1px solid rgba(247,243,236,.42); border-radius: 4px; background: rgba(247,243,236,.08); color: var(--cream); font: inherit; }
+    .form-field select option { color: var(--green); background: var(--cream); }
+    .form-field textarea { min-height: 120px; resize: vertical; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus, .consent input:focus-visible { outline: 3px solid #f4a285; outline-offset: 3px; border-color: var(--orange); }
+    .consent { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; }
+    .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--orange); }
+    .consent a { color: var(--orange); }
+    .signup-form .button { width: fit-content; cursor: pointer; }
+    .booking__micro { max-width: 690px; margin: -5px 0 0; color: rgba(237,230,218,.72); font-size: .8rem; }
+    .bot-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
     footer { padding: 48px 0; color: var(--cream); background: #0a2a26; }
     .footer__inner { display: flex; justify-content: space-between; align-items: end; gap: 30px; }
     .footer__brand { font: 700 1.8rem/1 "Poppins", sans-serif; }
@@ -127,7 +141,7 @@
     .footer__links { display: flex; gap: 22px; font-size: .82rem; }
 
     @media (max-width: 900px) {
-      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head { grid-template-columns: 1fr; }
+      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head, .booking__grid { grid-template-columns: 1fr; }
       .hero__inner { gap: 46px; }
       .edition-card { max-width: 560px; }
       .details__grid { grid-template-columns: 1fr; }
@@ -309,12 +323,33 @@
     </section>
 
     <section class="booking" id="book" aria-labelledby="book-title">
-      <div class="wrap">
-        <p class="eyebrow">Twelve opening places. First access.</p>
-        <h2 id="book-title">Be first at the table.</h2>
-        <p class="booking__lead">The Tavern is not open for booking just yet. Join the first-access list and be among the first invited to choose Weekend 01 or Weekend 02 when booking opens.</p>
-        <a class="button" href="#book" data-integration="make-first-access" aria-describedby="booking-note">Get first access →</a>
-        <p class="booking__micro" id="booking-note">No payment. No commitment. You will be the first to know when booking opens.</p>
+      <div class="booking__grid wrap">
+        <div>
+          <p class="eyebrow">Six seats. First access.</p>
+          <h2 id="book-title">Claim your seat at the table.</h2>
+          <p class="booking__lead"><strong>Six seats per weekend.</strong>Booking opens the moment everything is in place — and the list decides who goes first. Put your name down now and you get first pick of your weekend, at the first-access price on this page.</p>
+        </div>
+        <form class="signup-form" name="tavern-signup" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/thanks/">
+          <input type="hidden" name="form-name" value="tavern-signup">
+          <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
+          <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
+          <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+          <div class="form-field">
+            <label for="weekend">Which weekend?</label>
+            <select id="weekend" name="weekend" required>
+              <option value="" selected disabled>Choose an option</option>
+              <option>Weekend 01 — 30 Oct to 2 Nov 2026</option>
+              <option>Weekend 02 — 6 to 9 Nov 2026</option>
+              <option>Either one works for me</option>
+              <option>A private Tavern for my own group (4–12 players)</option>
+            </select>
+          </div>
+          <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
+          <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>
+          <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
+          <button class="button" type="submit" aria-describedby="booking-note">Claim my seat →</button>
+          <p class="booking__micro" id="booking-note">No payment now, and nothing is locked in yet. When booking opens you hear from us before anyone else, in the order names came in — and the first-access price on this page is the one you keep.</p>
+        </form>
       </div>
     </section>
   </main>
