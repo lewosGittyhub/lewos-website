@@ -157,6 +157,102 @@
       transform: translateY(-3px);
     }
 
+    /* TAVERN ENTRANCE */
+
+    .tavern-entry {
+      position: fixed;
+      z-index: 1000;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      visibility: hidden;
+      opacity: 0;
+      background: var(--green);
+      perspective: 2200px;
+      pointer-events: none;
+      transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+    }
+
+    .tavern-entry.is-active {
+      visibility: visible;
+      opacity: 1;
+      transition-delay: 0s;
+    }
+
+    .tavern-entry__doors {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      transform-style: preserve-3d;
+    }
+
+    .tavern-entry__door {
+      width: 50.1%;
+      height: 100%;
+      background-image: url("assets/tavern-double-doors.webp");
+      background-repeat: no-repeat;
+      background-size: 200% 100%;
+      backface-visibility: hidden;
+      transition: transform 2.35s cubic-bezier(.62,.02,.18,1);
+      will-change: transform;
+    }
+
+    .tavern-entry__door--left {
+      background-position: left center;
+      box-shadow: inset -28px 0 42px rgba(0,0,0,.35);
+      transform-origin: left center;
+    }
+
+    .tavern-entry__door--right {
+      margin-left: -.2%;
+      background-position: right center;
+      box-shadow: inset 28px 0 42px rgba(0,0,0,.35);
+      transform-origin: right center;
+    }
+
+    .tavern-entry.is-opening .tavern-entry__door--left {
+      transform: rotateY(-103deg);
+    }
+
+    .tavern-entry.is-opening .tavern-entry__door--right {
+      transform: rotateY(103deg);
+    }
+
+    .tavern-entry__message {
+      position: relative;
+      z-index: 2;
+      padding: 18px 26px;
+      border: 1px solid rgba(229,100,58,.65);
+      border-radius: 8px;
+      background: rgba(9,7,5,.78);
+      color: var(--cream);
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(.9rem, 2.2vw, 1.3rem);
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-align: center;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .4s ease, transform .4s ease;
+    }
+
+    .tavern-entry.is-active .tavern-entry__message {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .tavern-entry.is-opening .tavern-entry__message {
+      opacity: 0;
+      transform: translateY(-10px);
+      transition-delay: .7s;
+    }
+
+    body.tavern-entry-active {
+      overflow: hidden;
+    }
+
     /* INTRO */
 
     .intro {
@@ -340,10 +436,21 @@
       }
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .tavern-entry { display: none; }
+    }
   </style>
 </head>
 
 <body>
+
+  <div class="tavern-entry" aria-hidden="true">
+    <div class="tavern-entry__doors" aria-hidden="true">
+      <div class="tavern-entry__door tavern-entry__door--left"></div>
+      <div class="tavern-entry__door tavern-entry__door--right"></div>
+    </div>
+    <p class="tavern-entry__message" aria-live="polite">You enter the Tavern</p>
+  </div>
 
   <nav>
     <a href="/" class="logo">Lewos</a>
@@ -468,6 +575,30 @@
     </div>
 
   </footer>
+
+  <script>
+    (() => {
+      const tavernLinks = document.querySelectorAll('a[href="/tavern/"]');
+      const transition = document.querySelector('.tavern-entry');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let opening = false;
+
+      tavernLinks.forEach(link => {
+        link.addEventListener('click', event => {
+          if (opening || reducedMotion.matches) return;
+
+          event.preventDefault();
+          opening = true;
+          transition.setAttribute('aria-hidden', 'false');
+          transition.classList.add('is-active');
+          document.body.classList.add('tavern-entry-active');
+
+          window.setTimeout(() => transition.classList.add('is-opening'), 350);
+          window.setTimeout(() => { window.location.href = link.href; }, 1500);
+        });
+      });
+    })();
+  </script>
 
 </body>
 </html>
