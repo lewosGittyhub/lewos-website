@@ -77,9 +77,13 @@
     .weekend { position: relative; padding: clamp(32px, 5vw, 54px); overflow: hidden; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-medium); background-image: linear-gradient(rgba(10,42,38,.78), rgba(10,42,38,.70)), url("assets/weekend-01-dark-dice.webp?v=1"); background-position: center; background-size: cover; text-shadow: 0 2px 16px rgba(0,0,0,.35); }
     .weekend:nth-child(2) { background-image: linear-gradient(rgba(10,42,38,.80), rgba(10,42,38,.72)), url("assets/dice-character-sheet.webp?v=1"); background-position: center; }
     .weekend::after { content: "6 seats"; position: absolute; top: 28px; right: 28px; color: var(--orange); font: 600 .72rem/1 "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    .weekend--first::after { content: "Only 6 seats"; }
     .weekend__number { display: block; margin-bottom: 54px; color: rgba(237,230,218,.55); font: 600 .76rem/1 "Poppins", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
     .weekend h3 { margin-bottom: 10px; font-size: clamp(2rem, 3.8vw, 3.2rem); }
     .weekend p { margin-bottom: 0; color: var(--beige); }
+    .weekend .weekend__hook { max-width: 560px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(237,230,218,.28); color: var(--cream); font-weight: 600; }
+    .weekend__link { display: inline-flex; margin-top: 14px; color: var(--orange); font: 600 .88rem/1.3 "Poppins", sans-serif; text-decoration: none; }
+    .weekend__link:hover { color: var(--cream); }
     .release__rule { margin: 28px 0 0; padding-left: 20px; border-left: 3px solid var(--orange); color: var(--beige); }
 
     .manifesto { position: relative; min-height: 680px; display: grid; align-items: center; padding: 78px 0; overflow: hidden; color: var(--cream); background: var(--green) url("assets/bear-4x4-mountain-wide.webp?v=1") left center / cover no-repeat; }
@@ -264,10 +268,12 @@
           <p><strong>The first story can only be told once.</strong> On 30 October 2026, six players will cross the threshold of The Lewos Tavern for the very first time. Other chapters will follow. There will never be another first.</p>
         </div>
         <div class="weekends">
-          <article class="weekend">
+          <article class="weekend weekend--first">
             <span class="weekend__number">Weekend 01</span>
             <h3>30 Oct to 2 Nov</h3>
             <p>Friday evening through Monday morning · Asturias · 2026</p>
+            <p class="weekend__hook">The first table. The first fire. Your only chance to be there when it begins.</p>
+            <a class="weekend__link" href="#book">Claim a First Edition seat →</a>
           </article>
           <article class="weekend">
             <span class="weekend__number">Weekend 02</span>
