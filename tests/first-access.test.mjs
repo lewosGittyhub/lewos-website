@@ -38,14 +38,14 @@ const post=(body,headers={"content-type":"application/json",accept:"application/
 const valid={name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,consent:"agreed","bot-field":""};
 
 test("returns live remaining capacity",async()=>{
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler({httpMethod:"GET",headers:{}});
   assert.equal(response.statusCode,200);
   assert.equal(JSON.parse(response.body).weekends[0].remaining,2);
 });
 
 test("holds an entire fitting party",async()=>{
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post(valid));
   const body=JSON.parse(response.body);
   assert.equal(response.statusCode,200);
@@ -57,7 +57,7 @@ test("holds an entire fitting party",async()=>{
 
 test("does not send a second email for a duplicate",async()=>{
   registrationResult={...registrationResult,duplicate:true};
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post(valid));
   assert.equal(JSON.parse(response.body).emailSent,false);
   assert.equal(emailRequests,0);
@@ -65,7 +65,7 @@ test("does not send a second email for a duplicate",async()=>{
 
 test("preserves a group and offers the next fitting weekend",async()=>{
   registrationResult={status:"alternative_offered",requestedWeekend:"Weekend 01",offeredWeekend:"weekend-02",offeredWeekendLabel:"Weekend 02 · 6 to 9 Nov 2026",seats:3};
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const body=JSON.parse((await handler(post(valid))).body);
   assert.equal(body.status,"alternative_offered");
   assert.equal(body.offeredWeekend,"weekend-02");
@@ -73,28 +73,28 @@ test("preserves a group and offers the next fitting weekend",async()=>{
 });
 
 test("rejects more than six people for a featured weekend",async()=>{
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post({...valid,people:7}));
   assert.equal(response.statusCode,400);
   assert.equal(JSON.parse(response.body).error,"featured_party_too_large");
 });
 
 test("rejects private groups smaller than four",async()=>{
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post({...valid,weekend:"private",people:3}));
   assert.equal(response.statusCode,400);
   assert.equal(JSON.parse(response.body).error,"private_party_too_small");
 });
 
 test("accepts Netlify-style capitalised headers",async()=>{
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post(valid,{"Content-Type":"application/json","Accept":"application/json"}));
   assert.equal(response.statusCode,200);
 });
 
 test("stops rapid automated requests before claiming seats",async()=>{
   rateAllowed=false;
-  const {handler}=await import("./first-access.mjs");
+  const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post(valid));
   assert.equal(response.statusCode,429);
   assert.equal(JSON.parse(response.body).error,"too_many_requests");
