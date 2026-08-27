@@ -15,6 +15,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: "Inter", sans-serif; color: var(--green); background: var(--cream); line-height: 1.7; }
     a { color: inherit; }
+    a:focus-visible, button:focus-visible { outline: 3px solid #f4a285; outline-offset: 4px; }
     .wrap { width: min(calc(100% - 48px), 900px); margin-inline: auto; }
     header { padding: 26px 0; color: var(--cream); background: var(--green); }
     .logo { font: 700 1.9rem/1 "Poppins", sans-serif; letter-spacing: -.04em; text-decoration: none; }
@@ -34,13 +35,13 @@
   <main class="wrap">
     <p class="eyebrow">Lewos</p><h1>Privacy</h1>
     <p class="intro">Lewos collects personal data only when you send it to us yourself.</p>
-    <section><h2>What we collect</h2><p>When you claim a seat at The Lewos Tavern, we collect your name, your email address, the weekend you're interested in, the size of your group, and anything you choose to tell us.</p></section>
-    <section><h2>Why</h2><p>To let you know when booking opens, and to arrange your stay if you decide to join.</p></section>
-    <section><h2>Where it goes</h2><p>Your request is delivered to us by Netlify, the company that hosts this website, and forwarded to our email. We do not sell your details, we do not share them with advertisers, and we do not add you to any list you did not ask for.</p></section>
-    <section><h2>How long we keep it</h2><p>Until you ask us to delete it, or until it is clear you are not joining — whichever comes first.</p></section>
+    <section><h2>What we collect</h2><p>When you join First Access, we collect your name, email address, preferred weekend, group size and anything you choose to tell us. When you use the question form, we collect your name, email address and question. To protect the booking form from automated misuse, we temporarily process a one-way technical identifier derived from your network address and email address. It cannot be used by us to recover either value.</p></section>
+    <section><h2>Why</h2><p>To let you know when booking opens, arrange your stay if you decide to join, or answer a question you send us.</p></section>
+    <section><h2>Where it goes</h2><p>Questions sent through the contact form are delivered through Netlify, the company that hosts this website. First Access requests and seat allocations are processed and stored using Supabase, and one confirmation email may be delivered through Resend. These providers process the information only to provide those services to Lewos. We do not sell your details, share them with advertisers or add you to a list you did not request.</p></section>
+    <section><h2>How long we keep it</h2><p>Booking and contact details are kept until you ask us to delete them, or until it is clear you are not joining — whichever comes first. The technical identifier stops affecting access after its fifteen-minute protection window and is deleted automatically during subsequent security cleanup.</p></section>
     <section><h2>Your rights</h2><p>You can ask us at any time to see, correct or delete what we hold about you. One email is enough and we will act on it.</p></section>
-    <section class="contact"><h2>Contact</h2><p>Robert Neug — Lewos<br><a href="mailto:lewos.co@gmail.com">lewos.co@gmail.com</a></p></section>
+    <section class="contact"><h2>Contact</h2><p>Robert Neugebauer, operating as Lewos<br><a href="mailto:lewos.co@gmail.com">lewos.co@gmail.com</a></p></section>
   </main>
-  <footer><div class="wrap">© 2026 Lewos</div></footer>
+  <footer><div class="wrap">© 2026 Lewos · <a href="../legal/">Legal notice</a></div></footer>
 </body>
 </html>

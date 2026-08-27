@@ -1,1 +1,2 @@
+/api/first-access  /.netlify/functions/first-access  200
 https://lewos.netlify.app/*  https://lewos.co/:splat  301!

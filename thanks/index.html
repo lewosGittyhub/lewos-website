@@ -14,6 +14,7 @@
     * { box-sizing: border-box; }
     body { min-height: 100vh; margin: 0; display: grid; grid-template-rows: auto 1fr auto; font-family: "Inter", sans-serif; color: var(--cream); background: var(--green); line-height: 1.65; }
     a { color: inherit; }
+    a:focus-visible, button:focus-visible { outline: 3px solid #f4a285; outline-offset: 4px; }
     .wrap { width: min(calc(100% - 48px), 1180px); margin-inline: auto; }
     header { padding: 26px 0; }
     .logo { font: 700 1.9rem/1 "Poppins", sans-serif; letter-spacing: -.04em; text-decoration: none; }
@@ -32,11 +33,21 @@
   <header><div class="wrap"><a class="logo" href="/">Lewos</a></div></header>
   <main><div class="wrap">
     <p class="eyebrow">The Lewos Tavern · First access</p>
-    <h1>You're on the list.</h1>
-    <p class="lead">We'll be in touch when The Lewos Tavern opens for booking.<br><br>Until then, the story continues on Instagram.</p>
-    <div class="links"><a class="button" href="/tavern/">Back to The Tavern →</a><a class="button button--ghost" href="https://instagram.com/lewos.co">Follow on Instagram</a></div>
-    <p class="note">Nothing is reserved yet, and no payment is due.</p>
+    <h1 id="thanks-title">You're on the list.</h1>
+    <p class="lead" id="thanks-message">We'll be in touch when The Lewos Tavern opens for booking.<br><br>Until then, the story continues on Instagram.</p>
+    <div class="links"><a class="button" href="/tavern/">Back to The Tavern →</a><a class="button button--ghost" href="https://instagram.com/theLewosTavern">Follow on Instagram</a></div>
+    <p class="note" id="thanks-note">No payment is due today.</p>
   </div></main>
-  <footer><div class="wrap">© 2026 Lewos</div></footer>
+  <footer><div class="wrap">© 2026 Lewos · <a href="../privacy/">Privacy</a> · <a href="../legal/">Legal</a></div></footer>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('status') === 'held') {
+    const seats = Number.parseInt(params.get('seats'), 10) || 1;
+    const weekend = params.get('weekend') || 'your selected Tavern weekend';
+    document.querySelector('#thanks-title').textContent = seats === 1 ? 'Your seat is set aside.' : 'Your seats are set aside.';
+    document.querySelector('#thanks-message').textContent = `${seats} ${seats === 1 ? 'seat has' : 'seats have'} been set aside for ${weekend}. When booking opens you get 24 hours to complete payment before the weekend goes public. We will email you before that window starts.`;
+    document.querySelector('#thanks-note').textContent = 'No payment is due today. Your party stays together. Seats that are not paid for within those 24 hours are released.';
+  }
+</script>
 </body>
 </html>

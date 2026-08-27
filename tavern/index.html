@@ -4,12 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Lewos Tavern | First Access Weekends in Asturias</title>
-  <meta name="description" content="The Lewos Tavern brings immersive D&amp;D weekends to Asturias: featured tables for six guests and private or custom experiences for parties of up to twelve.">
+  <meta name="description" content="Immersive tabletop roleplaying weekends in Asturias, Spain: featured tables for six guests, plus private experiences for parties of up to twelve.">
   <meta name="theme-color" content="#0F3B35">
   <meta property="og:type" content="website">
   <meta property="og:title" content="The Lewos Tavern — Be First at the Table">
   <meta property="og:description" content="Featured Tavern weekends for six guests, plus private and custom experiences for parties of up to twelve. Join the first-access list.">
   <meta property="og:url" content="https://lewos.co/tavern/">
+  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-asturias-hero.webp">
+  <meta property="og:image:alt" content="Adventurers travelling through the mountains of Asturias toward The Lewos Tavern">
+  <meta property="og:image:width" content="1983">
+  <meta property="og:image:height" content="793">
+  <meta property="og:locale" content="en">
+  <meta property="og:site_name" content="Lewos">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://lewos.co/tavern/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,6 +102,13 @@
     .manifesto__copy + .manifesto__copy { margin-top: 22px; }
     .manifesto__copy strong { color: var(--cream); }
 
+    .fontecha { padding: 86px 0; background: var(--cream); color: var(--green); }
+    .fontecha__inner { display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(48px, 8vw, 120px); align-items: start; }
+    .fontecha h2 { max-width: 540px; margin-top: 12px; font-size: clamp(2.5rem, 4.6vw, 4.6rem); }
+    .fontecha__copy { max-width: 720px; padding-top: 10px; font-size: 1.08rem; }
+    .fontecha__copy p + p { margin-top: 20px; }
+    .fontecha__copy strong { color: var(--green); }
+
     .details { padding: 104px 0; background: var(--green); color: var(--cream); }
     .section-head { display: flex; justify-content: space-between; align-items: end; gap: 40px; margin-bottom: 56px; }
     .section-head h2 { max-width: 680px; margin-bottom: 0; font-size: clamp(2.3rem, 4.5vw, 4.1rem); }
@@ -104,6 +118,32 @@
     .detail__number { display: block; margin-bottom: 52px; color: var(--orange); font: 600 .8rem/1 "Poppins", sans-serif; }
     .detail h3 { margin-bottom: 14px; font-size: 1.4rem; }
     .detail p { margin-bottom: 0; color: var(--beige); }
+
+    .rhythm { padding: 116px 0; color: var(--green); background: var(--beige); }
+    .rhythm__head { display: grid; grid-template-columns: 1.15fr .85fr; gap: 70px; align-items: end; margin-bottom: 52px; }
+    .rhythm__head h2 { max-width: 720px; margin: 0; font-size: clamp(2.6rem, 5vw, 4.8rem); }
+    .rhythm__head > p { margin: 0 0 7px; color: var(--grey); font-size: 1.03rem; }
+    .rhythm__days { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .rhythm__day { min-height: 330px; padding: 32px 28px; border: 1px solid rgba(15,59,53,.18); border-radius: var(--radius-medium); background: var(--cream); }
+    .rhythm__day-number { display: block; margin-bottom: 42px; color: var(--orange); font: 600 .76rem/1 "Poppins", sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .rhythm__day h3 { margin-bottom: 24px; font-size: 1.45rem; }
+    .rhythm__item + .rhythm__item { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(15,59,53,.13); }
+    .rhythm__time { display: block; margin-bottom: 5px; color: var(--green); font: 600 .88rem/1.3 "Poppins", sans-serif; }
+    .rhythm__item p { margin: 0; color: var(--grey); font-size: .92rem; }
+    .rhythm__aside { margin: 28px 0 0; padding: 22px 26px; border-left: 4px solid var(--orange); border-radius: 0 var(--radius-small) var(--radius-small) 0; background: rgba(247,243,236,.72); color: var(--green); }
+
+    .gm { padding: 120px 0; background: var(--cream); }
+    .gm__grid { display: grid; grid-template-columns: minmax(300px, .82fr) minmax(0, 1.18fr); gap: clamp(48px, 8vw, 100px); align-items: center; }
+    .gm__portrait { position: relative; overflow: hidden; min-height: 610px; border-radius: var(--radius-large); background: var(--green); box-shadow: 0 28px 70px rgba(15,59,53,.18); }
+    .gm__portrait img { width: 100%; height: 100%; position: absolute; inset: 0; display: block; object-fit: cover; object-position: 56% center; }
+    .gm__portrait::after { content: "Evan · Game Master"; position: absolute; right: 24px; bottom: 24px; left: 24px; padding: 17px 20px; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-small); background: rgba(9,35,32,.82); color: var(--cream); font: 600 .84rem/1.3 "Poppins", sans-serif; letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(8px); }
+    .gm h2 { margin-bottom: 24px; color: var(--green); font-size: clamp(2.6rem, 5vw, 4.8rem); }
+    .gm__intro { margin-bottom: 24px; color: var(--green); font: 600 clamp(1.08rem, 1.8vw, 1.28rem)/1.65 "Poppins", sans-serif; }
+    .gm__copy { color: var(--grey); }
+    .gm__copy + .gm__copy { margin-top: 16px; }
+    .gm__quote { margin-top: 32px; padding: 28px 30px; border-left: 4px solid var(--orange); border-radius: 0 var(--radius-medium) var(--radius-medium) 0; background: var(--beige); }
+    .gm__quote p { margin: 0; color: var(--green); font: 600 1.02rem/1.65 "Poppins", sans-serif; }
+    .gm__quote cite { display: block; margin-top: 12px; color: var(--grey); font-style: normal; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; }
 
     .included { position: relative; padding: 120px 0; color: var(--cream); background: var(--brown) url("assets/tavern-party-journey-bear.webp?v=1") center / cover no-repeat; }
     .included::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(75,46,32,.62), rgba(75,46,32,.80) 48%, rgba(75,46,32,.88)); }
@@ -156,29 +196,38 @@
     .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--orange); }
     .consent a { color: var(--orange); }
     .signup-form .button { width: fit-content; cursor: pointer; }
+    .signup-form .button:disabled { cursor: wait; opacity: .7; }
+    .booking-result { padding: 16px 18px; border: 1px solid rgba(247,243,236,.35); border-radius: var(--radius-small); color: var(--cream); background: rgba(247,243,236,.1); }
+    .booking-result[data-type="alternative"] { border-color: var(--orange); }
+    .booking-result[data-type="error"] { border-color: #f4a285; }
     .booking__micro { max-width: 690px; margin: -5px 0 0; color: rgba(237,230,218,.72); font-size: .8rem; }
     .bot-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
     .faq { padding: 110px 0; background: var(--cream); }
     .faq h2 { color: var(--green); }
     .faq__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .faq details { padding: 0 26px; border: 1px solid rgba(15,59,53,.2); border-radius: var(--radius-medium); background: var(--beige); }
-    .faq summary { position: relative; padding: 24px 34px 24px 0; color: var(--green); font: 600 1rem/1.4 "Poppins", sans-serif; cursor: pointer; list-style: none; }
+    .faq details { padding: 0 22px; border: 1px solid rgba(15,59,53,.2); border-radius: var(--radius-medium); background: var(--beige); }
+    .faq summary { position: relative; padding: 19px 32px 19px 0; color: var(--green); font: 600 .96rem/1.4 "Poppins", sans-serif; cursor: pointer; list-style: none; }
     .faq summary::-webkit-details-marker { display: none; }
-    .faq summary::after { content: "+"; position: absolute; top: 20px; right: 0; color: var(--orange); font: 500 1.6rem/1 "Poppins", sans-serif; }
+    .faq summary::after { content: "+"; position: absolute; top: 15px; right: 0; color: var(--orange); font: 500 1.6rem/1 "Poppins", sans-serif; }
     .faq details[open] summary::after { content: "−"; }
     .faq details p { padding: 0 0 24px; color: var(--grey); }
     footer { padding: 48px 0; color: var(--cream); background: #0a2a26; }
-    .footer__inner { display: flex; justify-content: space-between; align-items: end; gap: 30px; }
+    .footer__inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 30px; }
     .footer__brand { font: 700 1.8rem/1 "Poppins", sans-serif; }
     .footer__tag { margin: 9px 0 0; color: rgba(237,230,218,.7); font-size: .85rem; }
-    .footer__links { display: flex; gap: 22px; font-size: .82rem; }
+    .footer__social { display: inline-flex; justify-content: center; align-items: center; gap: 12px; }
+    .footer__social a { display: inline-grid; width: 44px; height: 44px; place-items: center; border: 1px solid rgba(247,243,236,.28); border-radius: 50%; transition: color .2s, border-color .2s, transform .2s; }
+    .footer__social a:hover { color: var(--orange); border-color: var(--orange); transform: translateY(-2px); }
+    .footer__social svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; }
+    .footer__links { display: flex; justify-content: flex-end; gap: 22px; font-size: .82rem; }
 
     @media (max-width: 900px) {
-      .hero__inner, .manifesto__grid, .included__grid, .stay__panel, .private__box, .release__head, .booking__grid { grid-template-columns: 1fr; }
+      .hero__inner, .manifesto__grid, .fontecha__inner, .rhythm__head, .gm__grid, .included__grid, .stay__panel, .private__box, .release__head, .booking__grid { grid-template-columns: 1fr; }
       .hero__inner { gap: 46px; }
       .edition-card { max-width: 560px; }
       .details__grid { grid-template-columns: 1fr; }
+      .rhythm__days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .weekends { grid-template-columns: 1fr; }
       .detail { min-height: auto; }
       .detail__number { margin-bottom: 28px; }
@@ -187,6 +236,7 @@
       .stay__rule { min-height: 300px; }
       .private__aside { padding: 32px 0 0; border-left: 0; border-top: 1px solid rgba(247,243,236,.42); }
       .faq__list { grid-template-columns: 1fr; }
+      .gm__portrait { min-height: 520px; }
     }
 
     @media (max-width: 650px) {
@@ -200,7 +250,7 @@
       .hero__inner { padding-top: 135px; padding-bottom: 52px; }
       .hero h1 { font-size: clamp(3.15rem, 16vw, 5rem); }
       .hero__actions, .hero__actions .button { width: 100%; }
-      .manifesto, .details, .included, .stay, .booking, .release { padding-top: 82px; padding-bottom: 82px; }
+      .manifesto, .fontecha, .details, .rhythm, .included, .stay, .booking, .release { padding-top: 82px; padding-bottom: 82px; }
       .manifesto__grid { gap: 20px; }
       .manifesto { min-height: auto; background-position: 28% center; }
       .manifesto::before { background: linear-gradient(rgba(15,59,53,.48), rgba(15,59,53,.90)); }
@@ -209,13 +259,18 @@
       .section-head p { margin-top: 20px; }
       .detail { padding: 30px; }
       .good-to-know, .faq { padding: 82px 0; }
+      .gm { padding: 82px 0; }
+      .gm__portrait { min-height: 430px; }
+      .rhythm__days { grid-template-columns: 1fr; }
+      .rhythm__day { min-height: auto; }
       .know-grid { grid-template-columns: 1fr; }
       .know-card:last-child { grid-column: auto; }
       .signup-form { padding: 24px 20px; }
       .stay__content, .private__box { padding: 38px 26px; }
       .private { padding-bottom: 82px; }
-      .footer__inner { align-items: flex-start; flex-direction: column; }
-      .footer__links { flex-wrap: wrap; }
+      .footer__inner { grid-template-columns: 1fr; align-items: start; }
+      .footer__social { justify-content: flex-start; }
+      .footer__links { justify-content: flex-start; flex-wrap: wrap; }
     }
 
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
@@ -240,7 +295,7 @@
           <p class="eyebrow">The fire is lit · Your place is waiting</p>
           <h1 id="hero-title">Welcome to <span>The Lewos Tavern.</span></h1>
           <p class="hero__lead">Somewhere beyond the last turn in the Asturian road, a table is being prepared for your party. For three nights, the outside world falls away. You arrive as travellers, gather as a party and step into a story created around the people at the table.</p>
-          <p class="hero__promise">Shared meals. Mountain air. A dedicated Dungeon Master. You do not simply play the adventure. You become part of it.</p>
+          <p class="hero__promise">Shared meals. Mountain air. A professional Game Master. You do not simply play the adventure. You become part of it.</p>
           <div class="hero__actions">
             <a class="button" href="#chapters">Choose your chapter →</a>
           </div>
@@ -251,7 +306,7 @@
             <div><dt>Dates</dt><dd>30 Oct to 2 Nov<br>6 to 9 Nov</dd></div>
             <div><dt>Location</dt><dd>The misty mountains of Asturias, Spain</dd></div>
             <div><dt>Seats</dt><dd>6 per featured weekend<br><small>Private groups: 4–12 players</small></dd></div>
-            <div><dt>Status</dt><dd>First access opening soon</dd></div>
+            <div><dt>Status</dt><dd>First Access now open</dd></div>
             <div><dt>Price</dt><dd>€2,025 per person<br><small>First-access price for the opening editions</small></dd></div>
           </dl>
         </aside>
@@ -265,7 +320,7 @@
             <p class="eyebrow">The First Edition · Six seats</p>
             <h2 id="release-title">Choose your opening chapter.</h2>
           </div>
-          <p><strong>The first story can only be told once.</strong> On 30 October 2026, six players will cross the threshold of The Lewos Tavern for the very first time. Other chapters will follow. There will never be another first.</p>
+          <p><strong>The first story can only be told once.</strong> On 30 October 2026, six players will cross the threshold of The Lewos Tavern for the very first time. Other chapters will follow.</p>
         </div>
         <div class="weekends">
           <article class="weekend weekend--first">
@@ -296,31 +351,77 @@
       </div>
     </section>
 
-    <section class="details" id="details" aria-labelledby="details-title">
-      <div class="wrap">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">The tale unfolds</p>
-            <h2 id="details-title">Three nights. One party. One unfolding story.</h2>
-          </div>
-          <p>From the first dinner to the final breakfast, the weekend is designed so the story has room to breathe.</p>
+    <section class="fontecha" aria-labelledby="fontecha-title">
+      <div class="fontecha__inner wrap">
+        <div>
+          <p class="eyebrow">Where the story begins</p>
+          <h2 id="fontecha-title">Welcome to Fontecha.</h2>
         </div>
-        <div class="details__grid">
-          <article class="detail">
-            <span class="detail__number">01 / ARRIVE</span>
-            <h3>Friday evening</h3>
-            <p>Check in, meet your party and gather for dinner. The first clues may already be waiting.</p>
+        <div class="fontecha__copy">
+          <p><strong>The Lewos Tavern is set within Complejo Rural de Fontecha</strong>, a small collection of mountain houses near Llerandi in Asturias.</p>
+          <p>The surrounding landscape has carried travellers for centuries. A prehistoric burial mound is recorded above Fontecha, and the old Camino Real de Ponga once crossed the ridge. Ancient paths, buried history and mountain folklore belong to this place. Now a new story is about to begin here.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="rhythm" id="details" aria-labelledby="rhythm-title">
+      <div class="wrap">
+        <div class="rhythm__head">
+          <div>
+            <p class="eyebrow">The rhythm of the weekend</p>
+            <h2 id="rhythm-title">Enough structure to settle in. Enough freedom for the story.</h2>
+          </div>
+          <p>A few moments are fixed. Everything between them follows the party, the table and the pace of the campaign.</p>
+        </div>
+        <div class="rhythm__days">
+          <article class="rhythm__day">
+            <span class="rhythm__day-number">01 · Friday</span>
+            <h3>Cross the threshold</h3>
+            <div class="rhythm__item"><span class="rhythm__time">From 16:00</span><p>Arrive, settle into your room and meet the people who will share your table.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">Evening</span><p>Dinner together. The first clues may already be waiting.</p></div>
           </article>
-          <article class="detail">
-            <span class="detail__number">02 / PLAY</span>
-            <h3>A weekend in character</h3>
-            <p>A dedicated Dungeon Master leads an immersive D&amp;D experience, with space for shared meals and mountain air.</p>
+          <article class="rhythm__day">
+            <span class="rhythm__day-number">02 · Saturday</span>
+            <h3>The story begins</h3>
+            <div class="rhythm__item"><span class="rhythm__time">08:30 to 09:30</span><p>Breakfast at the house.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">10:00</span><p>The party takes its place at the table.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">Through the day</span><p>Lunch and dinner give the day its shape. The story decides the rest.</p></div>
           </article>
-          <article class="detail">
-            <span class="detail__number">03 / DEPART</span>
-            <h3>Monday morning</h3>
-            <p>One last breakfast together before the party heads home—with stories nobody else can quite understand.</p>
+          <article class="rhythm__day">
+            <span class="rhythm__day-number">03 · Sunday</span>
+            <h3>Deeper into the tale</h3>
+            <div class="rhythm__item"><span class="rhythm__time">08:30 to 09:30</span><p>Breakfast and a quiet start.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">10:00</span><p>Return to the campaign.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">Through the day</span><p>Shared meals mark the pauses while the adventure moves toward its final chapter.</p></div>
           </article>
+          <article class="rhythm__day">
+            <span class="rhythm__day-number">04 · Monday</span>
+            <h3>One last breakfast</h3>
+            <div class="rhythm__item"><span class="rhythm__time">08:30 to 09:30</span><p>Breakfast together before the party heads home.</p></div>
+            <div class="rhythm__item"><span class="rhythm__time">After breakfast</span><p>Departure, unless you have arranged a longer stay in Asturias.</p></div>
+          </article>
+        </div>
+        <p class="rhythm__aside"><strong>And perhaps an early walk into the mountains.</strong> If the weather, the route and the party allow, the day may begin outside before everyone returns to the table.</p>
+      </div>
+    </section>
+
+    <section class="gm" aria-labelledby="gm-title">
+      <div class="gm__grid wrap">
+        <figure class="gm__portrait">
+          <img src="assets/evan-game-master.jpg" alt="Evan, Game Master for The Lewos Tavern First Edition, wearing a headset at a live event" width="509" height="569" loading="lazy" decoding="async">
+        </figure>
+        <div>
+          <p class="eyebrow">Meet your Game Master</p>
+          <h2 id="gm-title">This is Evan.</h2>
+          <p class="gm__intro">A storyteller with a love for horror, atmosphere and giving players a world they can truly lose themselves in.</p>
+          <p class="gm__copy">Evan first joined a tabletop roleplaying game in a school library in Oxford almost ten years ago. When that group outgrew its table, he started a second one and stepped behind the screen. What began as a lunchtime game became eight years of storytelling, with some of that original group still at his table today.</p>
+          <p class="gm__copy">His games combine detailed description, music and sound to make imagined places feel real. What matters most to him is not controlling the story, but watching players take ownership of it and continue talking about it after the session has ended.</p>
+          <p class="gm__copy">Away from the table, Evan studies in London, works in esports production and brings experience from competitive sport and live-action roleplay. One day he hopes to run a game before a live audience.</p>
+          <p class="gm__copy">We are genuinely delighted that he is coming to Asturias to lead the very first table at The Lewos Tavern.</p>
+          <blockquote class="gm__quote">
+            <p>“Evan is a great GM. His preparation does wonders for the immersion, and he really encourages his players to take more risks with their roleplay.”</p>
+            <cite>One of Evan's players</cite>
+          </blockquote>
         </div>
       </div>
     </section>
@@ -335,10 +436,11 @@
           <ul class="included__list">
             <li>Accommodation for the duration of your selected Tavern weekend</li>
             <li>Meals and non-alcoholic drinks, from the arrival dinner through departure breakfast</li>
-            <li>A dedicated D&amp;D experience and Dungeon Master</li>
+            <li>Transfers between Asturias Airport or Arriondas train or bus station and the Tavern</li>
+            <li>A dedicated tabletop roleplaying campaign and professional Game Master</li>
             <li>A seat at your selected featured Tavern table</li>
           </ul>
-          <p class="included__note">Flights are not included. Practical arrival and transfer details will be confirmed with guests before the weekend.</p>
+          <p class="included__note">Travel to Asturias is not included. Collection from other locations and car hire can be arranged on request at additional cost.</p>
         </div>
       </div>
     </section>
@@ -350,7 +452,7 @@
           <h2 id="stay-title">Not ready to leave Asturias behind?</h2>
           <p>Depending on availability, you can extend your stay from the Monday before your Tavern weekend, or remain until Friday morning after it. Want to stay longer—or join us across two Tavern weekends? Ask us. Special arrangements may be possible.</p>
         </div>
-        <div class="stay__rule" role="img" aria-label="Snowy mountains and a green valley in Asturias">
+        <div class="stay__rule">
           <strong>The road home can wait. Asturias still has stories to tell.</strong>
         </div>
       </div>
@@ -382,11 +484,12 @@
           </article>
           <article class="know-card">
             <h3>Food</h3>
-            <p>Every meal and all non-alcoholic drinks are included. Dinner comes from a local restaurant; breakfast and lunch we handle ourselves on site. Vegetarian, allergies, anything else — tell us once you've booked and it's handled.</p>
+            <p>Every meal and all non-alcoholic drinks are included. Breakfast, lunch and dinner are all taken care of throughout the weekend. Vegetarian, allergies, anything else — tell us once you've booked and it's handled.</p>
           </article>
           <article class="know-card">
             <h3>Getting here</h3>
-            <p>Fly into Asturias (OVD), or take the train or bus. Travel isn't included, but tell us how you're arriving and we'll sort the last stretch — a shuttle can be arranged, and drivers get the location and directions.</p>
+            <p>Fly into Asturias (OVD), or take the train or bus to Arriondas. Your transfer from Asturias Airport or Arriondas station to the Tavern is included. Collection from other locations may be arranged at additional cost. Tell us how and when you plan to arrive, and we will arrange the last stretch. Drivers receive the exact location and directions.</p>
+            <p>Want the freedom to explore Asturias during your stay? Car hire can also be arranged on request at additional cost.</p>
           </article>
           <article class="know-card">
             <h3>Staying longer</h3>
@@ -394,7 +497,7 @@
           </article>
           <article class="know-card">
             <h3>We'll be filming the opening weekend</h3>
-            <p>A professional videographer will film Weekend 01. Nothing is published without your written approval, and if you'd rather stay off camera we'll keep you out of every shot. After the opening weekend, there is no planned filming; the host may occasionally take photos if the players would like that.</p>
+            <p>A professional videographer will film Weekend 01. Full details are set out in the filming and privacy terms provided before booking.</p>
           </article>
         </div>
       </div>
@@ -403,11 +506,16 @@
     <section class="booking" id="book" aria-labelledby="book-title">
       <div class="booking__grid wrap">
         <div>
-          <p class="eyebrow">The first table awaits.</p>
-          <h2 id="book-title">Claim your seat at the table.</h2>
-          <p class="booking__lead"><strong>Featured weekends begin with six seats.</strong>If more adventurers want to join, we remain open to what the table could become. The first twelve people on the list receive a private 24-hour booking window. After that, public booking opens and seats are available without priority.</p>
+          <p class="eyebrow">The First Edition · 30 October · Six seats</p>
+          <h2 id="book-title">The Tavern is ready.<br>It is waiting for its first party.</h2>
+          <div class="booking__lead">
+            <p>Three nights in the Asturian mountains. Sixteen hours of tabletop roleplaying drawn from the myths of this land. Your own room, every meal, and a table no party has ever sat at before.</p>
+            <p><strong>On 30 October, six players will become the first party of The Lewos Tavern.</strong></p>
+            <p>Join First Access for the chance to be one of them.</p>
+            <p><strong>The next chapter · 6 November · Six seats</strong><br>Miss the first table? The next party enters one week later.</p>
+          </div>
         </div>
-        <form class="signup-form" name="tavern-signup" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/thanks/">
+        <form class="signup-form" name="tavern-signup" method="POST" action="/api/first-access" data-first-access-form>
           <input type="hidden" name="form-name" value="tavern-signup">
           <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
           <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
@@ -416,17 +524,17 @@
             <label for="weekend">Which weekend?</label>
             <select id="weekend" name="weekend" required>
               <option value="" selected disabled>Choose an option</option>
-              <option>Weekend 01 — 30 Oct to 2 Nov 2026</option>
-              <option>Weekend 02 — 6 to 9 Nov 2026</option>
-              <option>Either one works for me</option>
-              <option>A private Tavern for my own group (4–12 players)</option>
+              <option value="weekend-01">Weekend 01 · 30 Oct to 2 Nov 2026</option>
+              <option value="weekend-02">Weekend 02 · 6 to 9 Nov 2026</option>
+              <option value="private">A private Tavern for my own group (4 to 12 players)</option>
             </select>
           </div>
           <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
           <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
-          <button class="button" type="submit" aria-describedby="booking-note">Claim my seat →</button>
-          <p class="booking__micro" id="booking-note">No payment now, and nothing is locked in yet. If you are among the first twelve people on the list, we will email you before public booking opens. You then have 24 hours to complete your booking at the first-access price shown on this page.</p>
+          <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
+          <button class="button" type="submit" aria-describedby="booking-note">Hold my seats →</button>
+          <p class="booking__micro" id="booking-note">No payment is due today. If your full party fits, we hold your seats for your chosen weekend. When booking opens, First Access guests get 24 hours to complete payment before the weekend goes public — we email you before that window starts. Seats that are not paid for within those 24 hours are released, and from then on it is first come, first served. Groups stay together.</p>
         </form>
       </div>
     </section>
@@ -439,26 +547,25 @@
           <details>
             <summary>Has this run before?</summary>
             <p>No. Weekend 01 is the first one. Ever.</p>
-            <p>The room is built. The table is in it. The fire is lit. The campaign is written. Eighteen hours of it, pulled out of Asturian myth that belongs to these mountains and nowhere else.</p>
+            <p>The room is built. The table is in it. The fire is lit. The campaign is written. Around sixteen hours of it, pulled out of Asturian myth that belongs to these mountains and nowhere else.</p>
             <p>What hasn't happened yet is the first players walking through that door.</p>
             <p>Everything here has been thought about: which chair you sit in, what comes to the table on Saturday night, what's waiting at the end of the story. A first edition is the one where none of it has settled yet. The people who show up still shape what this place turns into.</p>
             <p>You'd be at the first table. There's only one of those.</p>
           </details>
           <details>
-            <summary>Do I need to have played D&amp;D before?</summary>
-            <p>No. Tell us when you sign up and the Dungeon Master builds a character with you and takes it from there. Bringing years of experience is fine too — the table is built around whoever ends up at it.</p>
+            <summary>How does First Access work?</summary>
+            <p>You choose a weekend and we hold your seats. Nothing is paid today.</p>
+            <p>When booking opens, First Access guests get 24 hours to complete payment before the weekend goes public. We email you before that window starts, so you know when it begins.</p>
+            <p>If you do not book within those 24 hours, your seats are released and the weekend opens to everyone — first come, first served.</p>
+            <p>Your whole party is held together, or not at all. We do not split groups.</p>
+          </details>
+          <details>
+            <summary>Do I need to have played before?</summary>
+            <p>No. Tell us when you sign up and the Game Master builds a character with you and takes it from there. Bringing years of experience is fine too — the table is built around whoever ends up at it.</p>
           </details>
           <details>
             <summary>What language is it in?</summary>
             <p>English.</p>
-          </details>
-          <details>
-            <summary>Who runs the game?</summary>
-            <p>A professional Dungeon Master, booked through a company that supplies them for a living. Not a friend who plays a bit.</p>
-          </details>
-          <details>
-            <summary>How much do we actually play?</summary>
-            <p>Around sixteen to eighteen hours at the table across Saturday and Sunday. The rest of the weekend is food, fire and the kind of evening that makes the next session better.</p>
           </details>
           <details>
             <summary>Where do I sleep?</summary>
@@ -471,20 +578,16 @@
           </details>
           <details>
             <summary>What's included?</summary>
-            <p>Three nights, every meal, all non-alcoholic drinks, the game, the Dungeon Master, and the run of the Tavern. Something will be waiting on your seat when you sit down — we're not saying what. Flights are not included.</p>
-          </details>
-          <details>
-            <summary>What about food?</summary>
-            <p>Dinner comes from a local restaurant. Breakfast and lunch we handle ourselves, on site. Vegetarian, allergies, anything else — tell us once you've booked and it's arranged.</p>
+            <p>Three nights, every meal, all non-alcoholic drinks, transfers between Asturias Airport or Arriondas train or bus station and the Tavern, the game, the professional Game Master, and the run of the Tavern. Breakfast, lunch and dinner are all taken care of throughout the weekend. Vegetarian, allergies or anything else can be arranged after booking. A welcome gift will be waiting on your seat when you sit down. Travel to Asturias is not included.</p>
           </details>
           <details>
             <summary>How do I get there?</summary>
-            <p>Fly into Asturias (OVD), or come by train or bus — both run to the area. Travel isn't included in the price.</p>
-            <p>Tell us how you plan to arrive and we'll sort the last stretch with you. A shuttle can be arranged from the airport or the station, and if you're driving we'll send you the exact location and directions.</p>
+            <p>Fly into Asturias (OVD), or come by train or bus to Arriondas. Travel to Asturias isn't included in the price, but your transfer from Asturias Airport or Arriondas station to the Tavern is.</p>
+            <p>Tell us how and when you plan to arrive, and we will arrange the last stretch. Collection from other locations and car hire can be arranged on request at additional cost. If you're driving, we'll send you the exact location and directions.</p>
           </details>
           <details>
             <summary>Will I be filmed?</summary>
-            <p>Weekend 01 will be filmed by a professional videographer. Nothing is published without your written approval, and if you'd rather stay off camera we'll keep you out of every shot. After the opening weekend, there is no planned filming; the host may occasionally take photos if the players would like that.</p>
+            <p>Yes. Weekend 01 will be filmed by a professional videographer. Full details are set out in the filming and privacy terms provided before booking.</p>
           </details>
           <details>
             <summary>What if the weekend doesn't go ahead?</summary>
@@ -497,6 +600,7 @@
         </div>
       </div>
     </section>
+
   </main>
 
   <footer>
@@ -505,12 +609,19 @@
         <a class="footer__brand" href="/">Lewos</a>
         <p class="footer__tag">Whatever it is, there's always a way—and Lewos finds it.</p>
       </div>
+      <div class="footer__social">
+        <a href="https://instagram.com/theLewosTavern" target="_blank" rel="noopener noreferrer" aria-label="The Lewos Tavern on Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.1"></circle><circle cx="17.4" cy="6.7" r=".8" fill="currentColor" stroke="none"></circle></svg>
+        </a>
+      </div>
       <div class="footer__links">
         <a href="/">Home</a>
-        <a href="#book">Contact</a>
+        <a href="/contact/">Contact</a>
+        <a href="../legal/">Legal</a>
         <span>© 2026 Lewos</span>
       </div>
     </div>
   </footer>
+  <script src="first-access.js" defer></script>
 </body>
 </html>

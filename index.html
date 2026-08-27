@@ -6,11 +6,19 @@
 
   <title>Lewos | There's Always a Way</title>
   <meta name="description" content="Lewos creates experiences, projects and ideas with one belief: whatever it is, there's always a way — and Lewos finds it.">
+  <meta name="theme-color" content="#0F3B35">
   <link rel="canonical" href="https://lewos.co/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Lewos | There's Always a Way">
   <meta property="og:description" content="Ideas, experiences and possibilities brought to life — because there's always a way.">
   <meta property="og:url" content="https://lewos.co/">
+  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-asturias-hero.webp">
+  <meta property="og:image:alt" content="Adventurers travelling through the mountains of Asturias toward The Lewos Tavern">
+  <meta property="og:image:width" content="1983">
+  <meta property="og:image:height" content="793">
+  <meta property="og:locale" content="en">
+  <meta property="og:site_name" content="Lewos">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +89,11 @@
 
     .nav-links a:hover {
       color: var(--orange);
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid #f4a285;
+      outline-offset: 4px;
     }
 
     /* HERO */
@@ -155,6 +168,107 @@
 
     .button:hover {
       transform: translateY(-3px);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 14px;
+    }
+
+    .tavern-portal {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      min-height: 250px;
+      width: min(100%, 570px);
+      padding: 28px;
+      align-items: flex-end;
+      overflow: hidden;
+      border: 1px solid rgba(247, 243, 236, .28);
+      border-radius: 30px;
+      background: var(--green);
+      box-shadow: 0 24px 65px rgba(0, 0, 0, .28);
+    }
+
+    .tavern-portal::before {
+      content: "";
+      position: absolute;
+      z-index: -2;
+      inset: 0;
+      background-image: url("tavern/assets/weekend-01-dark-dice.webp");
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.03);
+    }
+
+    .tavern-portal::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15, 59, 53, .12), rgba(7, 28, 25, .94));
+    }
+
+    .tavern-portal__content {
+      display: grid;
+      justify-items: start;
+      gap: 9px;
+      width: 100%;
+    }
+
+    .tavern-portal__label {
+      color: var(--cream);
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(.82rem, 1.4vw, 1rem);
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .tavern-portal__title {
+      color: var(--cream);
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(2rem, 5vw, 3.7rem);
+      font-weight: 600;
+      line-height: .95;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+
+    .button--tavern {
+      display: inline-flex;
+      align-items: center;
+      gap: 18px;
+      width: auto;
+      padding: 14px 20px;
+      border: 2px solid var(--orange);
+      border-radius: 9px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .18);
+    }
+
+    .button--tavern strong {
+      font-size: clamp(.9rem, 1.5vw, 1.05rem);
+    }
+
+    .button--secondary {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      border: 2px solid rgba(247, 243, 236, .45);
+    }
+
+    .nav-tavern {
+      padding: 11px 17px;
+      border: 1px solid var(--orange);
+      border-radius: 6px;
+      background: var(--orange);
+    }
+
+    .nav-links .nav-tavern:hover {
+      color: var(--cream);
+      transform: translateY(-2px);
     }
 
     /* TAVERN ENTRANCE */
@@ -261,6 +375,29 @@
       margin: auto;
     }
 
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+      gap: clamp(38px, 7vw, 90px);
+      align-items: center;
+    }
+
+    .intro__photo-frame {
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 28px;
+      box-shadow: 0 24px 55px rgba(15, 59, 53, .16);
+    }
+
+    .intro__photo {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+    }
+
     .intro h2 {
       font-family: "Poppins", sans-serif;
       font-size: clamp(2.2rem, 5vw, 4.2rem);
@@ -274,6 +411,10 @@
       font-size: 1.15rem;
       line-height: 1.8;
       color: var(--grey);
+    }
+
+    .intro p + p {
+      margin-top: 18px;
     }
 
     /* PROJECTS */
@@ -295,15 +436,26 @@
     }
 
     .project-card {
-      background: var(--green);
+      background-color: var(--green);
+      background-image:
+        linear-gradient(90deg,
+          rgba(9, 35, 31, .98) 0%,
+          rgba(15, 59, 53, .88) 42%,
+          rgba(15, 59, 53, .24) 100%),
+        url("tavern/assets/tavern-asturias-hero.webp");
+      background-size: cover;
+      background-position: center, center;
       color: var(--cream);
       padding: clamp(35px, 7vw, 80px);
-      min-height: 420px;
+      min-height: 500px;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
       position: relative;
       overflow: hidden;
+      border: 1px solid rgba(247, 243, 236, .24);
+      border-radius: 30px;
+      box-shadow: 0 28px 70px rgba(15, 59, 53, .18);
     }
 
     .project-card::before {
@@ -339,14 +491,33 @@
     }
 
     .text-link {
+      display: inline-flex;
+      width: fit-content;
+      padding: 14px 20px;
+      border-radius: 9px;
+      background: var(--orange);
       color: var(--cream);
       font-family: "Poppins", sans-serif;
       font-weight: 600;
       text-decoration: none;
+      transition: transform .2s ease;
+    }
+
+    .project-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .text-link--ghost {
+      border: 1px solid rgba(247, 243, 236, .55);
+      background: rgba(15, 59, 53, .42);
+      backdrop-filter: blur(8px);
     }
 
     .text-link:hover {
-      color: var(--orange);
+      color: var(--cream);
+      transform: translateY(-3px);
     }
 
     /* PHILOSOPHY */
@@ -406,6 +577,11 @@
       font-size: 0.8rem;
     }
 
+    .copyright a {
+      margin-left: 18px;
+      color: inherit;
+    }
+
     /* MOBILE */
 
     @media (max-width: 700px) {
@@ -428,6 +604,14 @@
       .philosophy {
         padding-left: 6%;
         padding-right: 6%;
+      }
+
+      .intro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .intro__photo-frame {
+        max-width: 520px;
       }
 
       .footer-inner {
@@ -480,9 +664,19 @@
           Whatever it is, there's always a way — and Lewos finds it.
         </p>
 
-        <a href="#projects" class="button">
-          Discover Lewos →
-        </a>
+        <div class="hero-actions">
+          <div class="tavern-portal">
+            <div class="tavern-portal__content">
+              <span class="tavern-portal__label">First Edition · Asturias · Six seats</span>
+              <span class="tavern-portal__title">The Lewos Tavern</span>
+              <a href="/tavern/" class="button button--tavern">
+                <strong>Enter the Tavern</strong>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
 
       </div>
 
@@ -491,18 +685,21 @@
 
     <section class="intro" id="about">
 
-      <div class="eyebrow">What is Lewos?</div>
+      <div class="intro-grid">
+        <div class="intro__photo-frame">
+          <img class="intro__photo" src="assets/robert-founder-lewos.jpg" alt="Robert, founder of Lewos, outdoors in Asturias with a young horse" width="1200" height="675" loading="lazy" decoding="async">
+        </div>
 
-      <h2>
-        Some ideas don't fit neatly into a box.
-        We like those.
-      </h2>
+        <div>
+          <div class="eyebrow">A little about Lewos</div>
 
-      <p>
-        Lewos turns ideas into something real. From unforgettable
-        experiences to projects that begin with a simple question:
-        what if we actually did it?
-      </p>
+          <h2>Hi, I'm Robert.</h2>
+
+          <p>Lewos started with a simple belief: interesting ideas deserve more than “maybe one day.” I'm building those ideas here in Asturias, together with good people who know how to make them real. The Tavern is the first.</p>
+
+          <p>If you've found your way here, welcome. Take a look around. And if something makes you wonder “could we?”, you're already speaking our language.</p>
+        </div>
+      </div>
 
     </section>
 
@@ -518,7 +715,7 @@
         <article class="project-card">
 
           <div class="project-label">
-            Now entering its first chapter
+            First Edition · Only six seats
           </div>
 
           <h3>
@@ -531,9 +728,15 @@
             you become part of it.
           </p>
 
-          <a href="/tavern/" class="text-link">
-            Enter the Tavern →
-          </a>
+          <div class="project-actions">
+            <a href="/tavern/" class="text-link text-link--ghost">
+              Enter the Tavern →
+            </a>
+
+            <a href="/tavern/#book" class="text-link">
+              Join First Access →
+            </a>
+          </div>
 
         </article>
 
@@ -570,6 +773,9 @@
 
       <div class="copyright">
         © 2026 Lewos
+        <a href="/contact/">Contact</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="legal/">Legal</a>
       </div>
 
     </div>
@@ -578,13 +784,14 @@
 
   <script>
     (() => {
-      const tavernLinks = document.querySelectorAll('a[href="/tavern/"]');
+      const tavernLinks = document.querySelectorAll('a[href^="/tavern/"]');
       const transition = document.querySelector('.tavern-entry');
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
       let opening = false;
 
       tavernLinks.forEach(link => {
         link.addEventListener('click', event => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
           if (opening || reducedMotion.matches) return;
 
           event.preventDefault();
