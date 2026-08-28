@@ -45,13 +45,13 @@ test("an existing First Access checkout resumes without creating another Stripe 
 test("a full weekend never creates a Stripe session",async()=>{
   holdResult={status:"not_available",remaining:2};
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingNoticeAcknowledged:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingConsent:true})});
   assert.equal(result.statusCode,409);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
 });
 
 test("a Stripe failure releases the temporary hold",async()=>{
   stripeFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingNoticeAcknowledged:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingConsent:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
 });
 
@@ -61,10 +61,10 @@ test("public checkout requires adult and privacy confirmations",async()=>{
   assert.equal(result.statusCode,400);assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),false);
 });
 
-test("Weekend 01 requires a clear filming notice acknowledgement",async()=>{
+test("Weekend 01 can be booked when optional filming consent is declined",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true})});
-  assert.equal(result.statusCode,400);assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),false);
+  assert.equal(result.statusCode,200);assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),true);
 });
 
 test("webhook rejects an invalid signature",async()=>{

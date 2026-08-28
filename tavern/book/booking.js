@@ -2,7 +2,7 @@ const form=document.querySelector("[data-public-booking-form]");
 const weekend=form.elements.weekend;
 const notice=document.querySelector("[data-filming-notice]");
 const filmingCheck=document.querySelector("[data-filming-check]");
-const filmingInput=form.elements.filmingNoticeAcknowledged;
+const filmingInput=form.elements.filmingConsent;
 const error=document.querySelector("[data-booking-error]");
 const button=form.querySelector("button");
 
@@ -10,7 +10,6 @@ const updateFilmingNotice=()=>{
   const opening=weekend.value==="weekend-01";
   notice.hidden=!opening;
   filmingCheck.hidden=!opening;
-  filmingInput.required=opening;
   if(!opening)filmingInput.checked=false;
 };
 weekend.addEventListener("change",updateFilmingNotice);
@@ -19,7 +18,7 @@ form.addEventListener("submit",async event=>{
   event.preventDefault();
   if(!form.reportValidity())return;
   error.hidden=true;button.disabled=true;button.textContent="Securing your seats…";
-  const input={mode:"public",name:form.elements.name.value,email:form.elements.email.value,weekend:weekend.value,people:form.elements.people.value,adultConfirmed:form.elements.adultConfirmed.checked,privacyAccepted:form.elements.privacyAccepted.checked,filmingNoticeAcknowledged:filmingInput.checked};
+  const input={mode:"public",name:form.elements.name.value,email:form.elements.email.value,weekend:weekend.value,people:form.elements.people.value,adultConfirmed:form.elements.adultConfirmed.checked,privacyAccepted:form.elements.privacyAccepted.checked,filmingConsent:filmingInput.checked};
   try{
     const response=await fetch("/api/checkout",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(input)});
     const result=await response.json();

@@ -36,6 +36,7 @@ alter table public.tavern_seat_claims add column if not exists adult_confirmed_a
 alter table public.tavern_seat_claims add column if not exists privacy_accepted_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists terms_version text;
 alter table public.tavern_seat_claims add column if not exists filming_notice_acknowledged_at timestamptz;
+alter table public.tavern_seat_claims add column if not exists filming_consent_at timestamptz;
 
 create table if not exists public.tavern_request_limits (
   key_hash text primary key,
@@ -131,7 +132,8 @@ grant execute on function public.check_tavern_request_limit(text,integer,integer
 -- Public-sale checkout protection. The first complete party to start checkout
 -- receives a short hold; payment speed never decides who gets the seats.
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,integer);
-create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_notice_acknowledged boolean,p_hold_minutes integer default 30)
+drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,integer);
+create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_hold_minutes integer default 30)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare requested tavern_weekends%rowtype; occupied integer; claim_id uuid; expires_at timestamptz;
 begin
@@ -140,7 +142,6 @@ begin
   if p_terms_version is null or char_length(trim(p_terms_version)) < 1 then raise exception 'missing_terms_version'; end if;
   select * into requested from tavern_weekends where slug=p_weekend_slug and visible=true;
   if not found then raise exception 'unknown_weekend'; end if;
-  if requested.slug='weekend-01' and p_filming_notice_acknowledged is not true then raise exception 'filming_notice_not_acknowledged'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   update tavern_seat_claims set status='expired'
     where status='payment_pending' and hold_expires_at is not null and hold_expires_at<=now();
@@ -150,8 +151,8 @@ begin
     return jsonb_build_object('status','not_available','remaining',greatest(requested.capacity-occupied,0));
   end if;
   expires_at:=now()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
-  insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,consented_at,hold_expires_at,payment_reference,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at)
-  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',now(),expires_at,p_payment_reference,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end)
+  insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,consented_at,hold_expires_at,payment_reference,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at,filming_consent_at)
+  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',now(),expires_at,p_payment_reference,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end,case when requested.slug='weekend-01' and p_filming_consent is true then now() else null end)
   returning id into claim_id;
   return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
 end; $$;
