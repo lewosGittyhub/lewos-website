@@ -3,12 +3,12 @@ import {after,before,beforeEach,test} from "node:test";
 import {createHmac} from "node:crypto";
 import http from "node:http";
 
-let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
+let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let attachFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
 before(async()=>{
   server=http.createServer((request,response)=>{let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{calls.push({url:request.url,body,headers:request.headers});response.setHeader("content-type","application/json");
     if(request.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"||request.url==="/rest/v1/rpc/begin_tavern_checkout")return response.end(JSON.stringify(holdResult));
     if(request.url==="/rest/v1/rpc/check_tavern_request_limit")return response.end("true");
-    if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session")return response.end(JSON.stringify({status:"attached"}));
+    if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session"){if(attachFails){response.statusCode=500;return response.end(JSON.stringify({message:"attach_failed"}));}return response.end(JSON.stringify({status:"attached"}));}
     if(request.url==="/rest/v1/rpc/release_tavern_checkout")return response.end(JSON.stringify({status:"released"}));
     if(request.url==="/rest/v1/rpc/confirm_tavern_payment")return response.end(JSON.stringify(confirmationResult));
     if(request.url==="/v1/checkout/sessions"){if(stripeFails){response.statusCode=500;return response.end(JSON.stringify({error:"failed"}));}return response.end(JSON.stringify({id:"cs_test_1",url:"https://checkout.stripe.test/session"}));}
@@ -21,7 +21,7 @@ before(async()=>{
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
 });
-beforeEach(()=>{calls=[];stripeFails=false;emailRequests=0;holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"};});
+beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
@@ -42,6 +42,7 @@ test("an existing First Access checkout resumes without creating another Stripe 
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
   assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).resumed,true);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
+  const beginBody=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);assert.equal(beginBody.p_adult_confirmed,true);assert.equal(beginBody.p_privacy_accepted,true);
 });
 
 test("a full weekend never creates a Stripe session",async()=>{
@@ -55,6 +56,12 @@ test("a Stripe failure releases the temporary hold",async()=>{
   stripeFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingConsent:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
+});
+
+test("an attachment failure never returns a payable Stripe link and releases the hold",async()=>{
+  attachFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
 });
 
 test("public checkout requires adult and privacy confirmations",async()=>{
@@ -75,6 +82,20 @@ test("public checkout remains closed before its configured opening",async()=>{
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:1,adultConfirmed:true,privacyAccepted:true})});
   assert.equal(result.statusCode,403);assert.equal(JSON.parse(result.body).error,"booking_not_open");assert.equal(calls.length,0);
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
+});
+
+test("all payment routes remain closed while the global payment gate is off",async()=>{
+  process.env.TAVERN_PAYMENTS_ENABLED="false";
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,503);assert.equal(calls.length,0);
+});
+
+test("an invalid public opening timestamp keeps public booking closed",async()=>{
+  process.env.PUBLIC_BOOKING_OPENS_AT="not-a-date";
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:1,adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,403);assert.equal(calls.length,0);
 });
 
 test("Weekend 01 can be booked when optional filming consent is declined",async()=>{

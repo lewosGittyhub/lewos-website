@@ -3,7 +3,7 @@ const token=params.get("token")||"";
 const form=document.querySelector("#confirm");
 const progress=document.querySelector("#progress");
 const error=document.querySelector("#error");
-const fail=()=>{progress.hidden=true;form.hidden=true;error.style.display="block";};
+const fail=()=>{progress.hidden=true;form.hidden=true;error.style.display="block";error.focus();};
 if(!token)fail();
 form.addEventListener("submit",async event=>{
   event.preventDefault();

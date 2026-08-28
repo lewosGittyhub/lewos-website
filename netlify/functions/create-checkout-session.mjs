@@ -69,9 +69,7 @@ export const handler=async event=>{
       const filmingConsent=input.filmingConsent===true;
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
       if(!adultConfirmed||!privacyAccepted)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_hold_minutes:40});
-      // The payer's confirmations are recorded when the checkout session is attached.
-      hold={...hold,checkoutConfirmations:{adultConfirmed,privacyAccepted,filmingConsent}};
+      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:"booking-2026-09-02",p_filming_consent:filmingConsent,p_hold_minutes:40});
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -96,7 +94,7 @@ export const handler=async event=>{
     try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
     return json(503,{error:"checkout_unavailable"});
   }
-  try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url,p_adult_confirmed:input.adultConfirmed===true,p_privacy_accepted:input.privacyAccepted===true,p_terms_version:"booking-2026-09-02",p_filming_consent:input.filmingConsent===true});}
-  catch(error){console.error("Checkout session attachment error",error);}
+  try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url});}
+  catch(error){console.error("Checkout session attachment error",error);try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}return json(503,{error:"checkout_unavailable"});}
   return json(200,{status:"checkout_ready",checkoutUrl:session.url,holdExpiresAt:hold.holdExpiresAt});
 };
