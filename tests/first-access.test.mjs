@@ -5,6 +5,8 @@ import http from "node:http";
 let registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};
 let emailRequests=0;
 let rateAllowed=true;
+let registrationError="";
+let rateBodies=[];
 let server;
 const nativeFetch=globalThis.fetch;
 
@@ -15,8 +17,11 @@ before(async()=>{
     request.on("end",()=>{
       response.setHeader("content-type","application/json");
       if(request.url==="/rest/v1/rpc/get_tavern_availability") return response.end(JSON.stringify([{slug:"weekend-01",label:"Weekend 01",dateLabel:"30 Oct to 2 Nov 2026",capacity:6,remaining:2}]));
-      if(request.url==="/rest/v1/rpc/check_tavern_request_limit") return response.end(JSON.stringify(rateAllowed));
-      if(request.url==="/rest/v1/rpc/register_tavern_interest") return response.end(JSON.stringify(registrationResult));
+      if(request.url==="/rest/v1/rpc/check_tavern_request_limit"){rateBodies.push(JSON.parse(body));return response.end(JSON.stringify(rateAllowed));}
+      if(request.url==="/rest/v1/rpc/register_tavern_interest"){
+        if(registrationError){response.statusCode=400;return response.end(JSON.stringify({code:"P0001",message:registrationError}));}
+        return response.end(JSON.stringify(registrationResult));
+      }
       if(request.url==="/emails"){emailRequests+=1;return response.end(JSON.stringify({id:"email-1"}));}
       response.statusCode=404;response.end("{}");
     });
@@ -31,7 +36,7 @@ before(async()=>{
   process.env.RATE_LIMIT_SECRET="a-long-random-test-secret";
 });
 
-beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
+beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 const post=(body,headers={"content-type":"application/json",accept:"application/json"})=>({httpMethod:"POST",headers,body:JSON.stringify(body)});
@@ -90,6 +95,23 @@ test("accepts Netlify-style capitalised headers",async()=>{
   const {handler}=await import("../netlify/functions/first-access.mjs");
   const response=await handler(post(valid,{"Content-Type":"application/json","Accept":"application/json"}));
   assert.equal(response.statusCode,200);
+});
+
+test("uses separate rate limits for IP address and email address",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  await handler(post(valid));
+  assert.equal(rateBodies.length,2);
+  assert.equal(rateBodies[0].p_limit,12);
+  assert.equal(rateBodies[1].p_limit,5);
+  assert.notEqual(rateBodies[0].p_key_hash,rateBodies[1].p_key_hash);
+});
+
+test("returns a customer input error instead of a service outage",async()=>{
+  registrationError="email_claim_limit";
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const response=await handler(post(valid));
+  assert.equal(response.statusCode,422);
+  assert.equal(JSON.parse(response.body).error,"email_claim_limit");
 });
 
 test("stops rapid automated requests before claiming seats",async()=>{

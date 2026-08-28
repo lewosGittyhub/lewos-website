@@ -5,6 +5,12 @@ const tokenHash=token=>createHash("sha256").update(token).digest("hex");
 const emailOk=email=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
 const clientAddress=event=>getHeader(event,"x-nf-client-connection-ip")||getHeader(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
+const publicBookingIsOpen=()=>{
+  const value=process.env.PUBLIC_BOOKING_OPENS_AT;
+  if(!value)return false;
+  const opensAt=Date.parse(value);
+  return Number.isFinite(opensAt)&&Date.now()>=opensAt;
+};
 
 const rpc=async(name,body)=>{
   const response=await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:"POST",headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,authorization:`Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,"content-type":"application/json"},body:JSON.stringify(body)});
@@ -36,24 +42,36 @@ const createStripeSession=async({reference,name,email,seats,weekendLabel})=>{
 
 export const handler=async event=>{
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
+  if(process.env.TAVERN_PAYMENTS_ENABLED!=="true")return json(503,{error:"checkout_not_open"});
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.STRIPE_SECRET_KEY)return json(503,{error:"checkout_not_open"});
   let input;
   try{input=JSON.parse(event.body||"{}");}catch{return json(400,{error:"invalid_request"});}
   const mode=input.mode==="public"?"public":"first_access";
+  if(mode==="public"&&!publicBookingIsOpen())return json(403,{error:"booking_not_open"});
   let reference=randomUUID();
   const limiterIdentity=mode==="first_access"?String(input.token||""):String(input.email||"").trim().toLowerCase();
   if(!process.env.RATE_LIMIT_SECRET)return json(503,{error:"checkout_not_open"});
   try{
-    const key=createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET}|checkout|${clientAddress(event)}|${limiterIdentity}`).digest("hex");
-    const allowed=await rpc("check_tavern_request_limit",{p_key_hash:key,p_limit:5,p_window_minutes:15});
-    if(!allowed)return json(429,{error:"too_many_requests"});
+    const ipKey=createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET}|checkout|ip|${clientAddress(event)}`).digest("hex");
+    const identityKey=createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET}|checkout|identity|${limiterIdentity}`).digest("hex");
+    const [ipAllowed,identityAllowed]=await Promise.all([
+      rpc("check_tavern_request_limit",{p_key_hash:ipKey,p_limit:12,p_window_minutes:15}),
+      rpc("check_tavern_request_limit",{p_key_hash:identityKey,p_limit:5,p_window_minutes:15})
+    ]);
+    if(!ipAllowed||!identityAllowed)return json(429,{error:"too_many_requests"});
   }catch(error){console.error("Checkout rate limit error",error);return json(503,{error:"checkout_unavailable"});}
   let hold;
   try{
     if(mode==="first_access"){
       const token=String(input.token||"");
+      const adultConfirmed=input.adultConfirmed===true;
+      const privacyAccepted=input.privacyAccepted===true;
+      const filmingConsent=input.filmingConsent===true;
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
+      if(!adultConfirmed||!privacyAccepted)return json(400,{error:"confirmations_required"});
       hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_hold_minutes:40});
+      // The payer's confirmations are recorded when the checkout session is attached.
+      hold={...hold,checkoutConfirmations:{adultConfirmed,privacyAccepted,filmingConsent}};
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -78,7 +96,7 @@ export const handler=async event=>{
     try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
     return json(503,{error:"checkout_unavailable"});
   }
-  try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url});}
+  try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url,p_adult_confirmed:input.adultConfirmed===true,p_privacy_accepted:input.privacyAccepted===true,p_terms_version:"booking-2026-09-02",p_filming_consent:input.filmingConsent===true});}
   catch(error){console.error("Checkout session attachment error",error);}
   return json(200,{status:"checkout_ready",checkoutUrl:session.url,holdExpiresAt:hold.holdExpiresAt});
 };

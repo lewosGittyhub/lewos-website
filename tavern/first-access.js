@@ -59,7 +59,9 @@
       const unavailable=error.message==='booking_service_not_configured'||error.message==='booking_service_unavailable';
       const tooMany=error.message==='too_many_requests';
       const tooLarge=error.message==='featured_party_too_large';
-      show(unavailable?'Seat registration is temporarily unavailable. Please try again shortly or contact Robert directly.':tooMany?'Too many requests were sent in a short time. Your existing request is safe; please wait fifteen minutes before trying again.':tooLarge?'Featured weekends have six seats. For a larger group, choose a private Tavern.':'We could not check the seats. Please review your details and try again.','error');
+      const privateTooSmall=error.message==='private_party_too_small';
+      const emailLimit=error.message==='email_claim_limit';
+      show(unavailable?'Seat registration is temporarily unavailable. Please try again shortly or contact Robert directly.':tooMany?'Too many requests were sent in a short time. Your existing request is safe; please wait fifteen minutes before trying again.':tooLarge?'Featured weekends have six seats. For a larger group, choose a private Tavern in the same weekend menu.':privateTooSmall?'A private Tavern starts with four players. Bring your group to at least four, or choose one of the featured six-seat weekends.':emailLimit?'This email address already has seats held for the maximum number of featured weekends. Contact Robert if you need to change one of those requests.':'We could not check the seats. Please review your details and try again.','error');
     }
     finally{submit.disabled=false;submit.textContent='Claim my seats →';}
   });

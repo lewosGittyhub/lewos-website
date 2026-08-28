@@ -58,13 +58,15 @@ on conflict (slug) do update set label=excluded.label,date_label=excluded.date_l
 
 create or replace function public.register_tavern_interest(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_message text default null)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare requested tavern_weekends%rowtype; alternative tavern_weekends%rowtype; existing_claim tavern_seat_claims%rowtype; occupied integer; claim_id uuid;
+declare requested tavern_weekends%rowtype; alternative tavern_weekends%rowtype; existing_claim tavern_seat_claims%rowtype; occupied integer; active_claims integer; claim_id uuid;
 begin
   if char_length(trim(p_name)) < 2 or char_length(trim(p_name)) > 120 then raise exception 'invalid_name'; end if;
   if p_email !~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' then raise exception 'invalid_email'; end if;
   if p_party_size < 1 or p_party_size > 12 then raise exception 'invalid_party_size'; end if;
   if p_weekend_slug='private' then
     if p_party_size < 4 then raise exception 'private_party_too_small'; end if;
+    select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and status='private_inquiry' order by created_at desc limit 1;
+    if found then return jsonb_build_object('status','private_inquiry','claimId',existing_claim.id,'duplicate',true); end if;
     insert into tavern_seat_claims(name,email,party_size,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),now()) returning id into claim_id;
     return jsonb_build_object('status','private_inquiry','claimId',claim_id);
   end if;
@@ -76,6 +78,8 @@ begin
   if found then
     return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true);
   end if;
+  select count(*)::integer into active_claims from tavern_seat_claims where lower(email)=lower(trim(p_email)) and status in('first_access_held','payment_pending','paid');
+  if active_claims >= 2 then raise exception 'email_claim_limit'; end if;
   select coalesce(sum(party_size),0)::integer into occupied from tavern_seat_claims where assigned_weekend_id=requested.id and (status in('first_access_held','paid') or (status='payment_pending' and (hold_expires_at is null or hold_expires_at>now())));
   if requested.capacity-occupied >= p_party_size then
     insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'first_access_held',nullif(trim(p_message),''),now()) returning id into claim_id;
@@ -222,18 +226,28 @@ end; $$;
 revoke all on function public.begin_tavern_first_access_checkout(text,text,integer) from public, anon, authenticated;
 grant execute on function public.begin_tavern_first_access_checkout(text,text,integer) to service_role;
 
-create or replace function public.attach_tavern_checkout_session(p_payment_reference text,p_checkout_session_id text,p_checkout_session_url text)
+drop function if exists public.attach_tavern_checkout_session(text,text,text);
+create or replace function public.attach_tavern_checkout_session(p_payment_reference text,p_checkout_session_id text,p_checkout_session_url text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare claim_id uuid;
 begin
-  update tavern_seat_claims set checkout_session_id=p_checkout_session_id,checkout_session_url=p_checkout_session_url
+  if p_adult_confirmed is not true or p_privacy_accepted is not true then raise exception 'confirmations_required'; end if;
+  if p_terms_version is null or char_length(trim(p_terms_version))<1 then raise exception 'missing_terms_version'; end if;
+  update tavern_seat_claims set
+      checkout_session_id=p_checkout_session_id,
+      checkout_session_url=p_checkout_session_url,
+      adult_confirmed_at=coalesce(adult_confirmed_at,now()),
+      privacy_accepted_at=coalesce(privacy_accepted_at,now()),
+      terms_version=coalesce(terms_version,trim(p_terms_version)),
+      filming_notice_acknowledged_at=case when assigned_weekend_id=(select id from tavern_weekends where slug='weekend-01') then coalesce(filming_notice_acknowledged_at,now()) else filming_notice_acknowledged_at end,
+      filming_consent_at=case when assigned_weekend_id=(select id from tavern_weekends where slug='weekend-01') and p_filming_consent is true then coalesce(filming_consent_at,now()) else filming_consent_at end
     where payment_reference=p_payment_reference and status='payment_pending'
     returning id into claim_id;
   if claim_id is null then return jsonb_build_object('status','unknown_payment'); end if;
   return jsonb_build_object('status','attached','claimId',claim_id);
 end; $$;
-revoke all on function public.attach_tavern_checkout_session(text,text,text) from public, anon, authenticated;
-grant execute on function public.attach_tavern_checkout_session(text,text,text) to service_role;
+revoke all on function public.attach_tavern_checkout_session(text,text,text,boolean,boolean,text,boolean) from public, anon, authenticated;
+grant execute on function public.attach_tavern_checkout_session(text,text,text,boolean,boolean,text,boolean) to service_role;
 
 create or replace function public.release_tavern_checkout(p_payment_reference text)
 returns jsonb language plpgsql security definer set search_path=public as $$

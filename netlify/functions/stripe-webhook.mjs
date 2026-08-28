@@ -46,6 +46,10 @@ export const handler=async event=>{
   try{
     const result=await confirmPayment(reference,new Date(Number(stripeEvent.created)*1000).toISOString());
     if(result.status==="paid"&&!result.duplicate)await sendBookingEmail(result);
+    if(result.status!=="paid"){
+      console.error("Paid Stripe session could not be confirmed",{reference,status:result.status,claimId:result.claimId});
+      return response(500,{error:"paid_booking_requires_attention"});
+    }
     return response(200,{received:true,result});
   }catch(error){console.error("Payment confirmation error",error);return response(500,{error:"confirmation_failed"});}
 };

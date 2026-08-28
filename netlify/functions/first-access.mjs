@@ -6,7 +6,14 @@ const header=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.t
 const parseBody=event=>header(event,"content-type").includes("application/json")?JSON.parse(event.body||"{}"):Object.fromEntries(new URLSearchParams(event.body||""));
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const clientAddress=event=>header(event,"x-nf-client-connection-ip")||header(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
-const rateKey=(event,email)=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${clientAddress(event)}|${email}`).digest("hex");
+const rateKey=value=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${value}`).digest("hex");
+const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","email_claim_limit"]);
+const databaseError=async response=>{
+  let detail={};
+  try{detail=JSON.parse(await response.text());}catch{}
+  const message=String(detail.message||"").trim();
+  return knownInputErrors.has(message)?message:null;
+};
 
 const sendGuestEmail=async({email,name,people,result})=>{
   const apiKey=process.env.RESEND_API_KEY;
@@ -58,14 +65,25 @@ export const handler=async event=>{
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
   if(!process.env.RATE_LIMIT_SECRET) return json(503,{error:"booking_service_not_configured"});
   try{
-    const limitResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/check_tavern_request_limit`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_key_hash:rateKey(event,email),p_limit:5,p_window_minutes:15})});
-    if(!limitResponse.ok) return json(503,{error:"booking_service_unavailable"});
-    if(!(await limitResponse.json())) return json(429,{error:"too_many_requests"});
+    const checks=[
+      {p_key_hash:rateKey(`ip|${clientAddress(event)}`),p_limit:12,p_window_minutes:15},
+      {p_key_hash:rateKey(`email|${email}`),p_limit:5,p_window_minutes:15}
+    ];
+    for(const check of checks){
+      const limitResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/check_tavern_request_limit`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify(check)});
+      if(!limitResponse.ok) return json(503,{error:"booking_service_unavailable"});
+      if(!(await limitResponse.json())) return json(429,{error:"too_many_requests"});
+    }
   }catch(error){console.error("Rate limit connection error",error);return json(503,{error:"booking_service_unavailable"});}
   let result;
   try{
     const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message})});
-    if(!response.ok){console.error("First Access database error",response.status,await response.text());return json(503,{error:"booking_service_unavailable"});}
+    if(!response.ok){
+      const inputError=await databaseError(response);
+      if(inputError)return json(422,{error:inputError});
+      console.error("First Access database error",response.status);
+      return json(503,{error:"booking_service_unavailable"});
+    }
     result=await response.json();
   }catch(error){console.error("First Access connection error",error);return json(503,{error:"booking_service_unavailable"});}
   const emailSent=result.duplicate?false:await sendGuestEmail({email,name,people,result});
