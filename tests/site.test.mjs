@@ -82,3 +82,14 @@ test("payments remain gated on explicit configuration and a reviewed code versio
   assert.match(source,/PUBLISHED_TERMS_VERSION=""/);
   assert.match(source,/BOOKING_TERMS_VERSION/);
 });
+
+test("First Access and paid-booking wording describe the same legal moment",async()=>{
+  const legal=await read(path.join(root,"legal/index.html"));
+  const travel=await read(path.join(root,"travel-information/index.html"));
+  const terms=await read(path.join(root,"terms/index.html"));
+  assert.match(legal,/First Access can temporarily set aside the requested seats/);
+  assert.match(legal,/paid booking becomes binding only after successful payment/);
+  assert.match(travel,/group booking becomes binding after successful payment/);
+  assert.match(terms,/booking becomes binding when payment is successfully accepted/);
+  assert.doesNotMatch(legal,/expression of interest only/i);
+});
