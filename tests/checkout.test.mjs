@@ -21,8 +21,9 @@ before(async()=>{
   process.env.SUPABASE_URL=base;process.env.SUPABASE_SERVICE_ROLE_KEY="service";process.env.STRIPE_SECRET_KEY="sk_test_fake";process.env.STRIPE_WEBHOOK_SECRET="whsec_test";process.env.RESEND_API_KEY="re_test";process.env.TAVERN_FROM_EMAIL="Tavern <test@example.com>";process.env.RATE_LIMIT_SECRET="rate-test-secret";process.env.URL="https://lewos.co";
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.BOOKING_TERMS_VERSION="booking-test-v1";
 });
-beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"};});
+beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
@@ -87,6 +88,13 @@ test("public checkout remains closed before its configured opening",async()=>{
 
 test("all payment routes remain closed while the global payment gate is off",async()=>{
   process.env.TAVERN_PAYMENTS_ENABLED="false";
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,503);assert.equal(calls.length,0);
+});
+
+test("payments remain closed until a final terms version is configured",async()=>{
+  delete process.env.BOOKING_TERMS_VERSION;
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.length,0);

@@ -47,7 +47,8 @@ const expireStripeSession=async sessionId=>{
 export const handler=async event=>{
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
   if(process.env.TAVERN_PAYMENTS_ENABLED!=="true")return json(503,{error:"checkout_not_open"});
-  if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.STRIPE_SECRET_KEY)return json(503,{error:"checkout_not_open"});
+  const termsVersion=String(process.env.BOOKING_TERMS_VERSION||"").trim();
+  if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.STRIPE_SECRET_KEY||!termsVersion)return json(503,{error:"checkout_not_open"});
   let input;
   try{input=JSON.parse(event.body||"{}");}catch{return json(400,{error:"invalid_request"});}
   const mode=input.mode==="public"?"public":"first_access";
@@ -73,7 +74,7 @@ export const handler=async event=>{
       const filmingConsent=input.filmingConsent===true;
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
       if(!adultConfirmed||!privacyAccepted)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:"booking-2026-09-02",p_filming_consent:filmingConsent,p_hold_minutes:40});
+      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_hold_minutes:40});
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -83,7 +84,7 @@ export const handler=async event=>{
       const privacyAccepted=input.privacyAccepted===true;
       const filmingConsent=input.filmingConsent===true;
       if(name.length<2||name.length>120||!emailOk(email)||!["weekend-01","weekend-02"].includes(weekend)||!Number.isInteger(people)||people<1||people>6||!adultConfirmed||!privacyAccepted)return json(400,{error:"invalid_details"});
-      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:"booking-2026-09-02",p_filming_consent:filmingConsent,p_hold_minutes:40});
+      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_hold_minutes:40});
       hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"Weekend 01 · 30 Oct to 2 Nov 2026":"Weekend 02 · 6 to 9 Nov 2026"};
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}
