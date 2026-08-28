@@ -1,2 +1,4 @@
 /api/first-access  /.netlify/functions/first-access  200
+/api/checkout  /.netlify/functions/create-checkout-session  200
+/api/stripe-webhook  /.netlify/functions/stripe-webhook  200
 https://lewos.netlify.app/*  https://lewos.co/:splat  301!

@@ -28,6 +28,10 @@ create table if not exists public.tavern_seat_claims (
 
 alter table public.tavern_seat_claims add column if not exists hold_expires_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists payment_reference text;
+alter table public.tavern_seat_claims add column if not exists checkout_token_hash text;
+alter table public.tavern_seat_claims add column if not exists invitation_expires_at timestamptz;
+alter table public.tavern_seat_claims add column if not exists checkout_session_id text;
+alter table public.tavern_seat_claims add column if not exists checkout_session_url text;
 
 create table if not exists public.tavern_request_limits (
   key_hash text primary key,
@@ -37,6 +41,8 @@ create table if not exists public.tavern_request_limits (
 
 create index if not exists tavern_seat_claims_assigned_status_idx on public.tavern_seat_claims (assigned_weekend_id, status);
 create unique index if not exists tavern_seat_claims_payment_reference_idx on public.tavern_seat_claims (payment_reference) where payment_reference is not null;
+create unique index if not exists tavern_seat_claims_checkout_token_hash_idx on public.tavern_seat_claims (checkout_token_hash) where checkout_token_hash is not null;
+create unique index if not exists tavern_seat_claims_checkout_session_id_idx on public.tavern_seat_claims (checkout_session_id) where checkout_session_id is not null;
 alter table public.tavern_weekends enable row level security;
 alter table public.tavern_seat_claims enable row level security;
 alter table public.tavern_request_limits enable row level security;
@@ -78,7 +84,7 @@ begin
   insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,'future_weekend_interest',nullif(trim(p_message),''),now()) returning id into claim_id;
   return jsonb_build_object('status','future_weekend_interest','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',p_party_size);
 end; $$;
-revoke all on function public.register_tavern_interest(text,text,integer,text,text) from public;
+revoke all on function public.register_tavern_interest(text,text,integer,text,text) from public, anon, authenticated;
 grant execute on function public.register_tavern_interest(text,text,integer,text,text) to service_role;
 
 create or replace function public.get_tavern_availability()
@@ -99,7 +105,7 @@ returns jsonb language sql security definer set search_path=public as $$
   ) c on c.assigned_weekend_id=w.id
   where w.visible=true;
 $$;
-revoke all on function public.get_tavern_availability() from public;
+revoke all on function public.get_tavern_availability() from public, anon, authenticated;
 grant execute on function public.get_tavern_availability() to service_role;
 
 create or replace function public.check_tavern_request_limit(p_key_hash text,p_limit integer default 5,p_window_minutes integer default 15)
@@ -115,7 +121,7 @@ begin
   returning attempts into current_attempts;
   return current_attempts <= p_limit;
 end; $$;
-revoke all on function public.check_tavern_request_limit(text,integer,integer) from public;
+revoke all on function public.check_tavern_request_limit(text,integer,integer) from public, anon, authenticated;
 grant execute on function public.check_tavern_request_limit(text,integer,integer) to service_role;
 
 -- Public-sale checkout protection. The first complete party to start checkout
@@ -141,22 +147,99 @@ begin
   returning id into claim_id;
   return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
 end; $$;
-revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,integer) from public;
+revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,integer) from public, anon, authenticated;
 grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,integer) to service_role;
 
-create or replace function public.confirm_tavern_payment(p_payment_reference text)
+drop function if exists public.confirm_tavern_payment(text);
+create or replace function public.confirm_tavern_payment(p_payment_reference text,p_paid_at timestamptz)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare claim tavern_seat_claims%rowtype; weekend tavern_weekends%rowtype;
+begin
+  select * into claim from tavern_seat_claims where payment_reference=p_payment_reference for update;
+  if not found then return jsonb_build_object('status','unknown_payment'); end if;
+  select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
+  if claim.status='paid' then return jsonb_build_object('status','paid','claimId',claim.id,'duplicate',true); end if;
+  if claim.status not in('payment_pending','expired') or claim.hold_expires_at is null or p_paid_at is null or p_paid_at>claim.hold_expires_at then
+    update tavern_seat_claims set status='expired' where id=claim.id and status='payment_pending';
+    return jsonb_build_object('status','expired','claimId',claim.id);
+  end if;
+  update tavern_seat_claims set status='paid',hold_expires_at=null where id=claim.id;
+  return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label);
+end; $$;
+revoke all on function public.confirm_tavern_payment(text,timestamptz) from public, anon, authenticated;
+grant execute on function public.confirm_tavern_payment(text,timestamptz) to service_role;
+
+-- First Access invitations are issued only when the private payment window opens.
+-- Store a hash, never the guest's raw invitation token.
+create or replace function public.issue_tavern_checkout_invitation(p_claim_id uuid,p_token_hash text,p_window_hours integer default 24)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare claim tavern_seat_claims%rowtype; expires_at timestamptz;
+begin
+  if p_token_hash is null or char_length(p_token_hash)<>64 then raise exception 'invalid_token_hash'; end if;
+  select * into claim from tavern_seat_claims where id=p_claim_id for update;
+  if not found then return jsonb_build_object('status','unknown_claim'); end if;
+  if claim.status<>'first_access_held' then return jsonb_build_object('status','claim_not_eligible'); end if;
+  expires_at:=now()+make_interval(hours=>greatest(1,least(p_window_hours,72)));
+  update tavern_seat_claims
+    set checkout_token_hash=p_token_hash,invitation_expires_at=expires_at
+    where id=claim.id;
+  return jsonb_build_object('status','invited','claimId',claim.id,'expiresAt',expires_at,'seats',claim.party_size);
+end; $$;
+revoke all on function public.issue_tavern_checkout_invitation(uuid,text,integer) from public, anon, authenticated;
+grant execute on function public.issue_tavern_checkout_invitation(uuid,text,integer) to service_role;
+
+create or replace function public.begin_tavern_first_access_checkout(p_token_hash text,p_payment_reference text,p_hold_minutes integer default 30)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare claim tavern_seat_claims%rowtype; weekend tavern_weekends%rowtype; expires_at timestamptz;
+begin
+  perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
+  select * into claim from tavern_seat_claims where checkout_token_hash=p_token_hash for update;
+  if not found then return jsonb_build_object('status','invalid_invitation'); end if;
+  if claim.status='paid' then return jsonb_build_object('status','already_paid'); end if;
+  if claim.invitation_expires_at is null or claim.invitation_expires_at<=now() then
+    update tavern_seat_claims set status='expired' where id=claim.id and status in('first_access_held','payment_pending');
+    return jsonb_build_object('status','invitation_expired');
+  end if;
+  select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
+  if claim.status='payment_pending' and claim.hold_expires_at>now() then
+    return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',claim.hold_expires_at,'paymentReference',claim.payment_reference,'checkoutUrl',claim.checkout_session_url);
+  end if;
+  if claim.status not in('first_access_held','payment_pending') then return jsonb_build_object('status','claim_not_eligible'); end if;
+  expires_at:=now()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
+  update tavern_seat_claims set status='payment_pending',hold_expires_at=expires_at,payment_reference=p_payment_reference
+    where id=claim.id;
+  return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',expires_at);
+end; $$;
+revoke all on function public.begin_tavern_first_access_checkout(text,text,integer) from public, anon, authenticated;
+grant execute on function public.begin_tavern_first_access_checkout(text,text,integer) to service_role;
+
+create or replace function public.attach_tavern_checkout_session(p_payment_reference text,p_checkout_session_id text,p_checkout_session_url text)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare claim_id uuid;
+begin
+  update tavern_seat_claims set checkout_session_id=p_checkout_session_id,checkout_session_url=p_checkout_session_url
+    where payment_reference=p_payment_reference and status='payment_pending'
+    returning id into claim_id;
+  if claim_id is null then return jsonb_build_object('status','unknown_payment'); end if;
+  return jsonb_build_object('status','attached','claimId',claim_id);
+end; $$;
+revoke all on function public.attach_tavern_checkout_session(text,text,text) from public, anon, authenticated;
+grant execute on function public.attach_tavern_checkout_session(text,text,text) to service_role;
+
+create or replace function public.release_tavern_checkout(p_payment_reference text)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare claim tavern_seat_claims%rowtype;
 begin
   select * into claim from tavern_seat_claims where payment_reference=p_payment_reference for update;
   if not found then return jsonb_build_object('status','unknown_payment'); end if;
-  if claim.status='paid' then return jsonb_build_object('status','paid','claimId',claim.id,'duplicate',true); end if;
-  if claim.status<>'payment_pending' or claim.hold_expires_at<=now() then
-    update tavern_seat_claims set status='expired' where id=claim.id and status='payment_pending';
-    return jsonb_build_object('status','expired','claimId',claim.id);
+  if claim.status='payment_pending' then
+    update tavern_seat_claims set
+      status=case when checkout_token_hash is not null and invitation_expires_at>now() then 'first_access_held' else 'cancelled' end,
+      hold_expires_at=null,payment_reference=null,checkout_session_id=null,checkout_session_url=null
+      where id=claim.id;
+    return jsonb_build_object('status','released','claimId',claim.id);
   end if;
-  update tavern_seat_claims set status='paid',hold_expires_at=null where id=claim.id;
-  return jsonb_build_object('status','paid','claimId',claim.id);
+  return jsonb_build_object('status',claim.status,'claimId',claim.id);
 end; $$;
-revoke all on function public.confirm_tavern_payment(text) from public;
-grant execute on function public.confirm_tavern_payment(text) to service_role;
+revoke all on function public.release_tavern_checkout(text) from public, anon, authenticated;
+grant execute on function public.release_tavern_checkout(text) to service_role;

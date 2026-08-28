@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import {after,before,beforeEach,test} from "node:test";
+import {createHmac} from "node:crypto";
+import http from "node:http";
+
+let calls=[];let holdResult;let stripeFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
+before(async()=>{
+  server=http.createServer((request,response)=>{let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{calls.push({url:request.url,body,headers:request.headers});response.setHeader("content-type","application/json");
+    if(request.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"||request.url==="/rest/v1/rpc/begin_tavern_checkout")return response.end(JSON.stringify(holdResult));
+    if(request.url==="/rest/v1/rpc/check_tavern_request_limit")return response.end("true");
+    if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session")return response.end(JSON.stringify({status:"attached"}));
+    if(request.url==="/rest/v1/rpc/release_tavern_checkout")return response.end(JSON.stringify({status:"released"}));
+    if(request.url==="/rest/v1/rpc/confirm_tavern_payment")return response.end(JSON.stringify({status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"}));
+    if(request.url==="/v1/checkout/sessions"){if(stripeFails){response.statusCode=500;return response.end(JSON.stringify({error:"failed"}));}return response.end(JSON.stringify({id:"cs_test_1",url:"https://checkout.stripe.test/session"}));}
+    if(request.url==="/emails"){emailRequests+=1;return response.end(JSON.stringify({id:"email-1"}));}
+    response.statusCode=404;response.end("{}");});});
+  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  const base=`http://127.0.0.1:${server.address().port}`;
+  globalThis.fetch=(input,options)=>nativeFetch(String(input).startsWith("https://api.stripe.com/")?`${base}/v1/checkout/sessions`:String(input).startsWith("https://api.resend.com/")?`${base}/emails`:input,options);
+  process.env.SUPABASE_URL=base;process.env.SUPABASE_SERVICE_ROLE_KEY="service";process.env.STRIPE_SECRET_KEY="sk_test_fake";process.env.STRIPE_WEBHOOK_SECRET="whsec_test";process.env.RESEND_API_KEY="re_test";process.env.TAVERN_FROM_EMAIL="Tavern <test@example.com>";process.env.RATE_LIMIT_SECRET="rate-test-secret";process.env.URL="https://lewos.co";
+});
+beforeEach(()=>{calls=[];stripeFails=false;emailRequests=0;holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};});
+after(()=>{globalThis.fetch=nativeFetch;server.close();});
+
+test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456"})});
+  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).checkoutUrl,"https://checkout.stripe.test/session");
+  assert.equal(calls[0].url,"/rest/v1/rpc/check_tavern_request_limit");assert.equal(calls[1].url,"/rest/v1/rpc/begin_tavern_first_access_checkout");assert.equal(calls[2].url,"/v1/checkout/sessions");assert.equal(calls[3].url,"/rest/v1/rpc/attach_tavern_checkout_session");
+});
+
+test("public checkout holds the complete group before contacting Stripe",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:3})});
+  assert.equal(result.statusCode,200);assert.equal(calls[1].url,"/rest/v1/rpc/begin_tavern_checkout");
+});
+
+test("an existing First Access checkout resumes without creating another Stripe session",async()=>{
+  holdResult={...holdResult,checkoutUrl:"https://checkout.stripe.test/existing"};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456"})});
+  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).resumed,true);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
+});
+
+test("a full weekend never creates a Stripe session",async()=>{
+  holdResult={status:"not_available",remaining:2};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3})});
+  assert.equal(result.statusCode,409);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
+});
+
+test("a Stripe failure releases the temporary hold",async()=>{
+  stripeFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1})});
+  assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
+});
+
+test("webhook rejects an invalid signature",async()=>{
+  const {handler}=await import("../netlify/functions/stripe-webhook.mjs");
+  const result=await handler({httpMethod:"POST",headers:{"stripe-signature":"t=1,v1=no"},body:"{}"});assert.equal(result.statusCode,400);
+});
+
+test("paid Stripe webhook confirms the matching claim",async()=>{
+  const {handler}=await import("../netlify/functions/stripe-webhook.mjs");
+  const body=JSON.stringify({type:"checkout.session.completed",created:Math.floor(Date.now()/1000),data:{object:{payment_status:"paid",metadata:{payment_reference:"payment-1"}}}});
+  const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
+  const result=await handler({httpMethod:"POST",headers:{"Stripe-Signature":`t=${timestamp},v1=${signature}`},body});
+  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).result.status,"paid");assert.equal(emailRequests,1);
+});
+
+test("an expired Stripe session releases its seats",async()=>{
+  const {handler}=await import("../netlify/functions/stripe-webhook.mjs");
+  const body=JSON.stringify({type:"checkout.session.expired",created:Math.floor(Date.now()/1000),data:{object:{metadata:{payment_reference:"payment-1"}}}});
+  const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
+  const result=await handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=${signature}`},body});
+  assert.equal(result.statusCode,200);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
+});
