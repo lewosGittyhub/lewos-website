@@ -12,11 +12,12 @@ before(async()=>{
     if(request.url==="/rest/v1/rpc/release_tavern_checkout")return response.end(JSON.stringify({status:"released"}));
     if(request.url==="/rest/v1/rpc/confirm_tavern_payment")return response.end(JSON.stringify(confirmationResult));
     if(request.url==="/v1/checkout/sessions"){if(stripeFails){response.statusCode=500;return response.end(JSON.stringify({error:"failed"}));}return response.end(JSON.stringify({id:"cs_test_1",url:"https://checkout.stripe.test/session"}));}
+    if(request.url==="/v1/checkout/sessions/cs_test_1/expire")return response.end(JSON.stringify({id:"cs_test_1",status:"expired"}));
     if(request.url==="/emails"){emailRequests+=1;return response.end(JSON.stringify({id:"email-1"}));}
     response.statusCode=404;response.end("{}");});});
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
-  globalThis.fetch=(input,options)=>nativeFetch(String(input).startsWith("https://api.stripe.com/")?`${base}/v1/checkout/sessions`:String(input).startsWith("https://api.resend.com/")?`${base}/emails`:input,options);
+  globalThis.fetch=(input,options)=>{const url=String(input);if(url==="https://api.stripe.com/v1/checkout/sessions")return nativeFetch(`${base}/v1/checkout/sessions`,options);if(url.startsWith("https://api.stripe.com/v1/checkout/sessions/"))return nativeFetch(`${base}${new URL(url).pathname}`,options);if(url.startsWith("https://api.resend.com/"))return nativeFetch(`${base}/emails`,options);return nativeFetch(input,options);};
   process.env.SUPABASE_URL=base;process.env.SUPABASE_SERVICE_ROLE_KEY="service";process.env.STRIPE_SECRET_KEY="sk_test_fake";process.env.STRIPE_WEBHOOK_SECRET="whsec_test";process.env.RESEND_API_KEY="re_test";process.env.TAVERN_FROM_EMAIL="Tavern <test@example.com>";process.env.RATE_LIMIT_SECRET="rate-test-secret";process.env.URL="https://lewos.co";
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
@@ -61,7 +62,7 @@ test("a Stripe failure releases the temporary hold",async()=>{
 test("an attachment failure never returns a payable Stripe link and releases the hold",async()=>{
   attachFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
-  assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
+  assert.equal(result.statusCode,503);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions/cs_test_1/expire"),true);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
 });
 
 test("public checkout requires adult and privacy confirmations",async()=>{

@@ -39,6 +39,10 @@ const createStripeSession=async({reference,name,email,seats,weekendLabel})=>{
   if(!response.ok)throw new Error(`stripe:${response.status}:${await response.text()}`);
   return response.json();
 };
+const expireStripeSession=async sessionId=>{
+  const response=await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`,{method:"POST",headers:{authorization:`Bearer ${process.env.STRIPE_SECRET_KEY}`}});
+  if(!response.ok)throw new Error(`stripe_expire:${response.status}:${await response.text()}`);
+};
 
 export const handler=async event=>{
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
@@ -95,6 +99,11 @@ export const handler=async event=>{
     return json(503,{error:"checkout_unavailable"});
   }
   try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url});}
-  catch(error){console.error("Checkout session attachment error",error);try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}return json(503,{error:"checkout_unavailable"});}
+  catch(error){
+    console.error("Checkout session attachment error",error);
+    try{await expireStripeSession(session.id);}catch(expireError){console.error("Orphan checkout expiration error",expireError);}
+    try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
+    return json(503,{error:"checkout_unavailable"});
+  }
   return json(200,{status:"checkout_ready",checkoutUrl:session.url,holdExpiresAt:hold.holdExpiresAt});
 };
