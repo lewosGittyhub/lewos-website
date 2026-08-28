@@ -22,6 +22,7 @@ before(async()=>{
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
   process.env.BOOKING_TERMS_VERSION="booking-test-v1";
+  process.env.NODE_ENV="test";
 });
 beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01"};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
