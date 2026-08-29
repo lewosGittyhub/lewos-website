@@ -186,17 +186,25 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
 
-10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
-   standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
-   hoort een Nederlandse vertaling voor Robert.
+10. **[Wie het eerst kan, pas na 3–9] Spaanstalige kopie van de definitieve
+   reisinformatie** plus het wettelijke standaardinformatieformulier, zoals de pagina
+   zelf aankondigt. Niet nu al vertalen: eerst alle juridische gaten, garantiegegevens,
+   registratiegegevens en definitieve klantteksten invullen en laten controleren, zodat
+   er niet twee keer wordt vertaald of een concept per ongeluk als definitief gaat gelden.
+   Bij de Spaanse eindtekst hoort een Nederlandse vertaling voor Robert.
 
-11. **[Robert of Codex] Waar komen deze zeven illustraties vandaan?**
+11. **[Concrete vraag aan Robert/Codex, vóór publicatie] Waar komen deze zeven
+   illustraties precies vandaan?**
    `tavern-double-doors`, `asturias-mountain-view`, `bear-4x4-mountain-wide`,
    `dice-character-sheet`, `private-campaign-landscape`, `tavern-party-journey-bear` en
    `weekend-01-dark-dice`. Ze staan sinds de lanceercommit in de repo zonder vastgelegde
    herkomst. Gegenereerd? Zeg waarmee en of de voorwaarden commercieel gebruik toestaan.
    Uit een bibliotheek? Noem welke en onder welke licentie. Zet het antwoord in
-   `operations/image-credits.md`. *(Punt 14 en 15 zijn afgerond, zie het logboek.)*
+   `operations/image-credits.md`. **Niets aannemen:** geen Midjourney-, Unsplash- of andere
+   herkomst invullen zonder bewijs. Van de twee recent door Robert aangeleverde
+   omgevingsfoto's weten we alleen dat het Pexels-downloads zijn; leg daarvan nog de
+   exacte bron-URL en licentie vast. Dat gegeven bewijst niets over de zeven illustraties.
+   *(Punt 14 en 15 zijn afgerond, zie het logboek.)*
 
 12. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
    Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
@@ -217,6 +225,28 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 > Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
+### 2026-08-29 · Codex · Vertaalvolgorde en beeldherkomst aangescherpt · TE CONTROLEREN
+
+**Wat**
+- De Spaanse eindteksten staan nu bewust ná het invullen en controleren van alle
+  juridische, garantie-, registratie- en klantgegevens.
+- Punt 11 stelt Robert/Codex expliciet de vraag naar de bewijsbare herkomst en commerciële
+  gebruiksrechten van zeven oude illustraties. Er wordt geen beeldgenerator of bibliotheek
+  aangenomen zonder bewijs.
+- Vastgelegd dat twee recent aangeleverde omgevingsfoto's volgens Robert van Pexels komen,
+  maar dat exacte bron-URL en licentie nog moeten worden genoteerd. Dit zegt niets over de
+  zeven oude illustraties.
+
+**Controle**
+- Lees punten 10 en 11 in *Openstaand* en controleer dat er nergens een onbewezen
+  Midjourney-, Unsplash- of andere bronclaim is toegevoegd.
+
+**Wat nu volgt**
+- Robert/Codex levert per beeld het bronbewijs aan; pas daarna wordt
+  `operations/image-credits.md` definitief aangevuld.
+
+---
 
 ### 2026-08-29 · Claude · Merge van Codex nagekeken · TE CONTROLEREN
 
