@@ -9,8 +9,6 @@
   const calendarMonths=form.querySelector('[data-calendar-months]');
   const calendarChosen=form.querySelector('[data-calendar-chosen]');
   const weekendField=form.querySelector('[data-weekend-field]');
-  const privateToggle=form.querySelector('[data-private-toggle]');
-  const privateNotice=form.querySelector('[data-private-notice]');
   const bookingNote=form.querySelector('#booking-note');
   const publicBooking=document.querySelector('[data-public-booking-open]');
   const firstAccessWaiting=document.querySelector('[data-first-access-closed]');
@@ -79,27 +77,19 @@
     syncWeekendField();
   };
 
-  // Een privé-Tavern heeft geen vast weekend, dus dan verdwijnt de kalender en
-  // verandert het formulier van een stoelenaanvraag in een open vraag.
+  // Een privé-Tavern heeft een eigen pagina. Het keuzemenu houdt de optie wel, want
+  // dat menu is de terugval als de kalender niet kan laden.
   const isPrivate=()=>weekend.value==='private';
   const submitLabel=()=>isPrivate()?'Send my request →':'Hold my seats →';
   const applyMode=on=>{
     if(calendar)calendar.style.display=on?'none':'';
-    if(privateNotice)privateNotice.hidden=!on;
     if(bookingNote)bookingNote.hidden=on;
     // Een vast weekend heeft zes stoelen; een privé-Tavern loopt van vier tot twaalf.
     people.min=on?'4':'1';
     people.max=on?'12':'6';
     submit.textContent=submitLabel();
-    if(privateToggle)privateToggle.textContent=on?'← Back to the Tavern weekends':'Planning a private Tavern for 4 to 12 players? →';
     syncWeekendField();
   };
-  const setPrivate=on=>{
-    weekend.value=on?'private':'';
-    applyMode(on);
-    if(on){if(calendarChosen)calendarChosen.textContent='';}else buildCalendar();
-  };
-  if(privateToggle)privateToggle.addEventListener('click',()=>setPrivate(!isPrivate()));
 
   // Zodra de kalender de zichtbare bediening is, hoeft het keuzemenu alleen nog het
   // gekozen weekend te dragen. Kan de kalender niet laden, dan komt het menu terug.
@@ -125,7 +115,7 @@
       weekend.dispatchEvent(new Event('change',{bubbles:true}));
       paintCalendar();
     });
-    weekend.addEventListener('change',paintCalendar);
+    weekend.addEventListener('change',()=>{paintCalendar();applyMode(isPrivate());});
   }
 
   const updateWeekendOptions=()=>{

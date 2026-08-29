@@ -106,6 +106,9 @@
     .manifesto__copy + .manifesto__copy { margin-top: 22px; }
     .manifesto__copy strong { color: var(--cream); }
 
+    .ig-link { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 10px 16px 10px 12px; border: 1px solid rgba(15,59,53,.28); border-radius: 40px; color: var(--green); font: 600 .92rem/1.2 "Poppins", sans-serif; text-decoration: none; transition: color .2s, border-color .2s, background .2s; }
+    .ig-link:hover { color: var(--orange); border-color: var(--orange); background: rgba(229,100,58,.07); }
+    .ig-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; }
     .fontecha { padding: 86px 0; background: var(--cream); color: var(--green); }
     .fontecha__inner { display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(48px, 8vw, 120px); align-items: start; }
     .fontecha h2 { max-width: 540px; margin-top: 12px; font-size: clamp(2.5rem, 4.6vw, 4.6rem); }
@@ -402,6 +405,11 @@
         <div class="fontecha__copy">
           <p><strong>The Lewos Tavern is set within Complejo Rural de Fontecha</strong>, a small collection of mountain houses near Llerandi in Asturias.</p>
           <p>The surrounding landscape has carried travellers for centuries. A Neolithic burial mound, the t&uacute;mulo de Fontecha, is recorded on the boundary between Parres and Pilo&ntilde;a, and old mountain paths still cross these ridges. Buried history and mountain folklore belong to this place. Now a new story is about to begin here.</p>
+          <p>Photographs of the real houses and the valley are published by the accommodation itself.</p>
+          <a class="ig-link" href="https://www.instagram.com/fontecha_asturias/" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.1"></circle><circle cx="17.4" cy="6.7" r=".8" fill="currentColor" stroke="none"></circle></svg>
+            See Fontecha on Instagram
+          </a>
         </div>
       </div>
     </section>
@@ -511,7 +519,7 @@
         <aside class="private__aside">
           <span class="private__count">4–12</span>
           <p>players · custom experience · price on request</p>
-          <a class="button" href="#book" data-integration="make-private-inquiry">Plan a private Tavern →</a>
+          <a class="button" href="/tavern/private/" data-integration="make-private-inquiry">Plan a private Tavern →</a>
         </aside>
       </div>
     </section>
@@ -568,8 +576,7 @@
               <div class="calendar__months" data-calendar-months></div>
               <p class="calendar__chosen" data-calendar-chosen role="status"></p>
             </div>
-            <p class="private-note" data-private-notice hidden>A private Tavern is arranged around your group, so there is no fixed weekend to pick. Tell us your dates and what you have in mind, and Robert comes back with what is possible.</p>
-            <button class="link-button" type="button" data-private-toggle>Planning a private Tavern for 4 to 12 players? →</button>
+            <a class="link-button" href="/tavern/private/">Planning a private Tavern for 4 to 12 players? →</a>
             <div data-weekend-field>
             <label for="weekend">Which weekend?</label>
             <select id="weekend" name="weekend" required>

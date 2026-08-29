@@ -275,8 +275,13 @@ test("the weekend calendar is driven by real dates and degrades to the menu",asy
 test("the weekend menu becomes a read-out and a private Tavern has its own route",async()=>{
   const html=await read(path.join(root,"tavern/index.html"));
   const script=await read(path.join(root,"tavern/first-access.js"));
-  assert.match(html,/data-private-toggle/);
-  assert.match(html,/data-private-notice/);
+  const priv=await read(path.join(root,"tavern/private/index.html"));
+  const privScript=await read(path.join(root,"tavern/private/private.js"));
+  // One route for a private Tavern: its own page, reached from both entry points.
+  assert.equal(html.match(/href=["']\/tavern\/private\/["']/g)?.length,2,"both the section button and the form link must point at the private page");
+  assert.doesNotMatch(html,/data-private-toggle/,"the in-form toggle was replaced by the page");
+  assert.match(priv,/name=["']people["'][^>]*min=["']4["'][^>]*max=["']12["']/);
+  assert.match(privScript,/weekend:'private'/,"the private page reuses the existing enquiry route");
   assert.match(html,/data-weekend-field/);
   // Hiding with display:none would make the required select unfocusable and break
   // form validation, so the field is clipped instead.

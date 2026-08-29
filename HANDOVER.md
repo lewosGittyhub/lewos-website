@@ -116,6 +116,55 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Eigen privé-pagina en een beeldclausule · TE CONTROLEREN
+
+**Wat**
+- Nieuw: `tavern/private/index.html` en `tavern/private/private.js`. Een eigen pagina voor
+  privé-aanvragen met naam, e-mail, aantal spelers (4–12), gewenste periode, het verhaal
+  achter de vraag en toestemming. Opgenomen in `sitemap.xml`.
+- `tavern/index.html`: de knop *"Plan a private Tavern →"* en de regel onder de kalender
+  wijzen allebei naar die pagina. De schakelaar in het formulier van vanmiddag is weg —
+  één route in plaats van twee bedieningen voor hetzelfde.
+- `legal/index.html`: nieuwe sectie *Images on this website*. `terms/index.html`: nieuwe
+  sectie *Images and descriptions*.
+- `tavern/index.html`, Fontecha-sectie: een regel dat de accommodatie zelf foto's
+  publiceert, met een knop met Instagram-icoon naar
+  `instagram.com/fontecha_asturias`. Diezelfde bron staat nu ook in beide juridische
+  teksten.
+- `tests/site.test.mjs`: de test over de privé-route beschrijft de nieuwe opzet.
+
+**Waarom**
+- De privé-aanvraag hoort een eigen plek met eigen uitleg, niet een regel in een menu of
+  een omschakelende stand van hetzelfde formulier.
+- De pagina gebruikt **de bestaande aanvraagfunctie** met `weekend: 'private'`; die route
+  is al beproefd en kent al de ondergrens van vier spelers en de snelheidslimieten. De
+  gewenste periode gaat mee in het berichtveld, want de server kent geen apart veld
+  daarvoor en dat wilde ik er niet voor openbreken.
+- Een deel van het beeldmateriaal op de site is niet fotografisch. Zonder iets erover te
+  zeggen kan een gast zich met recht misleid noemen. **Let wel: een disclaimer repareert
+  een misleidend beeld niet.** Onder Europees recht helpt kleine lettertjes je niet als
+  een afbeelding wezenlijk iets anders belooft dan je levert. Wat wél beschermt is dat er
+  echte foto's te vinden zijn, en dat de illustraties de plek niet mooier maken dan hij
+  is. Vandaar dat de verwijzing naar het account van de accommodatie er ook staat: dat is
+  het inhoudelijke deel, de clausule is het formele deel.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 67 geslaagd**. Twee tests vielen onderweg
+  om en deden precies hun werk: de nieuwe pagina miste de `[hidden]`-beschermregel, en de
+  test over de privé-knop beschreef nog de oude schakelaar.
+- In de browser bekeken op 1100 × 800: de privé-pagina toont de zeven velden, geen
+  horizontale overloop; de Instagram-knop bij Fontecha wijst naar het juiste account,
+  opent in een nieuw tabblad met `rel="noopener noreferrer"`.
+
+**Niet geverifieerd**
+- Het formulier op de privé-pagina is niet echt verstuurd; de functie draait lokaal niet.
+  Codex kan dat natesten met een echte aanvraag die op `private_inquiry` uitkomt.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij wil draaien.
+
+---
+
 ### 2026-08-29 · Claude · Keuzemenu wordt uitleesveld, privé-Tavern krijgt eigen route · TE CONTROLEREN
 
 **Wat**
