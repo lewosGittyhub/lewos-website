@@ -32,7 +32,7 @@
       cell.classList.toggle('is-chosen',cell.dataset.slug===chosen&&!cell.classList.contains('is-full'));
     });
     const item=availability.find(entry=>entry.slug===chosen);
-    calendarChosen.textContent=item?`Chosen: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.`:'Pick a weekend in the calendar, or choose a private Tavern below.';
+    calendarChosen.textContent=item?`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.`:'Pick a weekend in the calendar, or choose a private Tavern below.';
   };
 
   const buildCalendar=()=>{

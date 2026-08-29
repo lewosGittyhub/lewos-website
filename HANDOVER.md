@@ -124,7 +124,8 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   pilletje *"6 vrij"*, daarna de zes bolletjes.
 - De regel onder de kalender is groter en vet: Poppins 700, oplopend van 1,05 tot
   1,22 rem, in crème in plaats van beige. Daar staat *"Chosen: Weekend 01 · 30 Oct to
-  2 Nov 2026 — 6 of 6 seats free."*
+  2 Nov 2026 — 6 of 6 seats free."* De aanhef was eerst *Chosen*; op verzoek van Robert
+  is dat *Selected weekend* geworden.
 - `tests/site.test.mjs`: de test heet nu *"a day cell shows only its date, and the seat
   count is read out below"* en bewaakt dat er geen meter of pilletje terugkomt.
 
