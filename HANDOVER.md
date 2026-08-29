@@ -121,10 +121,18 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 4. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
    en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
    dat ze nog volgen.
-5. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
+5. **[Robert] Verwerkersovereenkomst met Resend, of een andere maildienst.** Hun publieke
+   privacybeleid noemt geen waarborgmechanisme voor doorgifte naar de Verenigde Staten —
+   geen standaardcontractbepalingen, geen Data Privacy Framework. De andere drie
+   verwerkers publiceren dat wel. Vermoedelijk staat het in hun verwerkersovereenkomst;
+   dat moet je tekenen en bewaren vóór de eerste bevestigingsmail uitgaat. Daarna kan de
+   privacyverklaring het mechanisme ook voor Resend noemen.
+   *(De clausule zelf is geschreven, zie het logboek.)*
+
+~~5. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
    zodra een verwerker buiten de EER verwerkt. Zoek eerst uit in welke regio de
    Supabase-instantie draait en wat Netlify, Stripe en Resend daarover zeggen. Niets over
-   beweren voordat dat vaststaat.
+   beweren voordat dat vaststaat.~~ **Gedaan op 29 augustus.**
 6. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
 7. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
@@ -145,6 +153,53 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Doorgifte buiten de EU benoemd in de privacyverklaring · TE CONTROLEREN
+
+**Wat**
+- `privacy/index.html`: nieuwe sectie *Where in the world it goes* met per verwerker het
+  land en het waarborgmechanisme, plus de mogelijkheid een kopie van die waarborg op te
+  vragen.
+- `tests/site.test.mjs`: nieuwe test die eist dat de verklaring zowel de doorgifte als het
+  mechanisme noemt, en alle vier de verwerkers.
+
+**Waarom, en wat er geverifieerd is**
+- Artikel 13 lid 1 onder f van de AVG vraagt om de doorgifte én de waarborg waarop die
+  rust. De verklaring noemde de verwerkers al bij naam maar zei niets over waar ze
+  verwerken. Alle vier zijn nagekeken bij de bron, niet uit het hoofd:
+  - **Netlify** (VS): standaardcontractbepalingen van de Europese Commissie **en**
+    gecertificeerd onder het EU–VS Data Privacy Framework.
+  - **Supabase**: verwerkt mogelijk in de **Verenigde Staten en Singapore**, onder diezelfde
+    standaardcontractbepalingen.
+  - **Stripe**: Europese handelaren contracteren met de Ierse entiteiten; voor doorgifte
+    verder gebruiken zij standaardcontractbepalingen en het Data Privacy Framework.
+  - **Resend** (Plus Five Five, Inc., VS): verwerkt in de Verenigde Staten.
+
+**⚠️ Wat opviel bij Resend**
+- Hun publieke privacybeleid **noemt geen enkel waarborgmechanisme**. Geen
+  standaardcontractbepalingen, geen Data Privacy Framework — alleen dat er "adequate
+  controls" zijn. Dat is voor de andere drie wel netjes gepubliceerd.
+- Waarschijnlijk staat het in hun verwerkersovereenkomst en niet in het privacybeleid,
+  maar dat is niet vast te stellen zonder die overeenkomst. In de verklaring staat daarom
+  alleen het feit — dat zij in de Verenigde Staten verwerken — en geen mechanisme dat ik
+  niet kan staven. Als nieuw punt in *Openstaand* gezet.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 82 geslaagd.**
+- Bronnen: stripe.com/legal/privacy-center · supabase.com/privacy · netlify.com/privacy ·
+  resend.com/legal/privacy-policy, alle vier op 29 augustus 2026.
+
+**Niet geverifieerd**
+- In welke regio Roberts eigen Supabase-instantie draait. Voor de verklaring maakt dat
+  niet uit: Netlify, Stripe en Resend verwerken sowieso buiten de EER, dus de clausule is
+  hoe dan ook nodig. Voor de keuze van de regio zelf is het wel relevant.
+- Ik ben geen jurist. Dit is nauwkeurig opgeschreven wat de verwerkers zelf publiceren.
+
+**Wat nu volgt**
+- Robert tekent de verwerkersovereenkomst met Resend, of kiest een verwerker die het
+  mechanisme wel publiceert.
+
+---
 
 ### 2026-08-29 · Claude · Feitelijke dubbelingen weg en een creditsbestand · TE CONTROLEREN
 

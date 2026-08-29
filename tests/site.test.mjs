@@ -408,3 +408,14 @@ test("every image on the site is written down in the credits file",async()=>{
   const missing=used.filter(file=>!credits.includes(file));
   assert.deepEqual(missing,[],`no origin recorded for: ${missing.join(", ")}`);
 });
+
+test("the privacy statement names the transfers outside the EEA and their safeguard",async()=>{
+  const privacy=await read(path.join(root,"privacy/index.html"));
+  // Article 13(1)(f) asks for the fact of the transfer and the safeguard relied on.
+  // Naming the providers without naming either would be worse than saying nothing.
+  assert.match(privacy,/outside the European Economic Area/);
+  assert.match(privacy,/standard contractual clauses/);
+  assert.match(privacy,/Data Privacy Framework/);
+  for(const provider of ["Netlify","Supabase","Stripe","Resend"])assert.match(privacy,new RegExp(provider));
+  assert.match(privacy,/copy of the safeguards/,"a reader must be able to ask for the safeguard itself");
+});
