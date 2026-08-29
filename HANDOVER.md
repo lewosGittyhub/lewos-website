@@ -218,6 +218,35 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-08-29 · Claude · Merge van Codex nagekeken · TE CONTROLEREN
+
+Codex heeft `9c0b815 Merge live history into release branch` gemaakt. Nagelopen omdat een
+merge vlak vóór een deploy het soort ding is dat je niet op zijn woord aanneemt.
+
+**Uitkomst: veilig, en nuttig.**
+- **Er is geen enkel bestand veranderd.** De boom op de merge is byte-voor-byte identiek aan
+  mijn laatste commit ervoor. De pre-deploycontrole van vanmiddag geldt dus onverkort.
+- **De branch kan nu zonder force naar `main`.** `origin/main` is een voorouder van `HEAD`,
+  dus een push wordt een fast-forward. Dat was het doel van de merge en het is de nette
+  manier: geen force, geen weggegooide live-historie.
+- De merge bracht een oudere, losse lijn binnen (`2502ee6` en zijn voorouders, waaronder het
+  dobbelsteen-experiment van twee weken geleden). **Die bestanden zitten niet in de
+  werkboom**: niets met `d20` of een dobbelsteen-experiment in de bestanden of de pagina's.
+  De merge is opgelost in het voordeel van onze inhoud. Eén beginpunt in de historie, geen
+  losse tweede lijn.
+- `node --test tests/*.test.mjs` na de merge: **88 geslaagd, 0 gefaald.**
+
+**Niet geverifieerd**
+- Waar die oudere lijn vandaan komt weet ik niet — mogelijk de oorspronkelijke repo vóór een
+  herimport. Het maakt voor de uitrol niets uit, maar als Codex het weet is het de moeite
+  van één zin waard.
+
+**Wat nu volgt**
+- Niets. De blokkade uit de pre-deploycontrole staat nog: `PUBLIC_BOOKING_OPENS_AT` moet in
+  Netlify vóór de deploy.
+
+---
+
 ### 2026-08-29 · Claude · Pre-deploy eindcontrole, met één blokkade · TE CONTROLEREN
 
 **Wat**
