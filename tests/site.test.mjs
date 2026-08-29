@@ -419,3 +419,14 @@ test("the privacy statement names the transfers outside the EEA and their safegu
   for(const provider of ["Netlify","Supabase","Stripe","Resend"])assert.match(privacy,new RegExp(provider));
   assert.match(privacy,/copy of the safeguards/,"a reader must be able to ask for the safeguard itself");
 });
+
+test("no public page promises a distance a guest could measure",async()=>{
+  // A guest who paces it out and counts thirteen metres has been promised ten. Keep the
+  // fact, drop the number: a measurement we do not control should never be a promise.
+  for(const file of htmlFiles){
+    const html=await read(file);
+    const where=path.relative(root,file);
+    assert.doesNotMatch(html,/\b\d+\s*(metres|meters|metre|meter|km|kilometres)\b/i,`${where} promises a measurable distance`);
+    assert.doesNotMatch(html,/\b(ten|twenty|fifty|hundred|five hundred)\s+(metres|meters)\b/i,`${where} promises a measurable distance in words`);
+  }
+});

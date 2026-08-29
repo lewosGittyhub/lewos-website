@@ -54,6 +54,12 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
   actief · caución actief · RECE0033T06 ingediend én registratiecode ontvangen ·
   klantdocumenten definitief. Bouw geen checkout-omweg, geen "boek nu", geen betaalknop
   die de blokkade passeert.
+- **Nooit een maat beloven die een gast kan natellen.** Robert, 29 augustus: *"als ze tien
+  meter gaan tellen is het misschien twaalf of dertien meter."* Afstanden, aantallen
+  huisgenoten, loopminuten — houd het feit, laat het getal weg. Een test in
+  `tests/site.test.mjs` weigert elke afstand in meters of kilometers op een publieke
+  pagina. Dit geldt ook voor beloftes die je onderweg zelf verzint om een andere op te
+  lossen.
 - **Prijs is €2.025 p.p. all-in, drie nachten.** Op de Engelse pagina's geschreven als
   `€2,025`. Elke andere prijs is een fout.
 - **Geen verzonnen feiten in publieke teksten.** Geen namen, reviews, statistieken of
@@ -190,6 +196,45 @@ Robert wil Claude’s resterende capaciteit benutten voordat diens limiet reset.
 krijgt daarom één brede maar geordende ronde: technische piekbelasting en tests eerst,
 daarna copy/beeld en releasevoorbereiding. Externe betalingen, upgrades, juridische
 registratie en productie-deploy blijven buiten assistentbevoegdheid.
+
+### 2026-08-29 · Claude · Meetbare afstanden uit de publieke teksten · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`: *"roughly ten metres from the Tavern"* en *"about five hundred
+  metres"* staan er niet meer, op geen van beide plekken. Er staat nu *"a short walk"* en
+  *"further out across the grounds"*. Het feit blijft, het getal is weg.
+- Ook weg: *"You'll share the apartment with **one other player**"*. Dat is net zo telbaar,
+  en het hangt af van hoeveel huisjes er in gebruik zijn — de briefing noemt drie, maar
+  vier of vijf kan ook.
+- `tests/site.test.mjs`: nieuwe test *"no public page promises a distance a guest could
+  measure"*.
+- De regel staat nu ook bij de harde grenzen bovenaan dit dossier.
+
+**Waarom**
+- Robert: *"nooit geen beloftes als ze tien meter gaan tellen is het misschien twaalf of
+  dertien meter."* Precies. Een maat die een gast kan natellen is een belofte die je kunt
+  verliezen, en die winst is nul: *"a short walk"* verkoopt even goed en is niet te
+  weerleggen.
+- **Ik had bij de eerste poging zelf een nieuwe belofte ingebouwd** om de oude op te lossen:
+  *"we tell you which one you have before you book."* Dat is precies dezelfde fout in een
+  ander jasje — een toezegging doen die Robert misschien niet kan waarmaken, zeker niet
+  tijdens First Access als de groep nog niet rond is. Die zin is er weer uit voordat hij
+  ergens heen ging.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 83 geslaagd.**
+- `grep -rniE "metres|meters|kilometer" --include="*.html" .` geeft niets.
+
+**Niet geverifieerd**
+- Of *"others from the same table"* klopt met hoeveel huisjes je in de praktijk gebruikt.
+  Weet Robert dat zeker, dan mag het getal terug — maar dan als vaststaand feit, niet als
+  ongeveer.
+
+**Wat nu volgt**
+- Dit valt binnen de release-kandidaat; het releasedocument hoeft niet aangepast, de
+  wijziging staat erin als correctie.
+
+---
 
 ### 2026-08-29 · Claude · Release-kandidaat klaargezet, niet gepusht · TE CONTROLEREN
 
