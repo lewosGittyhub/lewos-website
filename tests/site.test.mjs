@@ -456,3 +456,19 @@ test("a caption describes the photograph and does not promise a service",async()
     assert.doesNotMatch(block,forbidden,`a caption promises something: ${forbidden}`);
   }
 });
+
+test("no page says where the food comes from or how it is made",async()=>{
+  // Robert, 29 August: that guests are fed is a fact; where it comes from is not the
+  // customer's concern and the arrangement is temporary. A sentence about the kitchen
+  // would become untrue the day a cook and a kitchen of our own arrive.
+  const claims=[/\bcooked\b/i,/\bkitchen\b/i,/\bchef\b/i,/locally sourced/i,/local produce/i,/home-?made/i,/farm[- ]to[- ]table/i,/prepared (on site|in our|by our|fresh)/i];
+  for(const file of htmlFiles){
+    const html=await read(file);
+    for(const claim of claims){
+      assert.doesNotMatch(html,claim,`${path.relative(root,file)} says something about how the food is made: ${claim}`);
+    }
+  }
+  // What may be said, and is said, is that the meals are included.
+  const tavern=await read(path.join(root,"tavern/index.html"));
+  assert.match(tavern,/Every meal/);
+});

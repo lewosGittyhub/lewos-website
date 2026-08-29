@@ -235,6 +235,43 @@ Claude nu alles laten nalopen voordat lokale wijzigingen naar live gaan. Claude 
 alle technische en inhoudelijke routes controleren, maar mag niet zelf deployen of de
 betalingspoort openen. Daarna volgt Codex’ onafhankelijke eindcontrole.
 
+### 2026-08-29 · Claude · Herkomst van het eten overal weg, inbegrepen blijft · TE CONTROLEREN
+
+**Wat**
+- De hele site nagelopen op uitspraken over waar het eten vandaan komt of hoe het bereid
+  wordt. **Er stond er nog maar één, en die was al weg**: het bijschrift over koken op hout.
+- `tests/site.test.mjs`: nieuwe test *"no page says where the food comes from or how it is
+  made"*. Die weigert `cooked`, `kitchen`, `chef`, `locally sourced`, `local produce`,
+  `homemade`, `farm-to-table` en `prepared on site` op elke publieke pagina, en eist
+  tegelijk dat er wél staat dat de maaltijden inbegrepen zijn.
+
+**Wat er wel staat, en mag blijven**
+- Tavern-pagina: *"Every meal, your own room and a professional Game Master."*
+- Prijskaart: *"All-in: three nights, every meal, transfers."*
+- Inbegrepen-lijst: *"Meals and non-alcoholic drinks, from the arrival dinner through
+  departure breakfast."*
+- Good to know: *"Breakfast, lunch and dinner, and everything non-alcoholic in between."*
+- Reisinformatie: *"Breakfast, lunch, dinner and non-alcoholic drinks throughout the
+  weekend."* De voorwaarden noemen maaltijden alleen als onderdeel van de dienst.
+- Geen van deze zegt iets over herkomst of bereiding. Alleen dát het erbij zit.
+
+**Eén ding dat ik heb laten staan, ter beoordeling**
+- In het dagritme staat *"Breakfast at the house"* en *"Breakfast together"*. Dat gaat over
+  wanneer en waar je eet, niet over waar het eten vandaan komt, en het is Roberts eigen
+  dagindeling. Valt buiten de regel, maar als het schema verandert moet die tekst mee.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 86 geslaagd.**
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Komt er een kok en een eigen keuken, dan mag daar iets over gezegd worden — maar dan als
+  feit, en dan gaat deze test bewust om.
+
+---
+
 ### 2026-08-29 · Claude · Twee bevestigingen van Robert verwerkt · TE CONTROLEREN
 
 **Wat**
