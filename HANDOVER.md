@@ -77,6 +77,14 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+16. **[Claude] Bewijs dat piekverkeer netjes degradeert.** Voeg een lokale, niet-
+   destructieve belastingstest toe voor circa 100 gelijktijdige First Access- en
+   contactaanvragen. Controleer dat rate limits misbruik afvangen, geldige aanvragen
+   geen dubbele stoelclaims maken, fouten als nette 429/503-antwoorden terugkomen en
+   de pagina zelf bruikbaar blijft. Documenteer ook welke Netlify/Supabase-limieten en
+   alerts Robert vóór publicatie moet instellen. Geen echte productie-aanvragen of
+   Stripe-betalingen in deze test.
+
 15. **[Claude] Doe een compacte tekst-audit van de publieke Tavern-pagina.** Verwijder
    doublures over drie nachten, maaltijden, transfers, zes stoelen, Asturias en het
    verhaal; laat één duidelijke versie per onderwerp staan en laat links/FAQ daarnaar
