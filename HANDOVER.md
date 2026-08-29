@@ -187,11 +187,19 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
    `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
    pagina haalt de beschikbaarheid live op.
-3. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
+3. **[Robert] Vul de twee ontbrekende velden in het standaardinformatieformulier in.** Het
+   formulier staat er nu, naar de wettekst, in het Engels en het Spaans op
+   `/standard-information/`. Het mist alleen nog de insolventiegarantie (verstrekker,
+   polisnummer, adres, telefoon) en de bevoegde autoriteit. Beide volgen uit de
+   registratieketen. Daarna alsnog langs de gestor voor de echte versie, zoals afgesproken.
+   *(Vervangt het oude punt: het formulier ontbrak, nu ontbreken alleen die velden.)*
+
+~~3. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
    volledig.** Bij een pakketreis moet de reiziger vóór het boeken een formulier met
    gestandaardiseerde informatie krijgen (richtlijn 2015/2302 bijlage I, in Spanje via het
    TRLGDCU). `/travel-information/` kondigt het zelf aan, maar het bestaat nergens. Dit is
-   geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.
+   geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.~~ **Opgesteld op
+   29 augustus, zie het logboek.**
 4. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
    en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
    dat ze nog volgen.
@@ -234,6 +242,58 @@ Netlify Personal is actief en nieuwe productie-deploys zijn weer mogelijk. Rober
 Claude nu alles laten nalopen voordat lokale wijzigingen naar live gaan. Claude moet
 alle technische en inhoudelijke routes controleren, maar mag niet zelf deployen of de
 betalingspoort openen. Daarna volgt Codex’ onafhankelijke eindcontrole.
+
+### 2026-08-29 · Claude · Standaardinformatieformulier opgesteld naar de wettekst · TE CONTROLEREN
+
+**Wat**
+- Nieuw: `standard-information/index.html`. Het wettelijke formulier in twee talen — Engels
+  voor de gast, Spaans omdat dát de voorgeschreven tekst is. Op `noindex`, met een
+  conceptmelding, en gelinkt vanuit `/travel-information/` en `/terms/`.
+- `tests/site.test.mjs`: nieuwe test die afdwingt dat het concept blijft zolang de
+  garantieverstrekker en de bevoegde autoriteit ontbreken.
+
+**Waar de tekst vandaan komt — niet verzonnen**
+- De inhoud van dit formulier ligt wettelijk vast. Ik heb hem **niet geschreven maar
+  overgenomen** uit de Spaanse wettekst: het texto refundido van de Ley General para la
+  Defensa de los Consumidores y Usuarios, RDL 1/2007, anexo II parte A.
+- De letterlijke Spaanse formulering is opgehaald uit een door een reisorganisator
+  gepubliceerd exemplaar van datzelfde formulier en woordelijk overgenomen; de openingszin
+  en de slotverwijzing zijn daarnaast gecontroleerd tegen de wettekst zelf. De Engelse
+  versie is een getrouwe vertaling, en de pagina zegt met zoveel woorden dat bij verschil
+  **de Spaanse tekst geldt**.
+- Twaalf punten onder *Principales derechos*, volledig, in beide talen.
+
+**⚠️ Wat er nog niet in kan staan**
+- Het formulier moet twee dingen noemen die Robert niet heeft: **de insolventiegarantie**
+  (verstrekker, polisnummer, adres, telefoon) en **de bevoegde autoriteit** waar een gast
+  terechtkan als er door insolventie diensten uitvallen. Allebei staan als zichtbaar
+  invulveld, niet als verzonnen tekst.
+- Die twee volgen uit de registratieketen uit `operations/legal-status-2026-08-29.md`:
+  eerst de caución, dan de declaración responsable, dan de registratie.
+
+**Een vraag voor de gestor die ik expliciet wil markeren**
+- Het formulier belooft **repatriëring** als er transport in de reis zit. Bij de Tavern
+  zitten transfers vanaf het vliegveld of station in het pakket. Of dat "transport" is in de
+  zin van de wet, en dus of de repatriëringsgarantie geldt, is precies zo'n vraag waar een
+  deskundige naar moet kijken. Ik heb de zin laten staan zoals de wet hem voorschrijft.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 87 geslaagd.**
+- In de browser: 24 rechtenpunten (twaalf per taal), vier zichtbare invulvelden, beide
+  taalblokken correct gemarkeerd, geen horizontale overloop.
+
+**Niet geverifieerd**
+- Ik ben geen jurist. Dit is de wettelijke tekst overgenomen en getrouw vertaald, niet
+  juridisch getoetst. Robert gaat na de eerste boekingen naar de gestor voor de echte
+  versie; dit is bedoeld om tot dan iets te hebben dat de lading dekt.
+- De officiële Engelse formulering uit bijlage I van richtlijn 2015/2302 kon ik niet
+  woordelijk ophalen; de ophaaltool knipt lange citaten af. De Engelse tekst hier is
+  daarom een vertaling van de Spaanse, en dat staat er ook bij.
+
+**Wat nu volgt**
+- Robert: de twee invulvelden zodra de garantie er is. En de gestor voor de echte versie.
+
+---
 
 ### 2026-08-29 · Claude · Herkomst van het eten overal weg, inbegrepen blijft · TE CONTROLEREN
 

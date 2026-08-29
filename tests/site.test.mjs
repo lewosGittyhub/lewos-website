@@ -472,3 +472,20 @@ test("no page says where the food comes from or how it is made",async()=>{
   const tavern=await read(path.join(root,"tavern/index.html"));
   assert.match(tavern,/Every meal/);
 });
+
+test("the standard information form stays a draft until it can name its guarantor",async()=>{
+  const form=await read(path.join(root,"standard-information/index.html"));
+  // The statutory form is only valid once it names who refunds the traveller if Lewos
+  // fails, and which authority to turn to. Until then it must say so on its face.
+  assert.match(form,/noindex/);
+  assert.match(form,/not complete and cannot be used yet/);
+  assert.match(form,/to be inserted/,"the missing fields must be visible as missing");
+  // The Spanish wording is the one the law sets out; the English must not quietly replace it.
+  assert.match(form,/lang="es"/);
+  assert.match(form,/the Spanish text is the one that applies/);
+  assert.match(form,/Real Decreto Legislativo 1\/2007/);
+  // It must be reachable from the two documents it belongs with.
+  for(const page of ["travel-information/index.html","terms/index.html"]){
+    assert.match(await read(path.join(root,page)),/href="\/standard-information\/"/,`${page} must link to the form`);
+  }
+});
