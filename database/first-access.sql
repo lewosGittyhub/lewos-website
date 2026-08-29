@@ -1,3 +1,9 @@
+-- Tijd onder een slot: PostgreSQL bevriest now() op het begin van de transactie. Wie
+-- vlak vóór een deadline binnenkomt en dan op het slot wacht, zou daarna nog met die
+-- oude tijd beoordeeld worden. Elke vergelijking met een deadline of vervaltijd, en elke
+-- vervaltijd die we zelf uitrekenen, gebruikt daarom clock_timestamp(): de tijd op het
+-- moment dat de regel echt draait. De tijdstempels die alleen vastleggen wanneer iets
+-- gebeurde blijven now(); daar maakt het geen verschil.
 create extension if not exists pgcrypto;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
@@ -54,6 +60,9 @@ alter table public.tavern_seat_claims add column if not exists filming_notice_ac
 alter table public.tavern_seat_claims add column if not exists filming_consent_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists confirmation_email_sent_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists confirmation_email_provider_id text;
+-- De prijs per persoon zoals die gold toen de stoelen werden vastgehouden. Verandert de
+-- weekendprijs later, dan blijft zichtbaar wat er met deze gast is afgesproken.
+alter table public.tavern_seat_claims add column if not exists price_cents integer;
 
 create table if not exists public.tavern_request_limits (
   key_hash text primary key,
@@ -91,15 +100,15 @@ begin
     set status='expired'
     where status='first_access_held'
       and invitation_expires_at is not null
-      and invitation_expires_at<=now();
+      and invitation_expires_at<=clock_timestamp();
   update tavern_seat_claims
-    set status=case when checkout_token_hash is not null and invitation_expires_at>now() then 'first_access_held' else 'expired' end,
+    set status=case when checkout_token_hash is not null and invitation_expires_at>clock_timestamp() then 'first_access_held' else 'expired' end,
         hold_expires_at=null,
         payment_reference=null
     where status='payment_pending'
       and checkout_session_id is null
       and hold_expires_at is not null
-      and hold_expires_at<=now();
+      and hold_expires_at<=clock_timestamp();
 end; $$;
 revoke all on function private.cleanup_tavern_claims() from public, anon, authenticated;
 
@@ -123,7 +132,7 @@ begin
   if p_party_size > requested.capacity then raise exception 'party_too_large'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
-  if p_first_access_closes_at is null or now()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
+  if p_first_access_closes_at is null or clock_timestamp()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
   select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid') order by created_at limit 1;
   if found then
     return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
@@ -207,7 +216,7 @@ begin
     select 1 from tavern_seat_claims where
       (status='first_access_held' and checkout_token_hash is null)
       or
-      (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>now())
+      (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>clock_timestamp())
   );
 end; $$;
 revoke all on function public.tavern_public_booking_ready() from public, anon, authenticated;
@@ -219,7 +228,7 @@ declare current_attempts integer;
 begin
   if p_key_hash is null or char_length(p_key_hash) < 32 then return false; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-rate-'||p_key_hash));
-  delete from tavern_request_limits where window_started_at < now()-make_interval(mins=>p_window_minutes);
+  delete from tavern_request_limits where window_started_at < clock_timestamp()-make_interval(mins=>p_window_minutes);
   insert into tavern_request_limits(key_hash,window_started_at,attempts)
   values(p_key_hash,now(),1)
   on conflict(key_hash) do update set attempts=tavern_request_limits.attempts+1
@@ -244,22 +253,22 @@ begin
   if not found then raise exception 'unknown_weekend'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
-  if p_public_booking_opens_at is null or now()<p_public_booking_opens_at then return jsonb_build_object('status','booking_not_open'); end if;
+  if p_public_booking_opens_at is null or clock_timestamp()<p_public_booking_opens_at then return jsonb_build_object('status','booking_not_open'); end if;
   if exists(select 1 from tavern_seat_claims where
     (status='first_access_held' and checkout_token_hash is null)
     or
-    (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>now()))
+    (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>clock_timestamp()))
   then return jsonb_build_object('status','first_access_windows_active'); end if;
   select coalesce(sum(party_size),0)::integer into occupied from tavern_seat_claims
     where assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid');
   if requested.capacity-occupied < p_party_size then
     return jsonb_build_object('status','not_available','remaining',greatest(requested.capacity-occupied,0));
   end if;
-  expires_at:=now()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
-  insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,consented_at,hold_expires_at,payment_reference,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at,filming_consent_at)
-  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',now(),expires_at,p_payment_reference,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end,case when requested.slug='weekend-01' and p_filming_consent is true then now() else null end)
+  expires_at:=clock_timestamp()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
+  insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,consented_at,hold_expires_at,payment_reference,price_cents,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at,filming_consent_at)
+  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',now(),expires_at,p_payment_reference,requested.price_cents,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end,case when requested.slug='weekend-01' and p_filming_consent is true then now() else null end)
   returning id into claim_id;
-  return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
+  return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'priceCents',requested.price_cents,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
 end; $$;
 revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) from public, anon, authenticated;
 grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) to service_role;
@@ -312,9 +321,9 @@ begin
   select * into claim from tavern_seat_claims where id=p_claim_id for update;
   if not found then return jsonb_build_object('status','unknown_claim'); end if;
   if claim.status<>'first_access_held' then return jsonb_build_object('status','claim_not_eligible'); end if;
-  if claim.checkout_token_hash is not null and claim.invitation_expires_at>now() then return jsonb_build_object('status','already_invited','claimId',claim.id); end if;
+  if claim.checkout_token_hash is not null and claim.invitation_expires_at>clock_timestamp() then return jsonb_build_object('status','already_invited','claimId',claim.id); end if;
   select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
-  expires_at:=now()+make_interval(hours=>greatest(1,least(p_window_hours,72)));
+  expires_at:=clock_timestamp()+make_interval(hours=>greatest(1,least(p_window_hours,72)));
   update tavern_seat_claims
     set checkout_token_hash=p_token_hash,invitation_expires_at=expires_at,invitation_sent_at=null,invitation_email_provider_id=null
     where id=claim.id;
@@ -329,7 +338,7 @@ declare marked_id uuid;
 begin
   update tavern_seat_claims
     set invitation_sent_at=coalesce(invitation_sent_at,now()),invitation_email_provider_id=coalesce(invitation_email_provider_id,nullif(trim(p_provider_id),''))
-    where id=p_claim_id and status='first_access_held' and checkout_token_hash is not null and invitation_expires_at>now()
+    where id=p_claim_id and status='first_access_held' and checkout_token_hash is not null and invitation_expires_at>clock_timestamp()
     returning id into marked_id;
   if marked_id is null then return jsonb_build_object('status','not_marked'); end if;
   return jsonb_build_object('status','marked','claimId',marked_id);
@@ -364,22 +373,22 @@ begin
   if not found then return jsonb_build_object('status','invalid_invitation'); end if;
   if claim.status='paid' then return jsonb_build_object('status','already_paid'); end if;
   select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
-  if claim.status='payment_pending' and claim.hold_expires_at>now() then
+  if claim.status='payment_pending' and claim.hold_expires_at>clock_timestamp() then
     update tavern_seat_claims set adult_confirmed_at=coalesce(adult_confirmed_at,now()),privacy_accepted_at=coalesce(privacy_accepted_at,now()),terms_version=coalesce(terms_version,trim(p_terms_version)),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then coalesce(filming_notice_acknowledged_at,now()) else filming_notice_acknowledged_at end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then coalesce(filming_consent_at,now()) else filming_consent_at end where id=claim.id;
-    return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',claim.hold_expires_at,'paymentReference',claim.payment_reference,'checkoutUrl',claim.checkout_session_url);
+    return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'priceCents',coalesce(claim.price_cents,weekend.price_cents),'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',claim.hold_expires_at,'paymentReference',claim.payment_reference,'checkoutUrl',claim.checkout_session_url);
   end if;
   if claim.status='payment_pending' and claim.checkout_session_id is not null then
     return jsonb_build_object('status','payment_reconciliation_pending','claimId',claim.id);
   end if;
-  if claim.invitation_expires_at is null or claim.invitation_expires_at<=now() then
+  if claim.invitation_expires_at is null or claim.invitation_expires_at<=clock_timestamp() then
     update tavern_seat_claims set status='expired' where id=claim.id and status in('first_access_held','payment_pending');
     return jsonb_build_object('status','invitation_expired');
   end if;
   if claim.status not in('first_access_held','payment_pending') then return jsonb_build_object('status','claim_not_eligible'); end if;
-  expires_at:=now()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
-  update tavern_seat_claims set status='payment_pending',hold_expires_at=expires_at,payment_reference=p_payment_reference,adult_confirmed_at=now(),privacy_accepted_at=now(),terms_version=trim(p_terms_version),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then now() else null end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then now() else null end
+  expires_at:=clock_timestamp()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
+  update tavern_seat_claims set status='payment_pending',hold_expires_at=expires_at,payment_reference=p_payment_reference,price_cents=weekend.price_cents,adult_confirmed_at=now(),privacy_accepted_at=now(),terms_version=trim(p_terms_version),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then now() else null end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then now() else null end
     where id=claim.id;
-  return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',expires_at);
+  return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'priceCents',weekend.price_cents,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',expires_at);
 end; $$;
 revoke all on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer) from public, anon, authenticated;
 grant execute on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer) to service_role;
@@ -406,7 +415,7 @@ begin
   if not found then return jsonb_build_object('status','unknown_payment'); end if;
   if claim.status='payment_pending' then
     update tavern_seat_claims set
-      status=case when checkout_token_hash is not null and invitation_expires_at>now() then 'first_access_held' else 'cancelled' end,
+      status=case when checkout_token_hash is not null and invitation_expires_at>clock_timestamp() then 'first_access_held' else 'cancelled' end,
       hold_expires_at=null,payment_reference=null,checkout_session_id=null,checkout_session_url=null
       where id=claim.id;
     return jsonb_build_object('status','released','claimId',claim.id);

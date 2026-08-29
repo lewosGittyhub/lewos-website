@@ -140,7 +140,57 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Controle van Claude-ronde tot d6954df · TE CONTROLEREN
+### 2026-08-29 · Claude · De drie bevindingen van Codex hersteld · TE CONTROLEREN
+
+**Wat**
+- **P0 prijsverschil.** `create-checkout-session.mjs` rekent niet langer de vaste
+  `202500` af. Het bedrag komt uit de hold, die het uit dezelfde weekendrij haalt als de
+  prijs die de bezoeker zag. Staat er een onmogelijk bedrag in — geen geheel getal, of
+  buiten €10 tot €10.000 per persoon — dan gaat er niets naar Stripe, worden de stoelen
+  weer vrijgegeven en volgt een 503.
+- **Prijs vastgelegd op de claim.** `tavern_seat_claims` krijgt `price_cents`. Bij het
+  vasthouden van stoelen wordt de geldende prijs erin gezet, en bij hervatten telt die
+  vastgelegde prijs, niet een intussen gewijzigde. Zo blijft na te gaan wat er met deze
+  gast is afgesproken.
+- **P0 deadline-race.** Zestien tijdvergelijkingen in `database/first-access.sql` gebruiken
+  nu `clock_timestamp()` in plaats van `now()`: alle vergelijkingen met een deadline of
+  vervaltijd, plus de drie plekken waar we zelf een vervaltijd uitrekenen. De tijdstempels
+  die alleen vastleggen wanneer iets gebeurde blijven `now()`.
+- **P1 kalender-fit.** Een weekend geldt in de kalender als onbeschikbaar zodra de hele
+  groep er niet meer bij past, niet pas als de laatste stoel weg is. De automatische
+  voorselectie kijkt naar hetzelfde, en een eerder gekozen weekend wordt losgelaten zodra
+  de groep te groot wordt. De reden staat in het label: *"only 2 of 6 seats free, not
+  enough for 3"*. De prijsregel toont geen totaal meer voor een groep die niet past.
+- Vier nieuwe tests, en drie bestaande omgedraaid: die eisten `now()` en eisen nu
+  `clock_timestamp()`.
+
+**Waarom**
+- Codex' drie bevindingen waren alle drie terecht. Het prijspunt was ik zelf aan het
+  repareren toen zijn controle binnenkwam — Robert stelde dezelfde vraag bijna
+  gelijktijdig: *"de site moet niet zeggen dat het 2000 euro kost en dan 9000 afboeken."*
+- De ondergrens en bovengrens op de prijs vangen een typefout in Supabase op. Eén nul te
+  veel maakt van €2.025 ineens €20.250; dat bereikt Stripe nu niet.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 74 geslaagd, 0 gefaald.**
+- In de browser met een weekend met nog twee vrije stoelen: bij twee personen klikbaar,
+  bij drie geblokkeerd met de reden in het label.
+- Nieuwe tests bewijzen dat er geen vast bedrag meer in de betaalfunctie staat, dat het
+  bedrag uit de hold als `unit_amount` naar Stripe gaat, en dat acht soorten onmogelijke
+  prijs de betaling stoppen in plaats van hem te versturen.
+
+**Niet geverifieerd — voor Codex**
+- De SQL is niet tegen Supabase gedraaid. Nodig: opnieuw uitvoeren met de rollbacktest,
+  en de twee-verbindingenproef die Codex zelf voorstelde — een First Access-transactie die
+  vóór de deadline begint maar het slot pas erna krijgt, moet nu alsnog geweigerd worden.
+- Controleer ook dat `price_cents` op de claim wordt vastgelegd en bij hervatten voorgaat.
+
+**Wat nu volgt**
+- Na die databaseproef is er geen technisch punt meer open uit de controle van Codex.
+
+---
+
+### 2026-08-29 · Codex · Controle van Claude-ronde tot d6954df · GECONTROLEERD door Claude, 2026-08-29
 
 **Wat**
 - De volledige wijzigingsreeks `614d6c4..d6954df` gelezen en gecontroleerd.
@@ -186,6 +236,10 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 **Wat nu volgt**
 - Claude of Codex herstelt eerst de drie technische punten hierboven. Daarna volgt een
   nieuwe onafhankelijke controle vóór enige publicatie.
+
+**Nagelopen door Claude, 29 augustus 2026:** alle drie de punten nagerekend in de code en
+alle drie terecht bevonden. Hersteld; zie het logboekitem hierboven. De twee database-
+proeven die Codex voorstelt kan Claude niet draaien en staan als open punt terug bij hem.
 
 ---
 

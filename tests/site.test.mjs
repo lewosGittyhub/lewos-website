@@ -112,7 +112,7 @@ test("active private invitation windows block an accidentally early public openi
   const checkout=await read(path.join(root,"netlify/functions/create-checkout-session.mjs"));
   const html=await read(path.join(root,"tavern/index.html"));
   assert.match(sql,/tavern_public_booking_ready/);
-  assert.match(sql,/invitation_expires_at>now\(\)/);
+  assert.match(sql,/invitation_expires_at>clock_timestamp\(\)/);
   assert.match(sql,/checkout_token_hash is null/);
   assert.match(sql,/status in\('first_access_held','payment_pending'\)/);
   assert.match(checkout,/first_access_windows_active/);
@@ -134,10 +134,10 @@ test("operators have a fail-safe payment reconciliation audit and runbook",async
 
 test("seat accounting never frees an attached Stripe checkout on a local timer",async()=>{
   const sql=await read(path.join(root,"database/first-access.sql"));
-  assert.match(sql,/checkout_session_id is null[\s\S]{0,160}hold_expires_at<=now\(\)/);
+  assert.match(sql,/checkout_session_id is null[\s\S]{0,180}hold_expires_at<=clock_timestamp\(\)/);
   assert.match(sql,/status in\('first_access_held','payment_pending','paid'\)/);
   assert.doesNotMatch(sql,/status in\('payment_pending','expired'\)/);
-  assert.match(sql,/status='first_access_held'[\s\S]{0,180}invitation_expires_at<=now\(\)/);
+  assert.match(sql,/status='first_access_held'[\s\S]{0,200}invitation_expires_at<=clock_timestamp\(\)/);
   assert.match(sql,/payment_reconciliation_pending/);
 });
 
@@ -321,7 +321,7 @@ test("the price shown with a weekend comes from the database and follows the par
   const seed=sql.match(/on conflict \(slug\) do update set[^;]*/)?.[0]??"";
   assert.doesNotMatch(seed,/price_cents/,"re-running the migration must not overwrite a changed price");
   assert.match(script,/including taxes/);
-  assert.match(script,/guests<=item\.capacity/,"no total for a party that cannot fit");
+  assert.match(script,/guests<=Math\.min\(item\.capacity,item\.remaining\)/,"no total for a party that cannot fit");
 });
 
 test("the party size sits next to a total that follows it",async()=>{
@@ -334,4 +334,32 @@ test("the party size sits next to a total that follows it",async()=>{
   assert.match(html,/\.party \{[^}]*grid-template-columns: 112px 1fr/);
   assert.match(script,/partyPrice\.textContent=money\(cents\*guests\)/);
   assert.match(script,/setAttribute\('data-empty',''\)/,"an unusable total must fall back to a neutral state");
+});
+
+test("a deadline is judged on the clock, not on when the transaction started",async()=>{
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  // Postgres freezes now() at the start of a transaction. A request that arrives just
+  // before a deadline and then waits on the advisory lock would still be judged with
+  // that stale time, so every deadline comparison reads the clock instead.
+  for(const check of [
+    /now\(\)>=p_first_access_closes_at/,
+    /now\(\)<p_public_booking_opens_at/,
+    /invitation_expires_at<=now\(\)/,
+    /invitation_expires_at>now\(\)/,
+    /hold_expires_at<=now\(\)/,
+    /hold_expires_at>now\(\)/
+  ])assert.doesNotMatch(sql,check,`a deadline is still compared against the transaction time: ${check}`);
+  assert.match(sql,/clock_timestamp\(\)>=p_first_access_closes_at/);
+  assert.match(sql,/clock_timestamp\(\)<p_public_booking_opens_at/);
+  assert.match(sql,/expires_at:=clock_timestamp\(\)\+make_interval/);
+});
+
+test("the calendar refuses a weekend that cannot hold the whole party",async()=>{
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  // The group is never split, so a weekend with two seats left is unavailable to three.
+  assert.match(script,/const full=item\.remaining<wanted/);
+  assert.doesNotMatch(script,/const full=item\.remaining<=0/);
+  assert.match(script,/items\.find\(item=>item\.remaining>=wantedSeats\(\)\)/);
+  assert.match(script,/current\.remaining<wantedSeats\(\)/,"a chosen weekend must be let go when the party grows");
+  assert.match(script,/not enough for \$\{wanted\}/,"the reason belongs in the accessible label");
 });

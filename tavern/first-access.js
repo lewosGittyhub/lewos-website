@@ -25,6 +25,7 @@
   const asDate=value=>{const parts=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));return parts?new Date(Number(parts[1]),Number(parts[2])-1,Number(parts[3])):null;};
   const key=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   const dated=()=>availability.filter(item=>asDate(item.startsOn)&&asDate(item.endsOn));
+  const wantedSeats=()=>{const party=Number.parseInt(people.value,10);return Number.isInteger(party)&&party>0?party:1;};
 
   const paintCalendar=()=>{
     if(!calendar||!calendar.hasAttribute('data-ready'))return;
@@ -42,7 +43,7 @@
     calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${hasPrice?` ${money(cents)} per person, including taxes.`:''}`;
     if(!partyPrice)return;
     const guests=Number.parseInt(people.value,10);
-    const fits=Number.isInteger(guests)&&guests>0&&guests<=item.capacity;
+    const fits=Number.isInteger(guests)&&guests>0&&guests<=Math.min(item.capacity,item.remaining);
     if(hasPrice&&fits){
       partyPrice.textContent=money(cents*guests);
       partyPrice.removeAttribute('data-empty');
@@ -75,23 +76,31 @@
       const total=new Date(year,month+1,0).getDate();
       let cells='';
       for(let i=0;i<lead;i++)cells+='<div class="calday" aria-hidden="true"></div>';
+      // Een weekend is voor déze groep onbeschikbaar zodra de hele partij er niet meer
+      // bij past, niet pas als de laatste stoel weg is. Anders kiest een gezelschap van
+      // drie een weekend met twee plekken en krijgt het pas na het versturen te horen
+      // dat de groep niet gesplitst wordt.
+      const wanted=wantedSeats();
       for(let day=1;day<=total;day++){
         const found=days.get(key(new Date(year,month,day)));
         if(!found){cells+=`<div class="calday"><span class="calday__n">${day}</span></div>`;continue;}
         const {item}=found;
-        const full=item.remaining<=0;
+        const full=item.remaining<wanted;
         const low=!full&&item.remaining<=2;
         // In het vakje staat alleen de datum. Het aantal vrije stoelen staat groot
         // onder de kalender en in het label van de knop; een cijfertje of een rij
         // vormpjes in zo'n vakje was op ware grootte niet af te lezen.
-        const label=`${item.label}, ${item.dateLabel}, ${full?'no seats left':`${item.remaining} of ${item.capacity} seats free`}`;
+        const label=`${item.label}, ${item.dateLabel}, ${item.remaining===0?'no seats left':full?`only ${item.remaining} of ${item.capacity} seats free, not enough for ${wanted}`:`${item.remaining} of ${item.capacity} seats free`}`;
         cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}" title="${label}"><span class="calday__n">${day}</span></button>`;
       }
       return `<div class="calmonth"><h4>${MONTHS[month]} ${year}</h4><div class="calmonth__dow">${DOW.map(name=>`<span>${name}</span>`).join('')}</div><div class="calmonth__grid">${cells}</div></div>`;
     }).join('');
     calendar.setAttribute('data-ready','');
-    const openWeekend=items.find(item=>item.remaining>0);
+    const openWeekend=items.find(item=>item.remaining>=wantedSeats());
     if(!weekend.value&&openWeekend)weekend.value=openWeekend.slug;
+    // Past de eerder gekozen datum niet meer bij een gewijzigd aantal, laat de keuze los.
+    const current=items.find(item=>item.slug===weekend.value);
+    if(current&&current.remaining<wantedSeats())weekend.value=openWeekend?openWeekend.slug:'';
     paintCalendar();
     syncWeekendField();
   };

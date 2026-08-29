@@ -12,7 +12,17 @@ const rpc=async(name,body)=>{
   return response.json();
 };
 
-const createStripeSession=async({reference,name,email,seats,weekendLabel})=>{
+// De prijs komt uit dezelfde rij als de prijs die de bezoeker te zien kreeg. Staat er
+// een onmogelijk bedrag in, dan gaat er niets naar Stripe: liever geen betaling dan een
+// afschrijving die niet klopt met wat er op de pagina stond.
+const MIN_PRICE_CENTS=1000;
+const MAX_PRICE_CENTS=1000000;
+const priceFromHold=hold=>{
+  const cents=Number(hold?.priceCents);
+  return Number.isInteger(cents)&&cents>=MIN_PRICE_CENTS&&cents<=MAX_PRICE_CENTS?cents:null;
+};
+
+const createStripeSession=async({reference,name,email,seats,weekendLabel,unitAmount})=>{
   const origin=process.env.URL||"https://lewos.co";
   const form=new URLSearchParams();
   form.set("mode","payment");
@@ -22,7 +32,7 @@ const createStripeSession=async({reference,name,email,seats,weekendLabel})=>{
   form.set("cancel_url",`${origin}/booking-cancelled/`);
   form.set("expires_at",String(Math.floor(Date.now()/1000)+CHECKOUT_HOLD_MINUTES*60));
   form.set("line_items[0][price_data][currency]","eur");
-  form.set("line_items[0][price_data][unit_amount]","202500");
+  form.set("line_items[0][price_data][unit_amount]",String(unitAmount));
   form.set("line_items[0][price_data][product_data][name]",`The Lewos Tavern · ${weekendLabel}`);
   form.set("line_items[0][price_data][product_data][description]","Three-night Tavern weekend in Asturias");
   form.set("line_items[0][quantity]",String(seats));
@@ -87,11 +97,17 @@ export const handler=async event=>{
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}
   if(hold.status!=="payment_pending")return json(409,{error:hold.status,...hold});
+  const unitAmount=priceFromHold(hold);
+  if(unitAmount===null){
+    console.error("Refusing checkout with an unusable price",{reference,priceCents:hold.priceCents});
+    try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
+    return json(503,{error:"checkout_unavailable"});
+  }
   if(hold.paymentReference)reference=hold.paymentReference;
   if(hold.checkoutUrl)return json(200,{status:"checkout_ready",checkoutUrl:hold.checkoutUrl,holdExpiresAt:hold.holdExpiresAt,resumed:true});
   let session;
   try{
-    session=await createStripeSession({reference,name:hold.name,email:hold.email,seats:hold.seats,weekendLabel:hold.weekendLabel});
+    session=await createStripeSession({reference,name:hold.name,email:hold.email,seats:hold.seats,weekendLabel:hold.weekendLabel,unitAmount});
   }catch(error){
     console.error("Stripe checkout error",error);
     try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}

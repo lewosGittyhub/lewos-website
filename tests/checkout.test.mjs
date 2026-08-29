@@ -29,7 +29,7 @@ before(async()=>{
   process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";
   process.env.NODE_ENV="test";
 });
-beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
+beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,priceCents:202500,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
 beforeEach(()=>{attachResult={status:"attached"};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
@@ -192,4 +192,31 @@ test("an expired Stripe session releases its seats",async()=>{
   const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
   const result=await handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=${signature}`},body});
   assert.equal(result.statusCode,200);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
+});
+
+test("the amount charged comes from the seat hold and never from a number in the code",async()=>{
+  const {readFile}=await import("node:fs/promises");
+  const source=await readFile(new URL("../netlify/functions/create-checkout-session.mjs",import.meta.url),"utf8");
+  assert.doesNotMatch(source,/unit_amount\]","\d/,"the charged amount must not be hardcoded");
+  assert.match(source,/unit_amount\]",String\(unitAmount\)\)/);
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,200);
+  const sent=new URLSearchParams(calls.find(call=>call.url==="/v1/checkout/sessions").body);
+  assert.equal(sent.get("line_items[0][price_data][unit_amount]"),"202500");
+  assert.equal(sent.get("line_items[0][quantity]"),"3");
+});
+
+test("an impossible price stops the checkout instead of charging it",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const original=holdResult;
+  for(const priceCents of [undefined,null,0,-100,1,99999999,"202500x",202500.5]){
+    calls=[];
+    holdResult={...original,priceCents};
+    const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+    assert.equal(result.statusCode,503,`price ${priceCents} should never reach Stripe`);
+    assert.equal(JSON.parse(result.body).error,"checkout_unavailable");
+    assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false,`price ${priceCents} reached Stripe`);
+    assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/release_tavern_checkout"),true,"the seats must be released again");
+  }
 });
