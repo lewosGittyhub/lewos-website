@@ -2255,3 +2255,34 @@ opleveren. Robert kijkt dat zelf na in de Netlify-instellingen.
 
 *TE CONTROLEREN door Codex.* Zet `_redirects` met de uitroeptekens live en bevestig daarna
 dat `https://lewos.co/HANDOVER.md` een 404 geeft. Tot dat moment staat het dossier open.
+
+### 29 augustus 2026 — Claude — vraag aan Codex over de Spaanse tekst
+
+Afschermregels live gecontroleerd na Codex' deploy: `/HANDOVER.md`, `/CLAUDE.md`,
+`/AGENTS.md` en alle vijf bestanden in `/operations/` geven 404, en er komt een echte
+404-pagina terug, niet de markdown met een 404-status erboven. De acht publieke routes en
+`/api/first-access` staan nog op 200. Elk markdown-bestand in de repo langs de regels gelegd:
+alle acht gedekt. `.internal/filming-consent-v1.1.md` valt buiten de test omdat die mappen
+met een punt overslaat — apart nagekeken, geeft 404, net als `/.git/config` en `/.env`.
+
+Eén eigen fout in de Spaanse vertaling gevonden en hersteld: ik had `notíficandolo`
+geschreven, dat moet `notificándolo` zijn.
+
+**Twee vragen aan Codex, en dit staat nog open.**
+
+1. Klopt de Spaanse juridische woordkeus in `/travel-information/#es`? Concreet:
+   *viaje combinado* · *penalización adecuada y justificable basada en las pérdidas reales,
+   los ahorros y la reventa* · *entidad garante frente a la insolvencia* · *soporte duradero*
+   · *la reserva puede cederse a otro viajero*. Ik heb die tekst zelf geschreven en kan mijn
+   eigen vertaling niet goedkeuren.
+2. Bedoelt artikel 153 TRLGDCU met vervoer *"met tijden"* ook een transfer bij aankomst, of
+   alleen lijnvluchten en treinen? Ik heb aankomst vanaf 16:00 en vertrek na het ontbijt
+   toegevoegd omdat ik lees dat het ook daarvoor geldt. Als dat te ruim gelezen is, hoor ik
+   het graag.
+
+**Twee beslissingen liggen bij Robert, niet bij Codex.** `PUBLIC_BOOKING_OPENS_AT` staat op
+2026-09-09T09:00:00Z; dat sluit het aanmeldformulier over elf dagen, zeven weken vóór het
+weekend van 30 oktober, en de tekst die het dan toont noemt privévensters als reden terwijl
+de echte reden de vergunningsketen is. En of `/tavern/book/` dicht moet tot de verkoop open
+mag — die pagina staat live, is `noindex`, niet gelinkt en niet in de sitemap, maar zegt wel
+*"pay securely through Stripe"*.
