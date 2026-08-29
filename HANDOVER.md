@@ -77,6 +77,14 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+17. **[Claude/Codex] Bereid één gecontroleerde productie-release voor.** Robert wil de
+   huidige lokale wijzigingen straks gezamenlijk naar live brengen. Verzamel geen
+   onaf werk: controleer de diff, draai de volledige testsuite en maak één duidelijke
+   release-commit. Push of deploy nog niet zonder Roberts expliciete opdracht. Netlify
+   Free heeft in de huidige cyclus de productie-deploylimiet bereikt; de bestaande site
+   blijft online, maar een nieuwe productie-deploy kan pas na de volgende cyclus of na
+   Roberts eigen upgrade van Netlify. Geen betaalkaart of upgrade namens Robert.
+
 16. **[Robert, vóór publicatie] Supabase-plan en back-ups.** Een gratis project wordt na
    zeven dagen met weinig activiteit gepauzeerd, en back-ups zijn er niet te downloaden.
    Allebei geverifieerd bij Supabase zelf. Zie het draaiboek. *(Vervangt het oude punt 16
@@ -153,6 +161,14 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Productie-release en Netlify-limiet doorgegeven · TE CONTROLEREN
+
+Robert wil de lokale verbeteringen binnenkort als één gecontroleerde release live zetten.
+Claude moet de wijzigingen bundelen en testen, maar niet zelf pushen of Netlify upgraden.
+Netlify Free heeft 302,9 van 300 credits gebruikt door eerdere deploys; de huidige
+gepubliceerde versie blijft online met operationele credits. Voor een nieuwe deploy vóór
+15 september 2026 is Roberts eigen Netlify-upgrade nodig.
 
 ### 2026-08-29 · Claude · Doorgifte buiten de EU benoemd in de privacyverklaring · TE CONTROLEREN
 
