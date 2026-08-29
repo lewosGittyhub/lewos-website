@@ -8,7 +8,11 @@ const parseBody=event=>header(event,"content-type").includes("application/json")
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const clientAddress=event=>header(event,"x-nf-client-connection-ip")||header(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
 const rateKey=value=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${value}`).digest("hex");
-const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","email_claim_limit"]);
+const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","email_claim_limit","first_access_closed"]);
+const firstAccessClosesAt=()=>{
+  const value=Date.parse(process.env.PUBLIC_BOOKING_OPENS_AT||"");
+  return Number.isFinite(value)?value:null;
+};
 const databaseError=async response=>{
   let detail={};
   try{detail=JSON.parse(await response.text());}catch{}
@@ -56,8 +60,9 @@ export const handler=async event=>{
       const availability=await fetch(`${supabaseUrl}/rest/v1/rpc/get_tavern_availability`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:"{}"});
       if(!availability.ok){console.error("Availability database error",availability.status,await availability.text());return json(503,{error:"booking_service_unavailable"});}
       const weekends=await availability.json();
-      const publicBookingOpen=await databasePublicBookingReady({supabaseUrl,serviceKey});
-      return json(200,{weekends,publicBookingOpen});
+      const firstAccessClosed=firstAccessClosesAt()!==null&&Date.now()>=firstAccessClosesAt();
+      const publicBookingOpen=firstAccessClosed?await databasePublicBookingReady({supabaseUrl,serviceKey}):false;
+      return json(200,{weekends,publicBookingOpen,firstAccessClosed:firstAccessClosed&&!publicBookingOpen});
     }catch(error){console.error("Availability connection error",error);return json(503,{error:"booking_service_unavailable"});}
   }
   if(event.httpMethod!=="POST") return json(405,{error:"method_not_allowed"});
@@ -73,8 +78,13 @@ export const handler=async event=>{
   if(!["weekend-01","weekend-02","private"].includes(weekend)) return json(400,{error:"invalid_weekend"});
   if(weekend==="private"&&people<4) return json(400,{error:"private_party_too_small"});
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
-  if(weekend!=="private"&&publicBookingIsOpen()){
-    try{if(await databasePublicBookingReady({supabaseUrl,serviceKey}))return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});}
+  const closesAt=firstAccessClosesAt();
+  if(weekend!=="private"&&closesAt===null)return json(503,{error:"booking_service_not_configured"});
+  if(weekend!=="private"&&Date.now()>=closesAt){
+    try{
+      if(await databasePublicBookingReady({supabaseUrl,serviceKey}))return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});
+      return json(409,{error:"first_access_closed"});
+    }
     catch(error){console.error("Public booking readiness error",error);return json(503,{error:"booking_service_unavailable"});}
   }
   if(!process.env.RATE_LIMIT_SECRET) return json(503,{error:"booking_service_not_configured"});
@@ -91,7 +101,7 @@ export const handler=async event=>{
   }catch(error){console.error("Rate limit connection error",error);return json(503,{error:"booking_service_unavailable"});}
   let result;
   try{
-    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message})});
+    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message,p_first_access_closes_at:weekend==="private"?null:new Date(closesAt).toISOString()})});
     if(!response.ok){
       const inputError=await databaseError(response);
       if(inputError)return json(422,{error:inputError});

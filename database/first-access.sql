@@ -53,6 +53,8 @@ create table if not exists public.tavern_request_limits (
 );
 
 create index if not exists tavern_seat_claims_assigned_status_idx on public.tavern_seat_claims (assigned_weekend_id, status);
+create index if not exists tavern_seat_claims_requested_weekend_idx on public.tavern_seat_claims (requested_weekend_id);
+create index if not exists tavern_seat_claims_offered_weekend_idx on public.tavern_seat_claims (offered_weekend_id);
 create unique index if not exists tavern_seat_claims_payment_reference_idx on public.tavern_seat_claims (payment_reference) where payment_reference is not null;
 create unique index if not exists tavern_seat_claims_checkout_token_hash_idx on public.tavern_seat_claims (checkout_token_hash) where checkout_token_hash is not null;
 create unique index if not exists tavern_seat_claims_checkout_session_id_idx on public.tavern_seat_claims (checkout_session_id) where checkout_session_id is not null;
@@ -89,7 +91,8 @@ begin
 end; $$;
 revoke all on function private.cleanup_tavern_claims() from public, anon, authenticated;
 
-create or replace function public.register_tavern_interest(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_message text default null)
+drop function if exists public.register_tavern_interest(text,text,integer,text,text);
+create or replace function public.register_tavern_interest(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_message text default null,p_first_access_closes_at timestamptz default null)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare requested tavern_weekends%rowtype; alternative tavern_weekends%rowtype; existing_claim tavern_seat_claims%rowtype; occupied integer; active_claims integer; claim_id uuid;
 begin
@@ -103,6 +106,7 @@ begin
     insert into tavern_seat_claims(name,email,party_size,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),now()) returning id into claim_id;
     return jsonb_build_object('status','private_inquiry','claimId',claim_id);
   end if;
+  if p_first_access_closes_at is null or now()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
   select * into requested from tavern_weekends where slug=p_weekend_slug and visible=true;
   if not found then raise exception 'unknown_weekend'; end if;
   if p_party_size > requested.capacity then raise exception 'party_too_large'; end if;
@@ -131,8 +135,8 @@ begin
   insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,'future_weekend_interest',nullif(trim(p_message),''),now()) returning id into claim_id;
   return jsonb_build_object('status','future_weekend_interest','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',p_party_size);
 end; $$;
-revoke all on function public.register_tavern_interest(text,text,integer,text,text) from public, anon, authenticated;
-grant execute on function public.register_tavern_interest(text,text,integer,text,text) to service_role;
+revoke all on function public.register_tavern_interest(text,text,integer,text,text,timestamptz) from public, anon, authenticated;
+grant execute on function public.register_tavern_interest(text,text,integer,text,text,timestamptz) to service_role;
 
 create or replace function public.mark_tavern_receipt_email_sent(p_claim_id uuid,p_provider_id text)
 returns jsonb language plpgsql security definer set search_path=public as $$
@@ -185,10 +189,10 @@ returns boolean language plpgsql security definer set search_path=public as $$
 begin
   perform private.cleanup_tavern_claims();
   return not exists(
-    select 1 from tavern_seat_claims
-      where status='first_access_held'
-        and checkout_token_hash is not null
-        and invitation_expires_at>now()
+    select 1 from tavern_seat_claims where
+      (status='first_access_held' and checkout_token_hash is null)
+      or
+      (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>now())
   );
 end; $$;
 revoke all on function public.tavern_public_booking_ready() from public, anon, authenticated;

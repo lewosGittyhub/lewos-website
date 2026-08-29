@@ -6,10 +6,12 @@
   const weekend=form.querySelector('#weekend');
   const people=form.querySelector('#people');
   const publicBooking=document.querySelector('[data-public-booking-open]');
+  const firstAccessWaiting=document.querySelector('[data-first-access-closed]');
   let availability=[];
   let publicBookingOpen=false;
   const show=(message,type='info')=>{result.textContent=message;result.dataset.type=type;result.hidden=false;result.focus();};
   const showPublicBooking=()=>{publicBookingOpen=true;form.hidden=true;if(publicBooking)publicBooking.hidden=false;};
+  const showFirstAccessWaiting=()=>{form.hidden=true;if(publicBooking)publicBooking.hidden=true;if(firstAccessWaiting)firstAccessWaiting.hidden=false;};
   const updateWeekendOptions=()=>{
     const partySize=Number.parseInt(people.value,10)||0;
     availability.forEach(item=>{
@@ -30,6 +32,7 @@
       if(!response.ok)return;
       const data=await response.json();
       if(data.publicBookingOpen){showPublicBooking();return;}
+      if(data.firstAccessClosed){showFirstAccessWaiting();return;}
       availability=Array.isArray(data.weekends)?data.weekends:[];
       updateWeekendOptions();
     }catch{
@@ -55,6 +58,7 @@
       const response=await fetch('/api/first-access',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},body:JSON.stringify(payload)});
       const data=await response.json();
       if(data.error==='public_booking_open'){showPublicBooking();return;}
+      if(data.error==='first_access_closed'){showFirstAccessWaiting();return;}
       if(!response.ok)throw new Error(data.error||'request_failed');
       if(data.status==='first_access_held'){window.location.assign(`/thanks/?status=held&weekend=${encodeURIComponent(data.weekendLabel)}&seats=${data.seats}`);return;}
       if(data.status==='alternative_offered'){weekend.value=data.offeredWeekend;show(`${data.requestedWeekend} cannot fit your complete party. We have selected ${data.offeredWeekendLabel}, where your ${data.seats} seats can still stay together. Check the new date and submit again to claim them.`,'alternative');return;}

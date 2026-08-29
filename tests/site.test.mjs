@@ -110,9 +110,13 @@ test("the Tavern can switch automatically from First Access to public booking",a
 test("active private invitation windows block an accidentally early public opening",async()=>{
   const sql=await read(path.join(root,"database/first-access.sql"));
   const checkout=await read(path.join(root,"netlify/functions/create-checkout-session.mjs"));
+  const html=await read(path.join(root,"tavern/index.html"));
   assert.match(sql,/tavern_public_booking_ready/);
   assert.match(sql,/invitation_expires_at>now\(\)/);
+  assert.match(sql,/checkout_token_hash is null/);
+  assert.match(sql,/status in\('first_access_held','payment_pending'\)/);
   assert.match(checkout,/first_access_windows_active/);
+  assert.match(html,/data-first-access-closed/);
 });
 
 test("operators have a fail-safe payment reconciliation audit and runbook",async()=>{

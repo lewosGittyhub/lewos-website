@@ -6,6 +6,7 @@ let registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 3
 let emailRequests=0;
 let markRequests=0;
 let markStatus="marked";
+let publicReady=true;
 let rateAllowed=true;
 let registrationError="";
 let rateBodies=[];
@@ -20,7 +21,7 @@ before(async()=>{
     request.on("end",()=>{
       response.setHeader("content-type","application/json");
       if(request.url==="/rest/v1/rpc/get_tavern_availability") return response.end(JSON.stringify([{slug:"weekend-01",label:"Weekend 01",dateLabel:"30 Oct to 2 Nov 2026",capacity:6,remaining:2}]));
-      if(request.url==="/rest/v1/rpc/tavern_public_booking_ready") return response.end("true");
+      if(request.url==="/rest/v1/rpc/tavern_public_booking_ready") return response.end(JSON.stringify(publicReady));
       if(request.url==="/rest/v1/rpc/check_tavern_request_limit"){rateBodies.push(JSON.parse(body));return response.end(JSON.stringify(rateAllowed));}
       if(request.url==="/rest/v1/rpc/register_tavern_interest"){
         if(registrationError){response.statusCode=400;return response.end(JSON.stringify({code:"P0001",message:registrationError}));}
@@ -42,7 +43,7 @@ before(async()=>{
 });
 
 beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",claimId:"00000000-0000-4000-8000-000000000001",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
-beforeEach(()=>{markRequests=0;markStatus="marked";});
+beforeEach(()=>{markRequests=0;markStatus="marked";publicReady=true;process.env.PUBLIC_BOOKING_OPENS_AT="2099-01-01T00:00:00Z";});
 beforeEach(()=>{process.env.URL=base;});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
@@ -72,6 +73,24 @@ test("switches featured weekends from First Access to public booking at opening 
   assert.deepEqual(JSON.parse(response.body),{error:"public_booking_open",bookingUrl:"/tavern/book/"});
   assert.equal(rateBodies.length,0);
   assert.equal(emailRequests,0);
+});
+
+test("closes First Access at the scheduled time while private windows finish",async()=>{
+  process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
+  process.env.BOOKING_TERMS_VERSION="booking-test-v1";
+  process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";
+  process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";
+  process.env.NODE_ENV="test";
+  publicReady=false;
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const status=JSON.parse((await handler({httpMethod:"GET",headers:{}})).body);
+  assert.equal(status.publicBookingOpen,false);
+  assert.equal(status.firstAccessClosed,true);
+  const response=await handler(post(valid));
+  assert.equal(response.statusCode,409);
+  assert.equal(JSON.parse(response.body).error,"first_access_closed");
+  assert.equal(rateBodies.length,0);
 });
 
 test("private enquiries remain available after public booking opens",async()=>{

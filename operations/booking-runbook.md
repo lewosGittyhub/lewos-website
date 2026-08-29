@@ -8,6 +8,8 @@
 4. In Stripe, confirm that the production webhook is active for completed and expired Checkout Sessions.
 5. Only then enable the payment gate. The database also refuses public opening while a private invitation window remains active.
 
+The required database pre-release check is `tests/database-integration.sql`, executed after `database/first-access.sql` in one Supabase SQL transaction. A successful run returns no exception and ends with `rollback`; it must never leave test fixtures behind.
+
 ## If the reconciliation audit reports a problem
 
 - `paid_webhook_missing`: do not release the seats. Verify the payment in Stripe and resend its completed Checkout event so the booking and confirmation email are completed normally.
