@@ -116,6 +116,44 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Smal aantalveld met een totaalvakje ernaast · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`: het veld *How many of you?* is smal geworden (112 px, 96 px op een
+  telefoon) met daarnaast een vakje **Total** in dezelfde stijl als de invoervelden.
+- `tavern/first-access.js`: dat vakje toont het totaalbedrag voor de ingevulde groep. De
+  regel onder de kalender houdt alleen de prijs per persoon; de twee vullen elkaar aan in
+  plaats van hetzelfde te herhalen.
+- `tests/site.test.mjs`: nieuwe test *"the party size sits next to a total that follows
+  it"*.
+
+**Waarom**
+- Een breed getallenveld voor een cijfer van één teken is verspilde ruimte, en het
+  totaalbedrag hoort naast het aantal te staan waar het bij hoort.
+- Het vakje is een `<output>` en geen `<input>` of `<div>`. Dat is precies waar dat
+  element voor bedoeld is: een schermlezer meldt de nieuwe waarde zodra die verandert, en
+  het wordt niet als formulierveld meegestuurd. Een test bewaakt dat er geen `name` op komt.
+- De labels zijn ongelijk lang, dus de twee velden lijnen uit op hun **onderkant**. Op
+  `align-items: start` zakte het invoerveld weg onder het prijsvakje omdat *How many of
+  you?* over twee regels breekt.
+- Past de groep niet in het weekend, of levert de database geen prijs, dan staat er
+  *Enter a number* of *On request* in plaats van een bedrag. Nooit een totaal voor een
+  boeking die niet kan.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 70 geslaagd**.
+- In de browser op 820 × 660 en op 375 × 812: bij 2 personen staat er €4,050, bij 4
+  personen €8,100, de onderkanten van beide velden liggen gelijk en er is geen
+  horizontale overloop.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij wil draaien.
+
+---
+
 ### 2026-08-29 · Claude · Prijs bij het gekozen weekend, meelopend met de groep · TE CONTROLEREN
 
 **Wat**

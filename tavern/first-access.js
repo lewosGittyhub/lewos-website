@@ -8,6 +8,7 @@
   const calendar=form.querySelector('[data-weekend-calendar]');
   const calendarMonths=form.querySelector('[data-calendar-months]');
   const calendarChosen=form.querySelector('[data-calendar-chosen]');
+  const partyPrice=form.querySelector('[data-party-price]');
   const weekendField=form.querySelector('[data-weekend-field]');
   const bookingNote=form.querySelector('#booking-note');
   const publicBooking=document.querySelector('[data-public-booking-open]');
@@ -37,17 +38,18 @@
     // Levert de API er geen, dan zwijgen we erover in plaats van te gokken.
     const cents=Number(item.priceCents);
     const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100);
+    const hasPrice=Number.isFinite(cents)&&cents>0;
+    calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${hasPrice?` ${money(cents)} per person, including taxes.`:''}`;
+    if(!partyPrice)return;
     const guests=Number.parseInt(people.value,10);
-    let price='';
-    if(Number.isFinite(cents)&&cents>0){
-      price=` ${money(cents)} per person, including taxes.`;
-      if(Number.isInteger(guests)&&guests>0&&guests<=item.capacity){
-        price=guests===1
-          ?` ${money(cents)} for one guest, including taxes.`
-          :` ${money(cents*guests)} for ${guests} guests — ${money(cents)} each, including taxes.`;
-      }
+    const fits=Number.isInteger(guests)&&guests>0&&guests<=item.capacity;
+    if(hasPrice&&fits){
+      partyPrice.textContent=money(cents*guests);
+      partyPrice.removeAttribute('data-empty');
+    }else{
+      partyPrice.textContent=hasPrice?'Enter a number':'On request';
+      partyPrice.setAttribute('data-empty','');
     }
-    calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${price}`;
   };
 
   const buildCalendar=()=>{

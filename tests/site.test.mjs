@@ -323,3 +323,15 @@ test("the price shown with a weekend comes from the database and follows the par
   assert.match(script,/including taxes/);
   assert.match(script,/guests<=item\.capacity/,"no total for a party that cannot fit");
 });
+
+test("the party size sits next to a total that follows it",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  // An output element is the right home for a calculated figure: screen readers
+  // announce it when it changes, and it is never submitted as a form value.
+  assert.match(html,/<output class="party__price"[^>]*data-party-price/);
+  assert.doesNotMatch(html,/<output[^>]*name=/,"the total is a read-out, not a submitted field");
+  assert.match(html,/\.party \{[^}]*grid-template-columns: 112px 1fr/);
+  assert.match(script,/partyPrice\.textContent=money\(cents\*guests\)/);
+  assert.match(script,/setAttribute\('data-empty',''\)/,"an unusable total must fall back to a neutral state");
+});

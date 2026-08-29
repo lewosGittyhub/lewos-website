@@ -229,6 +229,13 @@
     .form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 52px; padding: 13px 14px; border: 1px solid rgba(247,243,236,.5); border-radius: var(--radius-small); background: rgba(247,243,236,.12); color: var(--cream); font: inherit; }
     .form-field select option { color: var(--green); background: var(--cream); }
     .form-field textarea { min-height: 120px; resize: vertical; }
+    /* De labels zijn ongelijk lang, dus lijn de velden op hun onderkant uit in plaats
+       van op hun bovenkant; anders zakt het invoerveld weg onder het prijsvakje. */
+    .party { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: end; }
+    .party__price { display: flex; align-items: center; min-height: 52px; padding: 13px 14px; border: 1px solid rgba(247,243,236,.3); border-radius: var(--radius-small); background: rgba(247,243,236,.06); color: var(--cream); font: 700 1.05rem/1.2 "Poppins", sans-serif; }
+    .party__price[data-empty] { color: rgba(237,230,218,.5); font-weight: 600; }
+    .party__note { margin: 8px 0 0; color: var(--beige); font-size: .82rem; }
+    @media (max-width: 420px) { .party { grid-template-columns: 96px 1fr; gap: 10px; } .party__price { font-size: .95rem; padding: 13px 10px; } }
     .form-field input:focus, .form-field select:focus, .form-field textarea:focus, .consent input:focus-visible { outline: 3px solid #f4a285; outline-offset: 3px; border-color: var(--orange); }
     .consent { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; }
     .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--orange); }
@@ -583,7 +590,10 @@
             </select>
             </div>
           </div>
-          <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
+          <div class="form-field party">
+            <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
+            <div class="form-field"><label for="party-price">Total</label><output class="party__price" id="party-price" data-party-price for="people" data-empty>Enter a number</output></div>
+          </div>
           <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
           <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
