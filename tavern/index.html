@@ -193,6 +193,14 @@
        Zonder deze regel staan alle drie de toestanden van de aanmeldsectie tegelijk
        op de pagina. */
     [hidden] { display: none !important; }
+    .link-button { justify-self: start; padding: 0; border: 0; background: none; color: var(--orange); font: 600 .9rem/1.4 "Poppins", sans-serif; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .link-button:hover { color: var(--cream); }
+    .link-button:focus-visible { outline: 3px solid #f4a285; outline-offset: 3px; }
+    .private-note { margin: 0; color: var(--beige); font-size: .92rem; }
+    /* Onzichtbaar maar wel focusbaar: het keuzemenu blijft het veld dat de browser
+       valideert, ook als de kalender de zichtbare bediening is. display:none zou de
+       validatie laten struikelen op een veld dat niet te focussen is. */
+    .is-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; white-space: nowrap; clip-path: inset(50%); border: 0; }
     .calendar { display: none; }
     .calendar[data-ready] { display: grid; gap: 16px; }
     .calendar__months { display: grid; grid-template-columns: repeat(auto-fit, minmax(226px, 1fr)); gap: 16px; }
@@ -560,6 +568,9 @@
               <div class="calendar__months" data-calendar-months></div>
               <p class="calendar__chosen" data-calendar-chosen role="status"></p>
             </div>
+            <p class="private-note" data-private-notice hidden>A private Tavern is arranged around your group, so there is no fixed weekend to pick. Tell us your dates and what you have in mind, and Robert comes back with what is possible.</p>
+            <button class="link-button" type="button" data-private-toggle>Planning a private Tavern for 4 to 12 players? →</button>
+            <div data-weekend-field>
             <label for="weekend">Which weekend?</label>
             <select id="weekend" name="weekend" required>
               <option value="" selected disabled>Choose an option</option>
@@ -567,6 +578,7 @@
               <option value="weekend-02">Weekend 02 · 6 to 9 Nov 2026</option>
               <option value="private">A private Tavern for my own group (4 to 12 players)</option>
             </select>
+            </div>
           </div>
           <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
           <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>

@@ -116,6 +116,54 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Keuzemenu wordt uitleesveld, privé-Tavern krijgt eigen route · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`: het keuzemenu *Which weekend?* zit nu in een omhulsel
+  `data-weekend-field` dat visueel wordt weggeklapt zodra de kalender werkt. Wat de gast
+  ziet is de regel *"Chosen: Weekend 01 · 30 Oct to 2 Nov 2026 — 6 of 6 seats free."*
+  Nieuw: een knop *"Planning a private Tavern for 4 to 12 players? →"* en een toelichting
+  die alleen in privé-modus verschijnt.
+- `tavern/first-access.js`: schakelt tussen twee standen. In privé-modus verdwijnt de
+  kalender, komt de toelichting tevoorschijn, loopt het aantal deelnemers van 4 tot 12 en
+  heet de knop *Send my request →*. Terugschakelen herstelt alles inclusief het eerder
+  gekozen weekend.
+- `tests/site.test.mjs`: nieuwe test *"the weekend menu becomes a read-out and a private
+  Tavern has its own route"*.
+
+**Waarom**
+- Robert wil geen keuzemenu meer naast de kalender; het hoeft alleen te tonen wat er
+  gekozen is. En een privé-Tavern hoort een eigen ingang te hebben in plaats van een
+  regel in een lijst met weekenden.
+- **Het menu is weggeklapt, niet weggehaald.** Twee redenen. Het blijft het veld dat
+  verstuurd en door de browser gevalideerd wordt, en het is de terugval als de database
+  geen datums levert — dan komt het menu gewoon weer tevoorschijn.
+- Het wegklappen gebeurt met `clip-path`, niet met `display: none`. Een verplicht veld
+  dat op `display: none` staat kan de browser niet focussen, en dan blokkeert de
+  validatie het formulier met een fout die de gast niet kan oplossen.
+- Het maximum aantal deelnemers stond op twaalf, ook voor een vast weekend van zes
+  stoelen. Wie met acht mensen invulde, kreeg pas ná het versturen een afwijzing van de
+  server. Nu klopt het veld met de stand: zes voor een weekend, vier tot twaalf privé.
+- Meegenomen: na een mislukte poging veranderde de verzendknop van *Hold my seats* in
+  *Claim my seats*. Twee namen voor dezelfde knop, precies op het moment dat er iets
+  misging. De knoptekst volgt nu de stand van het formulier.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 67 geslaagd**.
+- In de browser de hele cyclus doorlopen met een nagebootst antwoord van de database:
+  begintoestand (menu verborgen, weekend 01 gekozen, maximum zes, kalender zichtbaar) →
+  privé (waarde `private`, kalender weg, toelichting zichtbaar, vier tot twaalf, andere
+  knoptekst) → terug (alles hersteld). Alle drie kloppen.
+
+**Niet geverifieerd**
+- Nog steeds getest tegen een nagebootst antwoord, niet tegen de echte API: de migratie
+  in Supabase staat nog open bij Codex.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij echt wil draaien.
+
+---
+
 ### 2026-08-29 · Claude · Weekendkalender in het First Access-formulier · TE CONTROLEREN
 
 **Wat**

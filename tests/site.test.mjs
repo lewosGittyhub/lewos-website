@@ -271,3 +271,22 @@ test("the weekend calendar is driven by real dates and degrades to the menu",asy
   // A private Tavern is not a dated weekend and must remain reachable in the menu.
   assert.match(html,/value=["']private["']/);
 });
+
+test("the weekend menu becomes a read-out and a private Tavern has its own route",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  assert.match(html,/data-private-toggle/);
+  assert.match(html,/data-private-notice/);
+  assert.match(html,/data-weekend-field/);
+  // Hiding with display:none would make the required select unfocusable and break
+  // form validation, so the field is clipped instead.
+  assert.match(html,/\.is-visually-hidden \{[^}]*clip-path/);
+  assert.doesNotMatch(html,/\.is-visually-hidden \{[^}]*display: none/);
+  assert.match(script,/is-visually-hidden/);
+  // A private Tavern runs 4 to 12 players; a featured weekend has six seats.
+  assert.match(script,/people\.min=on\?'4':'1'/);
+  assert.match(script,/people\.max=on\?'12':'6'/);
+  // The submit label must survive a failed attempt instead of turning into other wording.
+  assert.match(script,/submit\.textContent=submitLabel\(\)/);
+  assert.doesNotMatch(script,/submit\.textContent='Claim my seats/);
+});

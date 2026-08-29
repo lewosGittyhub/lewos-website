@@ -8,6 +8,10 @@
   const calendar=form.querySelector('[data-weekend-calendar]');
   const calendarMonths=form.querySelector('[data-calendar-months]');
   const calendarChosen=form.querySelector('[data-calendar-chosen]');
+  const weekendField=form.querySelector('[data-weekend-field]');
+  const privateToggle=form.querySelector('[data-private-toggle]');
+  const privateNotice=form.querySelector('[data-private-notice]');
+  const bookingNote=form.querySelector('#booking-note');
   const publicBooking=document.querySelector('[data-public-booking-open]');
   const firstAccessWaiting=document.querySelector('[data-first-access-closed]');
   let availability=[];
@@ -36,7 +40,7 @@
   const buildCalendar=()=>{
     if(!calendar||!calendarMonths)return;
     const items=dated();
-    if(!items.length){calendar.removeAttribute('data-ready');calendarMonths.textContent='';return;}
+    if(!items.length){calendar.removeAttribute('data-ready');calendarMonths.textContent='';syncWeekendField();return;}
     const days=new Map();
     items.forEach(item=>{
       const start=asDate(item.startsOn), end=asDate(item.endsOn);
@@ -72,6 +76,37 @@
     const openWeekend=items.find(item=>item.remaining>0);
     if(!weekend.value&&openWeekend)weekend.value=openWeekend.slug;
     paintCalendar();
+    syncWeekendField();
+  };
+
+  // Een privé-Tavern heeft geen vast weekend, dus dan verdwijnt de kalender en
+  // verandert het formulier van een stoelenaanvraag in een open vraag.
+  const isPrivate=()=>weekend.value==='private';
+  const submitLabel=()=>isPrivate()?'Send my request →':'Hold my seats →';
+  const applyMode=on=>{
+    if(calendar)calendar.style.display=on?'none':'';
+    if(privateNotice)privateNotice.hidden=!on;
+    if(bookingNote)bookingNote.hidden=on;
+    // Een vast weekend heeft zes stoelen; een privé-Tavern loopt van vier tot twaalf.
+    people.min=on?'4':'1';
+    people.max=on?'12':'6';
+    submit.textContent=submitLabel();
+    if(privateToggle)privateToggle.textContent=on?'← Back to the Tavern weekends':'Planning a private Tavern for 4 to 12 players? →';
+    syncWeekendField();
+  };
+  const setPrivate=on=>{
+    weekend.value=on?'private':'';
+    applyMode(on);
+    if(on){if(calendarChosen)calendarChosen.textContent='';}else buildCalendar();
+  };
+  if(privateToggle)privateToggle.addEventListener('click',()=>setPrivate(!isPrivate()));
+
+  // Zodra de kalender de zichtbare bediening is, hoeft het keuzemenu alleen nog het
+  // gekozen weekend te dragen. Kan de kalender niet laden, dan komt het menu terug.
+  const syncWeekendField=()=>{
+    if(!weekendField)return;
+    const usingCalendar=Boolean(calendar&&calendar.hasAttribute('data-ready'))||weekend.value==='private';
+    weekendField.classList.toggle('is-visually-hidden',usingCalendar);
   };
 
   const hoverCalendar=(slug,on)=>{
@@ -122,6 +157,7 @@
     }
   };
   people.addEventListener('input',updateWeekendOptions);
+  applyMode(isPrivate());
   loadAvailability();
   const query=new URLSearchParams(window.location.search);
   if(query.get('status')==='alternative'){
@@ -155,6 +191,6 @@
       const emailLimit=error.message==='email_claim_limit';
       show(unavailable?'Seat registration is temporarily unavailable. Please try again shortly or contact Robert directly.':tooMany?'Too many requests were sent in a short time. Your existing request is safe; please wait fifteen minutes before trying again.':tooLarge?'Featured weekends have six seats. For a larger group, choose a private Tavern in the same weekend menu.':privateTooSmall?'A private Tavern starts with four players. Bring your group to at least four, or choose one of the featured six-seat weekends.':emailLimit?'This email address already has seats held for the maximum number of featured weekends. Contact Robert if you need to change one of those requests.':'We could not check the seats. Please review your details and try again.','error');
     }
-    finally{submit.disabled=false;submit.textContent='Claim my seats →';}
+    finally{submit.disabled=false;submit.textContent=submitLabel();}
   });
 })();
