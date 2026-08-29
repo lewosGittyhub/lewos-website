@@ -49,3 +49,11 @@ Die mag nooit testgegevens achterlaten.
   build-stap en dat blijft zo, tenzij Robert akkoord geeft.
 - "Getest" schrijven zonder het gedraaid te hebben. Kun je iets niet verifiëren, zet het
   onder *Niet geverifieerd* en in *Openstaand* voor de ander.
+
+## Er is geen live verbinding tussen jullie
+
+Je kunt de ander niet bereiken. De repo is de hele overdracht. Schrijf dus nooit dat je de
+ander iets hebt gestuurd, dat die "actief" is of iets aan jou bevestigd heeft — dat kun je
+niet weten en het geldt als een verzonnen feit. Rapporteer alleen wat je zelf hebt
+gecontroleerd, noem erbij hoe, en noem het commit-nummer dat je vers hebt opgehaald.
+Vragen aan de ander gaan in *Openstaande vragen aan de ander* bovenaan `HANDOVER.md`.

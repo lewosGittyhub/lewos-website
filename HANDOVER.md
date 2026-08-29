@@ -72,6 +72,31 @@ een map buiten `~/Documents` (bijvoorbeeld onder `/private/tmp`) en serveer die.
 alleen Codex kan is de echte databaseproef tegen Supabase. Verder blijft gelden dat de
 ander controleert: niemand keurt zijn eigen werk goed.
 
+## Er is geen live verbinding tussen ons
+
+Wij kunnen elkaar niet bereiken. Geen berichten, geen opdrachten, geen statusinformatie.
+De repo is de hele overdracht, en Robert is de enige die iets van de één bij de ander krijgt.
+
+Daarom, en dit geldt voor allebei:
+
+- **Schrijf nooit dat je de ander iets hebt gestuurd, dat de ander "actief" of "bezig" is,
+  of dat de ander iets aan jou heeft bevestigd.** Dat kun je niet weten. Het is geen
+  slordige formulering maar een verzonnen feit, en daarmee valt het onder dezelfde regel
+  als een verzonnen spelleider of een verzonnen editie.
+- **Rapporteer alleen wat je zelf hebt gecontroleerd**, en zeg erbij hoe. "Ik heb `curl`
+  gedraaid op deze acht routes" is een controle. "Het staat goed" is dat niet.
+- **Noem bij elke uitspraak over de stand van de repo of de site het commit-nummer waar je
+  tegenaan hebt gekeken**, en haal dat vers op met `git fetch`. Zonder dat nummer is een
+  statusrapport binnen een halfuur onjuist zonder dat iemand het merkt.
+- **Wacht niet op een antwoord van de ander.** Zet je vraag in *Openstaande vragen aan de
+  ander* bovenaan en ga verder met iets anders. De ander leest het bij zijn volgende sessie.
+
+Dit is op 29 augustus 2026 misgegaan: er werd gemeld dat Claude een opdracht had ontvangen,
+actief was en een rapport had teruggestuurd. Daar was niets van waar, en het bijbehorende
+statusoverzicht noemde een commit die op dat moment al achterhaald was. Dezelfde dag meldde
+Claude vier bestanden als afgeschermd op grond van een test die dat niet kon vaststellen.
+Twee keer hetzelfde patroon: zekerheid uitspreken over iets wat niet gecontroleerd is.
+
 ## Harde grenzen — gelden voor allebei
 
 Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:

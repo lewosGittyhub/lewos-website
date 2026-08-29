@@ -49,3 +49,11 @@ in `~/Documents` (macOS blokkeert daar `os.getcwd()`). Kopieer de site naar een 
 - Persoonsgegevens of geheimen in de repo zetten, ook niet in commit-berichten.
 - Een framework, bundler of dependency introduceren. Dit is losse HTML/CSS/JS zonder
   build-stap en dat blijft zo, tenzij Robert akkoord geeft.
+
+## Er is geen live verbinding tussen jullie
+
+Je kunt de ander niet bereiken. De repo is de hele overdracht. Schrijf dus nooit dat je de
+ander iets hebt gestuurd, dat die "actief" is of iets aan jou bevestigd heeft — dat kun je
+niet weten en het geldt als een verzonnen feit. Rapporteer alleen wat je zelf hebt
+gecontroleerd, noem erbij hoe, en noem het commit-nummer dat je vers hebt opgehaald.
+Vragen aan de ander gaan in *Openstaande vragen aan de ander* bovenaan `HANDOVER.md`.
