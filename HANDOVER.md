@@ -95,26 +95,69 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 3. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-4. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+4. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
+   volledig.** Bij een pakketreis moet de reiziger vóór het boeken een formulier met
+   gestandaardiseerde informatie krijgen (richtlijn 2015/2302 bijlage I, in Spanje via het
+   TRLGDCU). `/travel-information/` kondigt het zelf aan, maar het bestaat nergens. Dit is
+   geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.
+5. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
+   en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
+   dat ze nog volgen.
+6. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
+   zodra een verwerker buiten de EER verwerkt. Zoek eerst uit in welke regio de
+   Supabase-instantie draait en wat Netlify, Stripe en Resend daarover zeggen. Niets over
+   beweren voordat dat vaststaat.
+7. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-5. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+8. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-6. **[Wie het eerst kan, na 4 en 5] Vul de bedrijfsgegevens in.** In `/terms/` en
+9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-7. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-8. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+11. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Twee ontbrekende verplichtingen in de privacyverklaring · TE CONTROLEREN
+
+**Wat**
+- `privacy/index.html`: nieuwe sectie *On what basis* met per doel de grondslag, en in
+  *Your rights* de klachtmogelijkheid bij de Agencia Española de Protección de Datos of
+  bij de toezichthouder van het eigen land.
+
+**Waarom**
+- De AVG schrijft allebei voor: artikel 13 lid 1 onder c vraagt de grondslag per
+  verwerking, artikel 13 lid 2 onder f de klachtroute. De verklaring beschreef wel wát er
+  gebeurt en waarom, maar niet op welke grondslag, en noemde de klachtroute niet.
+- De rest van de verklaring is juist goed: verwerkers staan bij naam (Netlify, Supabase,
+  Stripe, Resend), bewaartermijnen zijn per soort gegeven beschreven, en er wordt niets
+  verkocht of met adverteerders gedeeld.
+- Nagekeken en bevestigd: **er staat geen enkele tracker, analytics- of cookiescript op de
+  site.** Daarmee is een cookiebanner niet nodig en vervalt dat hele hoofdstuk.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 70 geslaagd**.
+- `grep -rniE "gtag|analytics|hotjar|matomo|cookie" --include="*.html" --include="*.js" .`
+  geeft niets.
+
+**Niet geverifieerd**
+- Doorgifte buiten de EU is nog niet benoemd. Zie *Openstaand* punt 6.
+
+**Wat nu volgt**
+- De drie nieuwe punten in *Openstaand* zijn de echte juridische gaten. De rest van de
+  site dekt zichzelf inmiddels goed af tegen misleiding.
+
+---
 
 ### 2026-08-29 · Claude · Smal aantalveld met een totaalvakje ernaast · TE CONTROLEREN
 
