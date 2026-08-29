@@ -14,6 +14,7 @@ committed to `tavern/assets/` or `assets/`.
 | `tavern/assets/tavern-asturias-hero.webp` | Panorama over an Asturian valley, used as the Tavern hero | Robert's own photograph, `IMG_1781.HEIC` | Owned by Lewos |
 | `tavern/assets/tavern-asturias-hero-portrait.webp` | Upright crop of the same panorama, for narrow screens | Same original | Owned by Lewos |
 | `tavern/assets/surroundings-house.webp` | Stone house with a tiled roof and covered porch | Robert's own photograph, `IMG_1725.HEIC` | Owned by Lewos |
+| `tavern/assets/surroundings-walkers.webp` | Walkers on a mountain track with chamois above | Robert's own photograph, `IMG_4664`-series, file `IMG_4693.HEIC` | Owned by Lewos. The people are Robert's family; Robert confirmed on 29 August 2026 that they are fine with the photograph being published |
 | `tavern/assets/surroundings-fire.webp` | Meat on a grill inside a stone hearth | Robert's own photograph, `IMG_4777.HEIC` | Owned by Lewos |
 | `tavern/assets/surroundings-path.webp` | Stone path across a ravine below limestone peaks | Robert's own photograph, `IMG_4664.HEIC` | Owned by Lewos. One distant figure, turned away and not identifiable |
 | `tavern/assets/surroundings-picos.webp` | The Picos de Europa above low cloud | Pexels, photographer credited there as Enrique, file `pexels-enrique72-33455263` | Pexels Licence |
@@ -52,9 +53,13 @@ better written down as unrecorded than filled in with something plausible.
 
 | File | Why not |
 | --- | --- |
-| `IMG_4693.HEIC` | A group of hikers on a mountain path. **Several are identifiable and none of them agreed to appear on a commercial website.** The same rule that gives our own guests a separate filming choice applies to strangers on a footpath. Not used, and not to be used without their consent. |
 | `IMG_1762.HEIC` | Not a photograph of a place at all: a picture of a RETA registration showing a tax number, a telephone number, an email address and a boarding pass. Never for publication. Flagged to Robert on 29 August 2026. |
-| `7F0FAF19-…​.MP4` | Seventeen seconds of the stone houses, vertical, 31 MB. Worth having, but see the note below. |
+| `7F0FAF19-…​.MP4` | Seventeen seconds of the stone houses, vertical, 31 MB. Robert decided on 29 August 2026 not to pursue it for the site. See the note below. |
+
+Identifiable people are the one case where a licence is not enough. `IMG_4693` was set
+aside at first for exactly that reason, and only used after Robert confirmed the walkers
+are his family and are fine with it. Apply the same test to anything new: a stranger who
+can be recognised does not go on a commercial site without their word.
 
 ## The video, and why it is not on the site
 

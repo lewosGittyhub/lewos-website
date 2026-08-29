@@ -60,6 +60,13 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
   `tests/site.test.mjs` weigert elke afstand in meters of kilometers op een publieke
   pagina. Dit geldt ook voor beloftes die je onderweg zelf verzint om een andere op te
   lossen.
+- ✅ **Bevestigd door Robert op 29 augustus 2026: de wandelaars op `IMG_4693` zijn zijn
+  familie en vinden publicatie prima.** Dat beeld staat daarom in de diavoorstelling. De
+  regel eronder blijft wel staan: een herkenbare vreemde gaat niet op een commerciële site
+  zonder diens woord.
+- ✅ **Besloten door Robert op 29 augustus 2026: de video komt niet op de site.** Verticaal,
+  te zwaar, en zonder ffmpeg niet fatsoenlijk te comprimeren. Instagram is de plek. Niet
+  opnieuw voorstellen.
 - **Prijs is €2.025 p.p. all-in, drie nachten.** Op de Engelse pagina's geschreven als
   `€2,025`. Elke andere prijs is een fout.
 - **Geen verzonnen feiten in publieke teksten.** Geen namen, reviews, statistieken of
@@ -233,6 +240,40 @@ publicatieconstanten zijn leeg, de checkout weigert zolang dat zo is, er staan g
 verzonnen feiten meer in de publieke teksten, elke wijziging is in dit dossier
 terug te lezen, en de gegevens die we vragen blijven beperkt tot wat de boeking nodig
 heeft. Wat een assistent níét kan leveren staat als zodanig in *Openstaand*.
+
+### 2026-08-29 · Claude · Familiefoto alsnog geplaatst, video definitief niet · TE CONTROLEREN
+
+**Wat**
+- `surroundings-walkers.webp` (213 kB) staat in de diavoorstelling, die daarmee op **negen
+  beelden** komt: zes eigen foto's van Robert en drie landschappen via Pexels.
+- `operations/image-credits.md`: het beeld verhuisd van *niet gebruikt* naar de tabel met
+  eigen foto's, met de toestemming en de datum erbij. De video staat er als besluit, niet
+  meer als open vraag.
+- De twee bevestigingen staan bij de harde grenzen bovenaan dit dossier.
+
+**Waarom**
+- Robert, 29 augustus: *"de wandelaars zijn mijn familie en die vinden het prima."* Daarmee
+  vervalt het bezwaar. Ik had het beeld terecht apart gelegd — bij een foto van herkenbare
+  mensen is een licentie niet genoeg — maar met toestemming van de afgebeelde personen is
+  het gewoon bruikbaar, en het is een van de sterkere beelden van de reeks.
+- De regel zelf blijft staan in het creditsbestand, zodat een volgende foto van vreemden
+  wél weer wordt tegengehouden.
+- Over de video: *"als videos niet kunnen dan pech."* Besloten en vastgelegd, zodat geen van
+  ons het over twee weken opnieuw voorstelt.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 84 geslaagd.**
+- In de browser: negen beelden in de presentatie, alle negen geladen, bijschriften in
+  volgorde *Where you sleep · The high pastures · Over the fire · Sharing the path · Old
+  stone paths · The Picos de Europa · The coast · Still water · Where the land stops*.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Niets. De media-opdracht is hiermee afgerond.
+
+---
 
 ### 2026-08-29 · Claude · Waar ik tegenaan loop — voor Codex · TE CONTROLEREN
 
