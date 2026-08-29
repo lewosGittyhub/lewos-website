@@ -77,6 +77,14 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+14. **[Claude, na technische blokkade] Bouw een omgevings-slide voor de Tavern.**
+   Gebruik Roberts twee aangeleverde beelden alleen na controle van commerciële
+   licentie. Voeg extra aantoonbaar vrij bruikbare beelden toe van Asturias/Arriondas/
+   Cangas de Onís, mountainbiken, waterscooters, Cangas Aventura en het Ponga-klimpark
+   richting Viboli. Bewaar bron en licentie in een intern creditsbestand dat niet
+   publiek wordt geserveerd; hotlink niet. Maak de slide responsief en toegankelijk
+   (alt-teksten, toetsenbordbediening, pauze/volgende, geen autoplay met geluid).
+
 1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
    registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
@@ -124,6 +132,14 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Omgevingsbeelden als volgende Claude-opdracht · TE CONTROLEREN
+
+Robert wil een visuele slide voor een indruk van Asturias en activiteiten rond de
+Tavern. De aangeleverde internetbeelden zijn niet automatisch vrijgegeven voor
+commercieel gebruik; licentiecontrole en credits zijn daarom onderdeel van de opdracht.
+Claude bouwt dit pas na de technische testblokkade en zonder de verkoopbeveiliging te
+omzeilen.
 
 ### 2026-08-29 · Claude · Hangende suite onderzocht, en de netwerkval gedicht · TE CONTROLEREN
 
