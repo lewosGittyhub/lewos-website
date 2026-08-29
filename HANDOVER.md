@@ -176,13 +176,61 @@ krijgt daarom één brede maar geordende ronde: technische piekbelasting en test
 daarna copy/beeld en releasevoorbereiding. Externe betalingen, upgrades, juridische
 registratie en productie-deploy blijven buiten assistentbevoegdheid.
 
-### 2026-08-29 · Codex · Productie-release en Netlify-limiet doorgegeven · TE CONTROLEREN
+### 2026-08-29 · Claude · Release-kandidaat klaargezet, niet gepusht · TE CONTROLEREN
+
+**Wat**
+- Nieuw: `operations/release-2026-08-29.md`. Wat een bezoeker erbij krijgt, wat bewust
+  dicht blijft, wat er gecontroleerd is, en in welke volgorde het moet gebeuren.
+- **Niet gepusht, niet gedeployed, geen Netlify-upgrade.** Zoals gevraagd.
+
+**De release**
+- Vijftig commits vóór op `origin/main`, 57 bestanden, ongeveer 4.000 regels erbij.
+- Drie nieuwe publieke pagina's: `/tavern/private/`, `/terms/` en `/travel-information/`.
+  De laatste twee zijn concept en staan op `noindex`.
+- Veertien nieuwe beeldbestanden; de Tavern-assets wegen samen 1,5 MB, allemaal uitgesteld
+  geladen behalve de hero.
+
+**Vijf controles vóór ik dit een kandidaat noemde**
+1. **Betalen blijft onmogelijk.** De drie publicatieconstanten zijn leeg; de checkout
+   weigert zolang dat zo is. Deployen brengt de verkoop dus geen stap dichterbij, en dat is
+   precies de bedoeling.
+2. Geen teststeiger, geen nagebootste API, geen `localhost`-verwijzing buiten `tests/`.
+   Het stubje dat de kalender lokaal zichtbaar maakt zit alleen in de preview, niet in de
+   repo.
+3. De conceptpagina's staan alle vier op `noindex`.
+4. Geen persoonsgegevens, fiscale nummers of sleutels in de hele boom.
+5. `console.log` staat alleen in de twee operatorscripts, waar het de uitvoer ís.
+- Plus: `node --test tests/*.test.mjs` → **82 geslaagd, 0 gefaald.**
+
+**Volgorde die ertoe doet**
+- **Eerst de migratie in Supabase, dan pas deployen** — of accepteer dat de kalender
+  verborgen blijft. Zonder `starts_on`, `ends_on` en `price_cents` verbergt de kalender
+  zichzelf en neemt het oude keuzemenu het over; de checkout weigert in plaats van een
+  prijs te gokken. Er gaat niets stuk, de functie verschijnt alleen niet.
+
+**Niet geverifieerd**
+- De release is niet op een testomgeving van Netlify gedraaid; er is lokaal getest met een
+  statische server en met de suite.
+
+**Wat nu volgt**
+- Robert beslist over pushen. Netlify Free staat op 302,9 van 300 credits, dus een nieuwe
+  productie-deploy vraagt de volgende cyclus of zijn eigen upgrade. Geen betaalkaart of
+  planwijziging namens hem.
+- Los daarvan: de juridische blokkades staan nog overeind en worden door geen enkele
+  deploy opgelost.
+
+---
+
+### 2026-08-29 · Codex · Productie-release en Netlify-limiet doorgegeven · GECONTROLEERD door Claude, 2026-08-29
 
 Robert wil de lokale verbeteringen binnenkort als één gecontroleerde release live zetten.
 Claude moet de wijzigingen bundelen en testen, maar niet zelf pushen of Netlify upgraden.
 Netlify Free heeft 302,9 van 300 credits gebruikt door eerdere deploys; de huidige
 gepubliceerde versie blijft online met operationele credits. Voor een nieuwe deploy vóór
 15 september 2026 is Roberts eigen Netlify-upgrade nodig.
+
+**Nagelopen door Claude, 29 augustus 2026:** kandidaat klaargezet en gecontroleerd, zie het
+item hierboven. Niet gepusht, niet gedeployed, geen upgrade namens Robert.
 
 ### 2026-08-29 · Claude · Doorgifte buiten de EU benoemd in de privacyverklaring · TE CONTROLEREN
 
