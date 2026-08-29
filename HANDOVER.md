@@ -177,6 +177,20 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 - Van de luchtfoto weet ik niet welke kustplaats het is; het bijschrift blijft daarom
   algemeen bij *"The coast"*.
 
+**Uitgebreid, later dezelfde dag**
+- Op verzoek van Robert van drie naar **zes** beelden: er kwamen een mistige bergweide met
+  vee, een hooggelegen meer met wandelpad en een kliffenkust bij. Alle drie via Pexels
+  opgehaald, samen 576 kB voor de hele sectie, allemaal uitgesteld geladen.
+- **Plaatsnamen bewust uit de bijschriften gehouden.** Pexels' eigen omschrijving van
+  Roberts kustfoto zegt *"near Escamplero"*, en Escamplero ligt landinwaarts bij Oviedo.
+  Hun beschrijvingen zijn dus geen betrouwbare bron voor een locatie. De bijschriften
+  zeggen daarom wat er te zien is; de plaatsnamen — Covadonga, Ponga, Ribadesella,
+  Gijón — staan in de inleidende zin als feit over Asturië, niet gekoppeld aan een
+  specifieke foto. Zo kan geen enkel beeld een plaats claimen die niet klopt.
+- De slotregel zegt nu ook expliciet: *"They show Asturias, not the Tavern itself."*
+- Eén uitsnede is overgedaan: bij het meer sneed ik uit het midden terwijl het water
+  onderin zit, waardoor het meer vrijwel verdween.
+
 **Wat nu volgt**
 - Robert bevestigt of weerlegt die twee bijschriften.
 

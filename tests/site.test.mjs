@@ -370,7 +370,8 @@ test("the surroundings are real photographs, credited and described",async()=>{
   assert.ok(block,"the surroundings section must exist");
   // Three photographs, each with words for a reader who cannot see them.
   const images=[...block.matchAll(/<img[^>]*>/g)].map(match=>match[0]);
-  assert.equal(images.length,3);
+  assert.ok(images.length>=3,"the section needs at least three photographs to be worth its space");
+  assert.equal(images.length,[...block.matchAll(/<figcaption>/g)].length,"every photograph carries its own caption");
   for(const image of images){
     assert.match(image,/alt="[^"]{40,}"/,"every photograph needs a description that stands on its own");
     assert.match(image,/loading="lazy"/);
