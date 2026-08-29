@@ -77,13 +77,18 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-16. **[Claude] Bewijs dat piekverkeer netjes degradeert.** Voeg een lokale, niet-
+16. **[Robert, vóór publicatie] Supabase-plan en back-ups.** Een gratis project wordt na
+   zeven dagen met weinig activiteit gepauzeerd, en back-ups zijn er niet te downloaden.
+   Allebei geverifieerd bij Supabase zelf. Zie het draaiboek. *(Vervangt het oude punt 16
+   over de belastingstest; die is gedaan.)*
+
+~~16. **[Claude] Bewijs dat piekverkeer netjes degradeert.** Voeg een lokale, niet-
    destructieve belastingstest toe voor circa 100 gelijktijdige First Access- en
    contactaanvragen. Controleer dat rate limits misbruik afvangen, geldige aanvragen
    geen dubbele stoelclaims maken, fouten als nette 429/503-antwoorden terugkomen en
    de pagina zelf bruikbaar blijft. Documenteer ook welke Netlify/Supabase-limieten en
    alerts Robert vóór publicatie moet instellen. Geen echte productie-aanvragen of
-   Stripe-betalingen in deze test.
+   Stripe-betalingen in deze test.~~ **Gedaan op 29 augustus, zie `tests/load.test.mjs`.**
 
 15. **[Claude] Doe een compacte tekst-audit van de publieke Tavern-pagina.** Verwijder
    doublures over drie nachten, maaltijden, transfers, zes stoelen, Asturias en het
@@ -150,6 +155,56 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Piekbelasting getest en de limieten vastgelegd · TE CONTROLEREN
+
+**Wat**
+- Nieuw bestand `tests/load.test.mjs`: vier proeven met ongeveer honderd gelijktijdige
+  aanvragen tegen de First Access-functie, met een nabootsing van de database die dezelfde
+  regels volgt als `database/first-access.sql`. Raakt geen productiegegevens en komt niet
+  bij Stripe.
+- `operations/booking-runbook.md`: nieuwe sectie *Load and limits before opening*.
+
+**Wat de proeven aantonen**
+- Honderd verschillende bezoekers die tegelijk hetzelfde weekend vragen: er worden
+  **precies zes** stoelen vergeven, geen zeven, en niemand krijgt een serverfout. De rest
+  krijgt een alternatief of belangstelling voor later.
+- Honderd aanvragen van één e-mailadres: vijf komen door, **vijfennegentig krijgen een
+  nette 429**. Dat adres houdt hooguit één claim over.
+- Honderd aanvragen vanaf één IP-adres: twaalf komen door, achtentachtig krijgen 429.
+- Database weg: **alle vijftig aanvragen krijgen 503** met `booking_service_unavailable`,
+  en er blijft geen halve claim achter.
+
+**Wat de proeven níét aantonen**
+- Het gedrag van PostgreSQL zelf onder gelijktijdige transacties. Dat is de rollbacktest in
+  Supabase die Codex draait; deze test dekt de functielaag en het contract ertussen.
+- Het contactformulier. Dat post naar **Netlify Forms**, niet naar een functie, dus het is
+  lokaal niet te belasten. Dat staat als zodanig in het draaiboek.
+
+**⚠️ Twee bevindingen die Robert vóór publicatie moet regelen — geverifieerd bij Supabase**
+- **Een Supabase-project op het gratis plan wordt gepauzeerd na zeven dagen met weinig
+  activiteit.** Een gepauzeerde database betekent dat First Access-aanvragen mislukken
+  terwijl de site er normaal uitziet. Precies het scenario van een rustige week vlak voor
+  de verkoop opengaat.
+- **Op het gratis plan kun je geen back-up downloaden.** De privacyverklaring belooft dat
+  boekings-, betaal- en factuurgegevens bewaard blijven zolang de wet dat eist. Dat is met
+  een niet-downloadbare back-up niet hard te maken.
+- Bron: https://supabase.com/docs/guides/platform/going-into-prod
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 80 geslaagd** (was 76; vier nieuwe).
+- De verwachte aantallen in de test zijn hard: 95 en 88 keer 429, precies 6 stoelen. Gaat
+  er iets aan de limieten schuiven, dan valt de test om in plaats van stilletjes mee te
+  bewegen.
+
+**Niet geverifieerd**
+- De Netlify-quota. Die verschillen per plan; het draaiboek noemt welke je moet nakijken
+  in het dashboard in plaats van een getal te beweren dat morgen anders is.
+
+**Wat nu volgt**
+- Robert: het Supabase-plan, vóór de eerste uitnodiging de deur uit gaat.
+
+---
 
 ### 2026-08-29 · Claude · Tekst ingekort en ontdaan van AI-ritme · TE CONTROLEREN
 
