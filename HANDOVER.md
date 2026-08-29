@@ -67,6 +67,10 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 - ✅ **Besloten door Robert op 29 augustus 2026: de video komt niet op de site.** Verticaal,
   te zwaar, en zonder ffmpeg niet fatsoenlijk te comprimeren. Instagram is de plek. Niet
   opnieuw voorstellen.
+- **Een bijschrift beschrijft de foto, het belooft geen dienst.** Zodra er staat wat een
+  gast krijgt, of hoe een maaltijd wordt gemaakt, is het een belofte die niemand tegen de
+  keuken heeft gehouden. Een test in `tests/site.test.mjs` weigert dat soort formuleringen
+  in de sfeersectie.
 - **Prijs is €2.025 p.p. all-in, drie nachten.** Op de Engelse pagina's geschreven als
   `€2,025`. Elke andere prijs is een fout.
 - **Geen verzonnen feiten in publieke teksten.** Geen namen, reviews, statistieken of
@@ -240,6 +244,45 @@ publicatieconstanten zijn leeg, de checkout weigert zolang dat zo is, er staan g
 verzonnen feiten meer in de publieke teksten, elke wijziging is in dit dossier
 terug te lezen, en de gegevens die we vragen blijven beperkt tot wat de boeking nodig
 heeft. Wat een assistent níét kan leveren staat als zodanig in *Openstaand*.
+
+### 2026-08-29 · Claude · Vier bijschriften waren beloftes · TE CONTROLEREN
+
+**Wat**
+- Vier bijschriften in de sfeersectie herschreven van belofte naar beschrijving.
+- `tests/site.test.mjs`: nieuwe test *"a caption describes the photograph and does not
+  promise a service"*.
+- De regel staat bij de harde grenzen bovenaan dit dossier.
+
+**⚠️ Eén ervan was waarschijnlijk ook feitelijk onjuist**
+- *"Dinner is cooked on wood, not switched on."* Robert zag de belofte; bij het nakijken
+  bleek het erger. **Zijn briefing aan Story Forge zegt: het eten wordt elders bereid en
+  komt gereed binnen; op locatie wordt het alleen opgemaakt en geserveerd.** Het bijschrift
+  beweerde dus iets over de keuken dat vermoedelijk niet klopt, onder een foto waarop
+  toevallig een vuur staat. Nu: *"The hearth — A grill set into the stone, with the fire
+  behind it."* Dat beschrijft wat er te zien is en belooft niets.
+- De andere drie: *"Where you sleep"* claimde dat dat huis het verblijf ís, wat nooit
+  bevestigd is; *"cloud that stays all morning"* beloofde weer; en *"long before the road"*
+  was een bewering over de ouderdom van het pad die ik niet kan staven.
+
+**Waarom dit patroon terugkomt**
+- Dit is de derde keer vandaag dat Robert een belofte eruit haalt: eerst de tien meter,
+  toen de vijfhonderd meter en het aantal huisgenoten, nu de maaltijden. Steeds hetzelfde
+  mechanisme: een zin die lekker loopt en die niemand tegen de werkelijkheid heeft
+  gehouden. Bij een sfeerfoto ligt dat extra voor de hand, omdat het beeld verleidt tot een
+  zin over de ervaring in plaats van over de foto.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 85 geslaagd.**
+
+**Niet geverifieerd**
+- Of het eten werkelijk volledig elders wordt bereid. De briefing zegt het, maar dat is een
+  document van 14 augustus; als het inmiddels anders werkt, hoort dat in de klantteksten.
+
+**Wat nu volgt**
+- Robert kan bevestigen hoe het eten nu werkelijk gaat, dan kan er weer iets concreets over
+  op de site — als feit ditmaal.
+
+---
 
 ### 2026-08-29 · Claude · Familiefoto alsnog geplaatst, video definitief niet · TE CONTROLEREN
 

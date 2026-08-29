@@ -444,3 +444,13 @@ test("a preloaded image is the exact one the page then uses",async()=>{
     }
   }
 });
+
+test("a caption describes the photograph and does not promise a service",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const block=html.match(/<section class="around"[\s\S]*?<\/section>/)?.[0]??"";
+  // A caption sits under a picture of the region. The moment it says what a guest will
+  // get, or how a meal is made, it becomes a promise nobody checked against the kitchen.
+  for(const forbidden of [/\bdinner is\b/i,/\bcooked\b/i,/\bwhere you sleep\b/i,/\byou will\b/i,/\bevery (meal|day|morning)\b/i]){
+    assert.doesNotMatch(block,forbidden,`a caption promises something: ${forbidden}`);
+  }
+});
