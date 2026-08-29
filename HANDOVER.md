@@ -67,6 +67,13 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 - ✅ **Besloten door Robert op 29 augustus 2026: de video komt niet op de site.** Verticaal,
   te zwaar, en zonder ffmpeg niet fatsoenlijk te comprimeren. Instagram is de plek. Niet
   opnieuw voorstellen.
+- ✅ **Bevestigd door Robert op 29 augustus 2026: het stenen pand op `IMG_1725` is een van
+  de slaapplekken.** Het bijschrift *"Where you sleep"* mag daarom staan. Wel *"one of the
+  houses"*, want een gast slaapt niet per se in díé.
+- ✅ **Bevestigd door Robert op 29 augustus 2026: dat gasten te eten krijgen is een feit; waar
+  het vandaan komt doet er niet toe.** Beschrijf op de site dus wát er inbegrepen is, en
+  nooit hoe of waar het bereid wordt. Dat is nu tijdelijk geregeld en verandert als er een
+  kok en een eigen keuken komen — een zin over de keuken zou dan meteen onjuist worden.
 - **Een bijschrift beschrijft de foto, het belooft geen dienst.** Zodra er staat wat een
   gast krijgt, of hoe een maaltijd wordt gemaakt, is het een belofte die niemand tegen de
   keuken heeft gehouden. Een test in `tests/site.test.mjs` weigert dat soort formuleringen
@@ -212,6 +219,37 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Twee bevestigingen van Robert verwerkt · TE CONTROLEREN
+
+**Wat**
+- Het bijschrift *"Where you sleep"* staat weer in de diavoorstelling, nu als *"One of the
+  houses. Everyone has their own bedroom."*
+- De test die dat bijschrift verbood is aangepast; de andere verboden formuleringen blijven.
+- Beide bevestigingen staan bij de harde grenzen bovenaan dit dossier.
+
+**Waarom**
+- Robert bevestigde dat het pand op de foto een van de slaapplekken is. Ik had het
+  bijschrift weggehaald omdat het een onbevestigde claim leek — met de bevestiging erbij is
+  het gewoon een feit, en het is nuttige informatie voor een bezoeker. Wel *"one of the
+  houses"*: dat het pand een slaapplek is, betekent niet dat een gast in dít huis slaapt.
+- Over het eten: *"dat ze eten krijgen is een feit, waar het vandaan komt is onbelangrijk.
+  Dat is gewoon even zo, als het loopt komt er een kok en een nieuwe keuken."* Dat is
+  precies de reden om er niets over te schrijven. Een zin over hoe of waar er gekookt wordt,
+  wordt onjuist op het moment dat die kok er is. **Wat inbegrepen is hoort op de site; hoe
+  het tot stand komt niet.**
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 85 geslaagd.**
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Komt die kok er, dan hoeft er niets aan de site te veranderen. Dat is precies de winst van
+  niet beschrijven hoe het werkt.
+
+---
 
 ### 2026-08-29 · Claude · Juridische status nagetrokken met bewijs · TE CONTROLEREN
 

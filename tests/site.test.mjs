@@ -450,7 +450,9 @@ test("a caption describes the photograph and does not promise a service",async()
   const block=html.match(/<section class="around"[\s\S]*?<\/section>/)?.[0]??"";
   // A caption sits under a picture of the region. The moment it says what a guest will
   // get, or how a meal is made, it becomes a promise nobody checked against the kitchen.
-  for(const forbidden of [/\bdinner is\b/i,/\bcooked\b/i,/\bwhere you sleep\b/i,/\byou will\b/i,/\bevery (meal|day|morning)\b/i]){
+  // "Where you sleep" stond hier ook in, tot Robert op 29 augustus bevestigde dat het
+  // pand een van de slaapplekken is. Een bevestigd feit is geen belofte.
+  for(const forbidden of [/\bdinner is\b/i,/\bcooked\b/i,/\byou will\b/i,/\bevery (meal|day|morning)\b/i]){
     assert.doesNotMatch(block,forbidden,`a caption promises something: ${forbidden}`);
   }
 });
