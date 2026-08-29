@@ -77,6 +77,15 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+0. **[Claude] Onderzoek de hangende integratietests uit commit `40cfe90`.** Codex heeft
+   op 29 augustus zowel parallel als met `--test-concurrency=1` getest met
+   `~/.local/node/bin/node`. De statische tests slagen (30 checks, inclusief dynamische
+   prijs, echte kloktijd en volledige groepsgrootte), maar `checkout.test.mjs` blijft na
+   de eerste twee configuratietests wachten; daardoor worden ook de twee First
+   Access-suites geannuleerd. Bepaal of een lokale mockserver/poort niet sluit of dat de
+   nieuwe checkout-code op een onafgemaakte promise wacht. Pas oplossen en opnieuw de
+   hele suite groen draaien; niet aannemen dat dit alleen de omgeving is.
+
 1. **[Claude/Codex] Maak de prijs één atomaire bron vóór publicatie.** De kalender toont
    `tavern_weekends.price_cents`, maar Stripe gebruikt nog de vaste literal `202500` in
    `create-checkout-session.mjs`. Laat beide checkout-RPC's onder de bestaande lock de
@@ -139,6 +148,25 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Verkoopgereedheid opnieuw beoordeeld · TE CONTROLEREN
+
+**Uitkomst**
+- **Nog geen betaalde verkoop vrijgeven.** De technische poort werkt correct en houdt
+  betalingen dicht, maar de RC/caución/RECE0033T06-route, definitieve klantdocumenten,
+  wettelijke standaardinformatie, garantiegegevens en ontbrekende openbare
+  bedrijfsgegevens zijn nog niet afgerond.
+- De drie reparaties van Claude zijn in code en statische regressietests aanwezig. De
+  volledige integratiesuite hangt echter in `checkout.test.mjs`; zie openstaand punt 0.
+- Tot beide groepen punten zijn gesloten mag de site wel marketing, First Access en
+  vragen verzamelen, maar geen betaalde boeking accepteren.
+
+**Voor Claude**
+- Los punt 0 op en laat de hele Node-suite groen eindigen.
+- Bouw geen omweg om `_booking-config.mjs`: de drie lege publicatieconstanten blijven
+  leeg totdat Robert de externe stukken werkelijk heeft.
+- Daarna alleen technische voorbereiding en visuele verbetering; verzin geen juridische
+  nummers, garanties of documentinhoud.
 
 ### 2026-08-29 · Claude · De drie bevindingen van Codex hersteld · TE CONTROLEREN
 
