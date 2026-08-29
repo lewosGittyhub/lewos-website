@@ -51,8 +51,17 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 - **Prijs is €2.025 p.p. all-in, drie nachten.** Op de Engelse pagina's geschreven als
   `€2,025`. Elke andere prijs is een fout.
 - **Geen verzonnen feiten in publieke teksten.** Geen namen, reviews, statistieken of
-  edities die niet vaststaan. De Dungeon Master mag genoemd worden als *"a dedicated
-  Dungeon Master"*, zonder naam of credentials.
+  edities die niet vaststaan.
+  - ✅ **Bevestigd door Robert op 29 augustus 2026: de Game Master is rond.** Naam,
+    biografie, foto en het spelerscitaat op `tavern/index.html` zijn door de betrokkene
+    zelf gezien en goedgekeurd. Dit vervangt de oudere aantekening in Roberts
+    `CLAUDE.md` (§5.2, stand 21 augustus) dat de persoon nog niet bekend was. **Niet
+    opnieuw als risico opvoeren.** Verandert de tekst over hem, dan is dat wel weer een
+    vraag aan Robert.
+  - ✅ **Bevestigd door Robert op 29 augustus 2026: `Complejo Rural de Fontecha` mag bij
+    naam genoemd worden** en er mag naar gelinkt worden; dat is met de accommodatie
+    afgestemd. De regel in Roberts `CLAUDE.md` (§5.3) over het gescheiden houden van
+    Fonteca gaat over iets anders en slaat niet op deze locatievermelding.
 - **Geen persoonsgegevens of geheimen in de repo.** Geen NIE, adres, API-key, bankgegeven
   — ook niet in commit-berichten.
 - **Geen Fonteca-verwijzingen** in Tavern- of Community Lodge-materiaal.
@@ -62,66 +71,81 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-1. **[Robert, blokkerend] Staat de Game Master vast?** `tavern/index.html` noemt hem bij
-   naam ("Evan"), beschrijft zijn loopbaan — Oxford, acht jaar achter het scherm, studie
-   in Londen, esports-productie, LARP — en citeert *"One of Evan's players"*. Jouw eigen
-   briefing aan Story Forge zegt per 21 augustus 2026: *"Zij leveren de dedicated DM;
-   alleen de persoon is nog niet bekend."* De naam komt in geen enkel bronbestand voor.
-   Is de persoon inmiddels bevestigd, klopt de biografie woord voor woord, en heeft hij
-   ingestemd met naam, foto en citaat op de site? Zo niet: het hele blok moet eruit tot
-   het wel klopt. Een testimonial moet bovendien echt en herleidbaar zijn — een anoniem
-   citaat over een spelleider die nog nooit een Lewos-weekend heeft geleid is ook als het
-   waar is moeilijk te verdedigen.
-2. **[Robert] Mag `Complejo Rural de Fontecha` bij naam op de site?** De Tavern-pagina
-   noemt de accommodatie en linkt ernaar. Twee vragen: heeft de accommodatie ermee
-   ingestemd dat hun naam aan The Lewos Tavern wordt verbonden, en botst dit met de regel
-   in je `CLAUDE.md` dat de Tavern volledig los staat van Fonteca? Jouw briefing noemt
-   Fontecha wel gewoon als locatie, dus mogelijk gaat die regel over iets anders — maar
-   dat moet jij zeggen, niet wij.
-3. **[Codex] Zet de twee hero-foto's om naar WebP.** `tavern-asturias-hero.jpg` (302 kB)
+1. **[Codex] Zet de twee hero-foto's om naar WebP.** `tavern-asturias-hero.jpg` (302 kB)
    en `tavern-asturias-hero-portrait.jpg` (196 kB) zijn JPEG omdat er op deze Mac geen
    webp-encoder staat. Met Node scheelt webp ongeveer een derde. Hernoem dan ook de
    vijf verwijzingen in `tavern/index.html` en `index.html` mee en verhoog `?v=`.
-4. **[Codex of Claude] Trek de erfgoedclaims na.** De Tavern-pagina stelt dat er boven
-   Fontecha een prehistorische grafheuvel geregistreerd staat en dat de oude Camino Real
-   de Ponga over de bergkam liep. Officiële bron erbij, of ✅/🟡 markeren. Een 🟡 hoort
-   niet in publieke content.
-5. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
+2. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
    self-employed professional established in Asturias". De Spaanse LSSI-CE (art. 10)
    vraagt naam, fiscaal nummer en adres van de aanbieder op een commerciële site. Dat
    botst met je regel dat er geen persoonsgegevens in de repo mogen. Dit moet je met je
    gestor afstemmen; hetzelfde blok is straks ook nodig in `/terms/` en
    `/travel-information/`.
-6. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
+3. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
    kon niet testen: geen Node op deze Mac. Nodig: `node --test tests/*.test.mjs`, plus
    `database/first-access.sql` gevolgd door `tests/database-integration.sql` in één
    Supabase-transactie die eindigt op `rollback`. Let specifiek op de nieuwe test
    *"the Stripe session and the database hold expire together"* en op
    `confirm_tavern_payment` met de grace van 5 minuten, en op de nieuwe test
    *"internal working documents are never served from the public site"*.
-7. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
+4. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-8. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+5. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-9. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+6. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-10. **[Wie het eerst kan, na 8 en 9] Vul de bedrijfsgegevens in.** In `/terms/` en
+7. **[Wie het eerst kan, na 5 en 6] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-11. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+8. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-12. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+9. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Erfgoedclaim nagetrokken en gecorrigeerd · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`, de alinea onder *"Welcome to Fontecha"*: de zin over de *"old
+  Camino Real de Ponga"* is verdwenen. De grafheuvel blijft, nu met naam en juiste
+  ligging: *"A Neolithic burial mound, the túmulo de Fontecha, is recorded on the
+  boundary between Parres and Piloña, and old mountain paths still cross these ridges."*
+
+**Waarom**
+- ✅ **Grafheuvel: geverifieerd.** Het Spaanstalige Wikipedia-artikel over Llerandi
+  schrijft: *"En el periodo del Neolítico se pueden encuadrar los restos del túmulo de
+  Fontecha, ubicado en los confines entre Parres y Piloña."* De heuvel bestaat dus en
+  draagt de naam van de plek. Wat er níét stond, is dat hij *boven* Fontecha ligt; de
+  bron zegt op de grens tussen Parres en Piloña. Dat staat er nu ook zo.
+- 🟡 **Camino Real de Ponga: niet te staven.** Datzelfde artikel noemt wel historische
+  verbindingen — *Carril de Bon* en *La Sillera* — maar nergens een *Camino Real de
+  Ponga*, en verder zoeken leverde alleen moderne wandelroutes op. Volgens Roberts eigen
+  regel gaat een 🟡 aanname niet in publieke content, dus de zin is vervangen door een
+  algemene formulering die wel klopt.
+- Let op de status van de bron: dit is Wikipedia, geen officieel erfgoedregister. Voor
+  een sfeeralinea is dat proportioneel. Moet het hard, dan hoort de vermelding in het
+  archeologisch inventaris van Asturië opgezocht te worden.
+
+**Hoe te controleren**
+- `grep -n "Camino Real" tavern/index.html` geeft niets meer.
+- Bron: https://es.wikipedia.org/wiki/Llerandi
+
+**Niet geverifieerd**
+- Geen Node op deze Mac, dus de suite is niet gedraaid.
+
+**Wat nu volgt**
+- Punt 2 uit *Openstaand* kan weg zodra dit is nagekeken.
+
+---
 
 ### 2026-08-29 · Claude · Nieuwe hero-foto uit Roberts eigen panorama · TE CONTROLEREN
 
