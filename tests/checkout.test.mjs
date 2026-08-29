@@ -3,12 +3,12 @@ import {after,before,beforeEach,test} from "node:test";
 import {createHmac} from "node:crypto";
 import http from "node:http";
 
-let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let attachFails=false;let emailFails=false;let markFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
+let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let attachFails=false;let attachResult;let emailFails=false;let markFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
 before(async()=>{
   server=http.createServer((request,response)=>{let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{calls.push({url:request.url,body,headers:request.headers});response.setHeader("content-type","application/json");
     if(request.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"||request.url==="/rest/v1/rpc/begin_tavern_checkout")return response.end(JSON.stringify(holdResult));
     if(request.url==="/rest/v1/rpc/check_tavern_request_limit")return response.end("true");
-    if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session"){if(attachFails){response.statusCode=500;return response.end(JSON.stringify({message:"attach_failed"}));}return response.end(JSON.stringify({status:"attached"}));}
+    if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session"){if(attachFails){response.statusCode=500;return response.end(JSON.stringify({message:"attach_failed"}));}return response.end(JSON.stringify(attachResult));}
     if(request.url==="/rest/v1/rpc/release_tavern_checkout")return response.end(JSON.stringify({status:"released"}));
     if(request.url==="/rest/v1/rpc/confirm_tavern_payment")return response.end(JSON.stringify(confirmationResult));
     if(request.url==="/rest/v1/rpc/mark_tavern_confirmation_email_sent"){if(markFails){response.statusCode=500;return response.end(JSON.stringify({message:"mark_failed"}));}return response.end(JSON.stringify({status:"marked"}));}
@@ -29,6 +29,7 @@ before(async()=>{
   process.env.NODE_ENV="test";
 });
 beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
+beforeEach(()=>{attachResult={status:"attached"};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
@@ -67,6 +68,13 @@ test("a Stripe failure releases the temporary hold",async()=>{
 
 test("an attachment failure never returns a payable Stripe link and releases the hold",async()=>{
   attachFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,503);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions/cs_test_1/expire"),true);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
+});
+
+test("a rejected attachment response never returns a payable Stripe link",async()=>{
+  attachResult={status:"unknown_payment"};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions/cs_test_1/expire"),true);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
 });

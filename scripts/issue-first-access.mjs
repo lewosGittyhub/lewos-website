@@ -50,6 +50,8 @@ if(!send){
 }
 if(process.env.FIRST_ACCESS_SEND_CONFIRM!=="SEND_FIRST_ACCESS_NOW")throw new Error("Set FIRST_ACCESS_SEND_CONFIRM=SEND_FIRST_ACCESS_NOW to send invitations.");
 if(!paymentsAreEnabled())throw new Error("Payments and the published booking-terms version must be enabled before invitations can be sent.");
+const publicOpensAt=Date.parse(process.env.PUBLIC_BOOKING_OPENS_AT||"");
+if(!Number.isFinite(publicOpensAt)||publicOpensAt<=Date.now())throw new Error("PUBLIC_BOOKING_OPENS_AT must be a valid future time before invitations can be sent.");
 
 let sent=0;
 for(const candidate of eligible){
@@ -58,13 +60,23 @@ for(const candidate of eligible){
   const claim=await rpc("issue_tavern_checkout_invitation",{p_claim_id:candidate.id,p_token_hash:tokenHash,p_window_hours:24});
   if(claim.status==="already_invited")continue;
   if(claim.status!=="invited")throw new Error(`Claim ${candidate.id} could not be invited: ${claim.status}`);
+  if(Date.parse(claim.expiresAt)>publicOpensAt){
+    await rpc("revoke_tavern_checkout_invitation",{p_claim_id:claim.claimId,p_token_hash:tokenHash}).catch(()=>{});
+    throw new Error(`Invitation ${claim.claimId} expires after public booking opens.`);
+  }
+  let providerId;
   try{
-    const providerId=await sendEmail({claim,token,tokenHash});
+    providerId=await sendEmail({claim,token,tokenHash});
+  }catch(error){
+    await rpc("revoke_tavern_checkout_invitation",{p_claim_id:claim.claimId,p_token_hash:tokenHash}).catch(()=>{});
+    throw error;
+  }
+  try{
     const marked=await rpc("mark_tavern_invitation_sent",{p_claim_id:claim.claimId,p_provider_id:providerId});
     if(marked.status!=="marked")throw new Error(`Invitation ${claim.claimId} could not be marked as sent.`);
     sent+=1;
   }catch(error){
-    await rpc("revoke_tavern_checkout_invitation",{p_claim_id:claim.claimId,p_token_hash:tokenHash}).catch(()=>{});
+    console.error(`Invitation ${claim.claimId} was accepted by the email provider but delivery could not be recorded. The token remains valid and requires reconciliation.`);
     throw error;
   }
 }

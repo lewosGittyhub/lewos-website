@@ -93,7 +93,10 @@ export const handler=async event=>{
     try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
     return json(503,{error:"checkout_unavailable"});
   }
-  try{await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url});}
+  try{
+    const attachment=await rpc("attach_tavern_checkout_session",{p_payment_reference:reference,p_checkout_session_id:session.id,p_checkout_session_url:session.url});
+    if(attachment?.status!=="attached")throw new Error(`attach_tavern_checkout_session:${attachment?.status||"invalid_response"}`);
+  }
   catch(error){
     console.error("Checkout session attachment error",error);
     try{await expireStripeSession(session.id);}catch(expireError){console.error("Orphan checkout expiration error",expireError);}

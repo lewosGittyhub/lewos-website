@@ -8,6 +8,7 @@ let rateAllowed=true;
 let registrationError="";
 let rateBodies=[];
 let server;
+let base;
 const nativeFetch=globalThis.fetch;
 
 before(async()=>{
@@ -27,7 +28,7 @@ before(async()=>{
     });
   });
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-  const base=`http://127.0.0.1:${server.address().port}`;
+  base=`http://127.0.0.1:${server.address().port}`;
   globalThis.fetch=(input,options)=>nativeFetch(String(input).startsWith("https://api.resend.com/")?`${base}/emails`:input,options);
   process.env.SUPABASE_URL=base;
   process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
@@ -37,6 +38,7 @@ before(async()=>{
 });
 
 beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
+beforeEach(()=>{process.env.URL=base;});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 const post=(body,headers={"content-type":"application/json",accept:"application/json"})=>({httpMethod:"POST",headers,body:JSON.stringify(body)});
