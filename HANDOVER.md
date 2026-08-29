@@ -62,36 +62,110 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-1. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
+1. **[Robert, blokkerend] Staat de Game Master vast?** `tavern/index.html` noemt hem bij
+   naam ("Evan"), beschrijft zijn loopbaan — Oxford, acht jaar achter het scherm, studie
+   in Londen, esports-productie, LARP — en citeert *"One of Evan's players"*. Jouw eigen
+   briefing aan Story Forge zegt per 21 augustus 2026: *"Zij leveren de dedicated DM;
+   alleen de persoon is nog niet bekend."* De naam komt in geen enkel bronbestand voor.
+   Is de persoon inmiddels bevestigd, klopt de biografie woord voor woord, en heeft hij
+   ingestemd met naam, foto en citaat op de site? Zo niet: het hele blok moet eruit tot
+   het wel klopt. Een testimonial moet bovendien echt en herleidbaar zijn — een anoniem
+   citaat over een spelleider die nog nooit een Lewos-weekend heeft geleid is ook als het
+   waar is moeilijk te verdedigen.
+2. **[Robert] Mag `Complejo Rural de Fontecha` bij naam op de site?** De Tavern-pagina
+   noemt de accommodatie en linkt ernaar. Twee vragen: heeft de accommodatie ermee
+   ingestemd dat hun naam aan The Lewos Tavern wordt verbonden, en botst dit met de regel
+   in je `CLAUDE.md` dat de Tavern volledig los staat van Fonteca? Jouw briefing noemt
+   Fontecha wel gewoon als locatie, dus mogelijk gaat die regel over iets anders — maar
+   dat moet jij zeggen, niet wij.
+3. **[Codex of Claude] Trek de erfgoedclaims na.** De Tavern-pagina stelt dat er boven
+   Fontecha een prehistorische grafheuvel geregistreerd staat en dat de oude Camino Real
+   de Ponga over de bergkam liep. Officiële bron erbij, of ✅/🟡 markeren. Een 🟡 hoort
+   niet in publieke content.
+4. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
+   self-employed professional established in Asturias". De Spaanse LSSI-CE (art. 10)
+   vraagt naam, fiscaal nummer en adres van de aanbieder op een commerciële site. Dat
+   botst met je regel dat er geen persoonsgegevens in de repo mogen. Dit moet je met je
+   gestor afstemmen; hetzelfde blok is straks ook nodig in `/terms/` en
+   `/travel-information/`.
+5. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
    kon niet testen: geen Node op deze Mac. Nodig: `node --test tests/*.test.mjs`, plus
    `database/first-access.sql` gevolgd door `tests/database-integration.sql` in één
    Supabase-transactie die eindigt op `rollback`. Let specifiek op de nieuwe test
    *"the Stripe session and the database hold expire together"* en op
    `confirm_tavern_payment` met de grace van 5 minuten, en op de nieuwe test
    *"internal working documents are never served from the public site"*.
-2. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
+6. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-3. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+7. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-4. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+8. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-5. **[Wie het eerst kan, na 3 en 4] Vul de bedrijfsgegevens in.** In `/terms/` en
+9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-6. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-7. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+11. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Misleidingscontrole op de publieke teksten · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html` en `tavern/book/index.html`: bij de prijs staat nu *"Total price
+  including taxes"*, en de boekingspagina noemt zelf dat reis naar Asturië er niet in zit.
+- `tavern/index.html`: *"Sixteen hours"* → *"Around sixteen hours"*; *"New featured
+  weekends will be announced regularly"* → *"Further featured weekends may be
+  announced"*; het blok *"Your own room. A shared house."* vermeldt nu zelf dat één huis
+  ongeveer vijfhonderd meter verderop ligt.
+- `tests/site.test.mjs`: nieuwe test *"every public price is presented as a total
+  including taxes"*.
+- **Niets veranderd aan het blok over de Game Master.** Zie *Openstaand* 1; dat is een
+  vraag aan Robert, geen redactionele keuze.
+
+**Waarom**
+- Een totaalprijs voor een pakketreis moet als totaalprijs inclusief belastingen
+  herkenbaar zijn, met de belangrijkste uitsluiting erbij. `/travel-information/` zei dat
+  al ("including applicable taxes"), de verkooppagina's niet. Het woord *VAT* blijft
+  bewust weg — onder de Spaanse bijzondere regeling voor reisbureaus wordt btw niet
+  apart getoond, en de bestaande test verbiedt het woord al.
+- *"Sixteen hours"* was een harde belofte; de campagne is elders steeds *"around
+  sixteen"* en het draaiboek is ± 18 uur. Een geschat getal hoort ook als schatting te
+  staan, overal hetzelfde.
+- *"announced regularly"* beloofde een frequentie die nergens vastligt.
+- Het ernstigste: *"Everyone at the table gets their own bedroom, roughly ten metres from
+  the Tavern"* stond in het blok *Good to know*, terwijl de FAQ verderop toegeeft dat één
+  huis ongeveer vijfhonderd meter verderop ligt. Een gast die daar terechtkomt kan
+  terecht zeggen dat de verkooppagina iets anders beloofde. De nuance hoort op de plek
+  waar de belofte gedaan wordt, niet alleen in de FAQ eronder.
+
+**Hoe te controleren**
+- `node --test tests/site.test.mjs`. De nieuwe test dwingt af dat elke publieke pagina
+  die €2.025 toont, ook zegt dat het de totaalprijs inclusief belastingen is en dat reis
+  naar Asturië er niet in zit.
+- De bestaande test *"consumer price remains consistent and banned sales wording is
+  absent"* moet blijven slagen: de toevoeging gebruikt *taxes*, niet *VAT*.
+
+**Niet geverifieerd**
+- Geen Node op deze Mac; de suite is niet gedraaid. De nieuwe testregels zijn met python3
+  tegen de echte bestandsinhoud nagerekend en slagen.
+- De erfgoedclaims op de Tavern-pagina zijn niet nagetrokken. Zie *Openstaand* 3.
+
+**Wat nu volgt**
+- Robert beantwoordt *Openstaand* 1 en 2. Punt 1 blokkeert: zolang dat niet vaststaat
+  staat er een naam, een cv en een citaat op een verkooppagina die niemand kan staven.
+
+---
 
 ### 2026-08-29 · Claude · Stripe-vervaltijd gelijkgetrokken met de stoelhold · TE CONTROLEREN
 

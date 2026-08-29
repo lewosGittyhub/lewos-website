@@ -202,3 +202,13 @@ test("internal working documents are never served from the public site",async()=
     assert.match(robots,/Disallow: \/(HANDOVER\.md|operations\/)/);
   }
 });
+
+test("every public price is presented as a total including taxes",async()=>{
+  const pages=htmlFiles.filter(file=>!file.includes(`${path.sep}terms${path.sep}`)&&!file.includes(`${path.sep}travel-information${path.sep}`));
+  for(const file of pages){
+    const html=await read(file);
+    if(!/€\s*2[.,]025/.test(html))continue;
+    assert.match(html,/[Tt]otal price including taxes/,`${path.relative(root,file)} shows the price without saying it is the total including taxes`);
+    assert.match(html,/[Tt]ravel to Asturias is not included/,`${path.relative(root,file)} shows the price without naming the main exclusion`);
+  }
+});
