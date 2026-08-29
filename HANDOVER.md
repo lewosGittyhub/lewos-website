@@ -216,6 +216,52 @@ verzonnen feiten meer in de publieke teksten, elke wijziging is in dit dossier
 terug te lezen, en de gegevens die we vragen blijven beperkt tot wat de boeking nodig
 heeft. Wat een assistent níét kan leveren staat als zodanig in *Openstaand*.
 
+### 2026-08-29 · Claude · Waar ik tegenaan loop — voor Codex · TE CONTROLEREN
+
+Robert vroeg om door te geven waar ik in de praktijk vastloop. Dit is geen klaagbrief maar
+een lijst waar jij iets mee kunt, Codex.
+
+**Wat ik op deze machine niet kan**
+- **Supabase.** Geen toegang. Elke migratie en elke databaseproef blijft bij jou. Dat is de
+  belangrijkste scheidslijn tussen ons.
+- **Video fatsoenlijk comprimeren.** Geen `ffmpeg`, geen HandBrake. Alleen `avconvert` met
+  vaste presets: 540×960 kost bijna 10 MB, of 168×300 voor een halve. Heb jij wel ffmpeg,
+  dan is dat iets wat jij beter kunt dan ik.
+- **Een voorbeeldserver draaien vanuit `~/Documents`.** macOS blokkeert daar `os.getcwd()`
+  voor het serverproces. Ik kopieer de site daarom naar `/private/tmp` en serveer die.
+- **`timeout`** bestaat niet op macOS zonder coreutils. Handig om te weten voordat je een
+  commando met een tijdslimiet doorgeeft.
+
+**Twee valkuilen die mij geld hebben gekost aan tijd**
+- **`sips` schrijft stilletjes een HEIC weg met een `.png`-naam** als je niet expliciet
+  `-s format png` meegeeft. Sharp weigert dat bestand dan met een cryptische fout over een
+  heif-decoder. Altijd het formaat expliciet meegeven.
+- **EXIF-rotatie.** Een uitsnede uit een telefoonfoto komt 90 graden gedraaid uit sharp als
+  je `.rotate()` vergeet. Dat zie je alleen als je het beeld zelf bekijkt. Ik kijk daarom
+  naar élke afbeelding voordat ik hem gebruik; dat heeft vandaag twee foute uitsnedes en
+  één gedraaide foto gevangen.
+
+**Over onze samenwerking, praktisch**
+- **Kijk in het logboek voordat je een taak schrijft.** Punt 14 en 15 stonden nog open
+  terwijl ze al gedaan waren, en de "brede afrondingsronde" was al uitgevoerd toen hij
+  binnenkwam. Dat kost een ronde heen en weer. Het logboek staat bovenaan dit bestand en is
+  chronologisch.
+- **Schermafdrukken zijn hier onbetrouwbaar.** Het browservenster geeft na scrollen vaak
+  een leeg beeld terug. Ik verberg daarom de omringende elementen en meet liever de DOM.
+  Als ik schrijf "visueel gecontroleerd" betekent dat: gemeten én bekeken, niet alleen een
+  plaatje.
+- **De testsuite die bij jou vastliep** zou nu een benoemde fout moeten geven in plaats van
+  te blijven hangen. Loopt hij nog vast, stuur die regel door — dan weten we het meteen.
+
+**Wat ik juist wél goed kan, gebruik dat**
+- Externe claims verifiëren bij de bron. Vandaag: de Pexels-licentie, de LSSI-eisen, de
+  doorgifte van vier verwerkers, de Supabase-productiechecklist, de grafheuvel. Geef me een
+  claim en ik zoek de bron erbij in plaats van hem aan te nemen.
+- Tekst, toegankelijkheid en beeld beoordelen, en dat vastleggen in tests zodat het niet
+  terugglijdt.
+
+---
+
 ### 2026-08-29 · Claude · Nieuwe media beoordeeld: twee erin, twee eruit, video niet · TE CONTROLEREN
 
 **Wat**
