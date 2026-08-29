@@ -211,7 +211,7 @@
     .calmonth h4 { margin: 0 0 11px; font: 600 .92rem/1.2 "Poppins", sans-serif; color: var(--cream); }
     .calmonth__dow, .calmonth__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
     .calmonth__dow span { padding-bottom: 6px; color: rgba(237,230,218,.6); font-size: .6rem; font-weight: 600; letter-spacing: .05em; text-align: center; text-transform: uppercase; }
-    .calday { aspect-ratio: 1; min-width: 0; display: flex; flex-direction: column; padding: 3px 4px; margin: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: rgba(237,230,218,.45); font: inherit; font-size: .72rem; line-height: 1.1; text-align: left; }
+    .calday { aspect-ratio: 1; min-width: 0; display: grid; place-items: center; padding: 3px 4px; margin: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: rgba(237,230,218,.45); font: inherit; font-size: .78rem; line-height: 1.1; }
     .calday.is-weekend { border-color: rgba(237,230,218,.42); background: rgba(247,243,236,.12); color: var(--cream); font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s; }
     .calday.is-low { border-color: rgba(217,162,59,.75); background: rgba(217,162,59,.22); }
     .calday.is-hot { border-color: var(--orange); background: rgba(229,100,58,.32); }
@@ -219,22 +219,7 @@
     .calday.is-full { border-color: rgba(237,230,218,.16); background: repeating-linear-gradient(135deg, rgba(247,243,236,.06), rgba(247,243,236,.06) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.42); cursor: not-allowed; }
     .calday.is-full .calday__n { text-decoration: line-through; }
     .calday:focus-visible { outline: 3px solid #f4a285; outline-offset: 2px; }
-    .calday__seats { margin-top: auto; min-width: 0; padding: 0 4px; border-radius: 20px; background: rgba(9,35,32,.85); color: var(--cream); font-size: .55rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; }
-    .calday.is-low .calday__seats { background: var(--gold); color: var(--brown); }
-    .calday.is-chosen .calday__seats { background: var(--white); color: var(--orange); }
-    /* Zes segmenten als brandstofmeter: ingekleurd is bezet, leeg is nog vrij.
-       Sneller af te lezen dan een getal, en het aria-label houdt het aantal
-       beschikbaar voor wie de pagina laat voorlezen. */
-    .calday__gauge { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: auto; }
-    .calday__gauge i { aspect-ratio: 1; min-width: 0; border: 1.5px solid rgba(247,243,236,.6); border-radius: 50%; }
-    .calday__gauge i.is-taken { border-color: var(--cream); background: var(--cream); }
-    .calday.is-low .calday__gauge i { border-color: rgba(217,162,59,.85); }
-    .calday.is-low .calday__gauge i.is-taken { border-color: var(--gold); background: var(--gold); }
-    .calday.is-chosen .calday__gauge i { border-color: rgba(255,252,247,.8); }
-    .calday.is-chosen .calday__gauge i.is-taken { border-color: var(--white); background: var(--white); }
-    .calday.is-full .calday__gauge i { border-color: transparent; background: rgba(237,230,218,.4); }
-    .calendar__chosen { margin: 0; color: var(--beige); font-size: .92rem; }
-    .calendar__chosen b { color: var(--cream); }
+    .calendar__chosen { margin: 0; color: var(--cream); font: 700 clamp(1.05rem, 1.5vw, 1.22rem)/1.4 "Poppins", sans-serif; }
     /* Een vierkant hokje wordt op een telefoon te klein om met een duim te raken.
        Laat de hoogte dan los van de breedte lopen. */
     @media (max-width: 460px) { .calmonth { padding: 11px; } .calday { aspect-ratio: auto; min-height: 44px; font-size: .66rem; } }

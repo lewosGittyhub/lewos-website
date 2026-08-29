@@ -116,7 +116,42 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Claude · Stoelen als bolletjes in plaats van een getal · TE CONTROLEREN
+### 2026-08-29 · Claude · Vakjes leeg, het aantal stoelen groot eronder · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html` en `tavern/first-access.js`: in de dagvakjes staat nu alleen de
+  datum, gecentreerd. Alle aanduidingen van stoelen in de cel zijn weg — eerst het
+  pilletje *"6 vrij"*, daarna de zes bolletjes.
+- De regel onder de kalender is groter en vet: Poppins 700, oplopend van 1,05 tot
+  1,22 rem, in crème in plaats van beige. Daar staat *"Chosen: Weekend 01 · 30 Oct to
+  2 Nov 2026 — 6 of 6 seats free."*
+- `tests/site.test.mjs`: de test heet nu *"a day cell shows only its date, and the seat
+  count is read out below"* en bewaakt dat er geen meter of pilletje terugkomt.
+
+**Waarom**
+- Drie pogingen, en dit is de derde: een getal in de cel, toen zes segmenten, toen zes
+  bolletjes. Robert vond ze alle drie niet werken, en achteraf is dat ook te verklaren —
+  een vakje van 38 tot 46 pixels is simpelweg te klein voor iets naast een datum. Alles
+  wat je erin propt, concurreert met het enige dat er hoort te staan.
+- Het aantal stoelen is niet onbelangrijk, het staat alleen op de verkeerde plek. Onder
+  de kalender is er ruimte voor een volledige zin, en die kan groot en vet. Het staat
+  bovendien nog steeds in het `aria-label` en de tooltip van elke weekendknop, dus wie
+  zweeft of laat voorlezen krijgt het per weekend te horen.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 68 geslaagd**.
+- In de browser nagemeten: de regel staat op 16,8 px met gewicht 700, en er staat geen
+  enkel restant van de meter of het pilletje meer in de opgebouwde kalender.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij wil draaien.
+
+---
+
+### 2026-08-29 · Claude · Stoelen als bolletjes in plaats van een getal · ACHTERHAALD, zie het item hierboven
 
 **Wat**
 - `tavern/index.html` en `tavern/first-access.js`: het pilletje *"6 vrij"* op de vrijdag

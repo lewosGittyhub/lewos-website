@@ -42,7 +42,7 @@
     const days=new Map();
     items.forEach(item=>{
       const start=asDate(item.startsOn), end=asDate(item.endsOn);
-      for(let day=new Date(start);day<=end;day.setDate(day.getDate()+1))days.set(key(day),{item,first:key(day)===key(start)});
+      for(let day=new Date(start);day<=end;day.setDate(day.getDate()+1))days.set(key(day),{item});
     });
     const months=[];
     items.forEach(item=>{
@@ -61,17 +61,14 @@
       for(let day=1;day<=total;day++){
         const found=days.get(key(new Date(year,month,day)));
         if(!found){cells+=`<div class="calday"><span class="calday__n">${day}</span></div>`;continue;}
-        const {item,first}=found;
+        const {item}=found;
         const full=item.remaining<=0;
         const low=!full&&item.remaining<=2;
-        // Een meter met één segment per stoel. Bij een ongebruikelijk grote tafel
-        // worden de segmenten te dun om iets te zeggen; dan blijft het een getal.
-        const taken=Math.max(0,item.capacity-item.remaining);
-        const gauge=item.capacity<=8
-          ?`<span class="calday__gauge" aria-hidden="true">${Array.from({length:item.capacity},(_,index)=>`<i${index<taken?' class="is-taken"':''}></i>`).join('')}</span>`
-          :`<span class="calday__seats">${full?'full':`${item.remaining} free`}</span>`;
+        // In het vakje staat alleen de datum. Het aantal vrije stoelen staat groot
+        // onder de kalender en in het label van de knop; een cijfertje of een rij
+        // vormpjes in zo'n vakje was op ware grootte niet af te lezen.
         const label=`${item.label}, ${item.dateLabel}, ${full?'no seats left':`${item.remaining} of ${item.capacity} seats free`}`;
-        cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}" title="${label}"><span class="calday__n">${day}</span>${first?gauge:''}</button>`;
+        cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}" title="${label}"><span class="calday__n">${day}</span></button>`;
       }
       return `<div class="calmonth"><h4>${MONTHS[month]} ${year}</h4><div class="calmonth__dow">${DOW.map(name=>`<span>${name}</span>`).join('')}</div><div class="calmonth__grid">${cells}</div></div>`;
     }).join('');
