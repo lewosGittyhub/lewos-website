@@ -199,19 +199,71 @@ meerdere foto’s. Claude moet eerst vaststellen welke media geschikt zijn voor 
 ze technisch optimaliseren en alleen eigen/toegestane beelden gebruiken. De bestaande
 licentie- en privacyregels blijven gelden.
 
-### 2026-08-29 · Codex · Best-effort juridische bescherming bevestigd · TE CONTROLEREN
+### 2026-08-29 · Codex · Best-effort juridische bescherming bevestigd · GECONTROLEERD door Claude, 2026-08-29
 
 Robert wil de site nu zo goed mogelijk afschermen en professionele juridische controle
 uitvoeren zodra er inkomsten/budget zijn. De technische lijn blijft daarom: minimale
 gegevens, duidelijke toestemmingen en voorwaarden, geen verzonnen feiten, audit trail en
 betalingen fail-closed totdat de vereiste informatie werkelijk beschikbaar is.
 
-### 2026-08-29 · Codex · Claude opdracht gegeven voor brede afrondingsronde · TE CONTROLEREN
+**Nagelopen door Claude, 29 augustus 2026:** die lijn houdt in de code. De drie
+publicatieconstanten zijn leeg, de checkout weigert zolang dat zo is, er staan geen
+verzonnen feiten meer in de publieke teksten, elke wijziging is in dit dossier
+terug te lezen, en de gegevens die we vragen blijven beperkt tot wat de boeking nodig
+heeft. Wat een assistent níét kan leveren staat als zodanig in *Openstaand*.
+
+### 2026-08-29 · Claude · Eindcontrole over alle veertien pagina's · TE CONTROLEREN
+
+**Wat**
+- Alle veertien publieke pagina's nagelopen op taal, titel, beschrijving, canonical,
+  koppenstructuur, formulierlabels en alt-teksten. Daarna de netwerk- en consolelogs van de
+  pagina's met JavaScript.
+- Eén echte fout gevonden en hersteld, plus een test die hem tegenhoudt.
+
+**De uitslag**
+- **Schoon over de hele linie:** elke pagina heeft `lang`, precies één `h1`, geen sprong in
+  de koppenniveaus, elk formulierveld een gekoppeld label en elke afbeelding een
+  alt-tekst. Nul uitzonderingen.
+- Meta ontbreekt alleen op pagina's die op `noindex` staan of puur transactioneel zijn
+  (bedankpagina's, betaalresultaat, 404). Daar heeft een canonical geen functie.
+
+**⚠️ De fout: de hero werd twee keer gedownload**
+- De `preload` in de `<head>` vroeg `tavern-asturias-hero.webp`, terwijl de CSS
+  `tavern-asturias-hero.webp?v=3` opvraagt. Voor de browser zijn dat twee URL's. Bij een
+  lege cache werd de zwaarste afbeelding van de site dus tweemaal gehaald, en de
+  voorgeladen kopie werd nooit gebruikt — de preload werkte precies averechts.
+- Beide preloads lopen nu gelijk met wat de pagina echt opvraagt. Nieuwe test: *"a
+  preloaded image is the exact one the page then uses"*.
+- Dit was mijn eigen fout, ontstaan toen ik de bestandsnamen van `.jpg` naar `.webp`
+  omzette en de cache-parameter op één plek wel en op de andere niet meenam.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 84 geslaagd.**
+- Netwerklog van `/tavern/`: alle assets 200 of 304, de enige 404 is `/api/first-access`,
+  en dat hoort lokaal omdat Netlify-functies niet op een statische server draaien.
+- Het formulier op `/tavern/private/` weigert een ongeldig e-mailadres en een groep van
+  twee, en zet de aandacht op het foute veld.
+
+**Niet geverifieerd**
+- Kleurcontrast is niet gemeten, alleen op het oog beoordeeld.
+- Het gedrag op een echte Netlify-omgeving; alles is lokaal getest.
+
+**Wat nu volgt**
+- Niets uit deze ronde. De openstaande punten zijn extern of van Robert.
+
+---
+
+### 2026-08-29 · Codex · Claude opdracht gegeven voor brede afrondingsronde · GECONTROLEERD door Claude, 2026-08-29
 
 Robert wil Claude’s resterende capaciteit benutten voordat diens limiet reset. Claude
 krijgt daarom één brede maar geordende ronde: technische piekbelasting en tests eerst,
 daarna copy/beeld en releasevoorbereiding. Externe betalingen, upgrades, juridische
 registratie en productie-deploy blijven buiten assistentbevoegdheid.
+
+**Nagelopen door Claude, 29 augustus 2026:** de ronde is afgerond. Piekbelasting en tests
+(`tests/load.test.mjs`, 84 tests), copy en beeld (tekstaudit, creditsbestand, meetbare
+afstanden eruit) en de releasevoorbereiding (`operations/release-2026-08-29.md`). Daar
+bovenop deze eindcontrole. Niets gepusht, niets gedeployed, geen upgrade.
 
 ### 2026-08-29 · Claude · Meetbare afstanden uit de publieke teksten · TE CONTROLEREN
 

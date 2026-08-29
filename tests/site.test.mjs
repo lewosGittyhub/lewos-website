@@ -430,3 +430,17 @@ test("no public page promises a distance a guest could measure",async()=>{
     assert.doesNotMatch(html,/\b(ten|twenty|fifty|hundred|five hundred)\s+(metres|meters)\b/i,`${where} promises a measurable distance in words`);
   }
 });
+
+test("a preloaded image is the exact one the page then uses",async()=>{
+  for(const file of htmlFiles){
+    const html=await read(file);
+    const where=path.relative(root,file);
+    for(const [,url] of html.matchAll(/<link[^>]*rel=["']preload["'][^>]*as=["']image["'][^>]*href=["']([^"']+)["']/g)){
+      // A preload whose URL differs by so much as a cache-busting query is a second
+      // download of the same picture, and the preloaded copy is never used.
+      const relative=url.replace(/^\/tavern\//,"assets/").replace(/^\//,"");
+      const used=html.includes(`url("${relative}")`)||html.includes(url);
+      assert.ok(used,`${where} preloads ${url} but the page asks for a different URL`);
+    }
+  }
+});
