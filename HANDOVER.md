@@ -36,6 +36,11 @@ dat op als *niet geverifieerd* en zet je het in *Openstaand* voor de ander. Nooi
 | Git op deze Mac | ja | ja |
 | python3 | ja | ja |
 
+**Lokale preview.** `python3 -m http.server` weigert te starten met de werkmap ergens in
+`~/Documents`: macOS blokkeert `os.getcwd()` daar voor dat proces, met
+`PermissionError: [Errno 1] Operation not permitted`. Werkende omweg: kopieer de site naar
+een map buiten `~/Documents` (bijvoorbeeld onder `/private/tmp`) en serveer die.
+
 **Gevolg:** wat Claude aan code verandert, moet Codex natesten voordat het als
 geverifieerd geldt. Wat Codex verandert, kan Claude nalezen en op logica, juridische
 grenzen en inhoud controleren, maar niet uitvoeren.
