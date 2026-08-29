@@ -29,9 +29,10 @@ dat op als *niet geverifieerd* en zet je het in *Openstaand* voor de ander. Nooi
 
 | | Codex (ChatGPT) | Claude (Claude Code) |
 | --- | --- | --- |
-| Node.js aanwezig | ja, in eigen omgeving | **nee, staat niet op deze Mac** |
-| `node --test tests/*.test.mjs` | kan draaien | kan niet draaien |
-| Supabase / echte Postgres-proef | kan draaien (rollback-transactie) | geen toegang |
+| Node.js aanwezig | ja, in eigen omgeving | ja, sinds 29 aug 2026 in `~/.local/node` |
+| `node --test tests/*.test.mjs` | kan draaien | kan draaien |
+| Beeldbewerking (sharp, WebP) | ja | ja |
+| Supabase / echte Postgres-proef | kan draaien (rollback-transactie) | **geen toegang** |
 | Code lezen, schrijven, redeneren | ja | ja |
 | Git op deze Mac | ja | ja |
 | python3 | ja | ja |
@@ -41,9 +42,9 @@ dat op als *niet geverifieerd* en zet je het in *Openstaand* voor de ander. Nooi
 `PermissionError: [Errno 1] Operation not permitted`. Werkende omweg: kopieer de site naar
 een map buiten `~/Documents` (bijvoorbeeld onder `/private/tmp`) en serveer die.
 
-**Gevolg:** wat Claude aan code verandert, moet Codex natesten voordat het als
-geverifieerd geldt. Wat Codex verandert, kan Claude nalezen en op logica, juridische
-grenzen en inhoud controleren, maar niet uitvoeren.
+**Gevolg:** allebei kunnen de testsuite draaien, dus dat is geen scheidslijn meer. Wat
+alleen Codex kan is de echte databaseproef tegen Supabase. Verder blijft gelden dat de
+ander controleert: niemand keurt zijn eigen werk goed.
 
 ## Harde grenzen — gelden voor allebei
 
@@ -76,46 +77,77 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-1. **[Codex] Zet de twee hero-foto's om naar WebP.** `tavern-asturias-hero.jpg` (302 kB)
-   en `tavern-asturias-hero-portrait.jpg` (196 kB) zijn JPEG omdat er op deze Mac geen
-   webp-encoder staat. Met Node scheelt webp ongeveer een derde. Hernoem dan ook de
-   vijf verwijzingen in `tavern/index.html` en `index.html` mee en verhoog `?v=`.
-2. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
+1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
    registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
    met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
    wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
    Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
-3. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
-   kon niet testen: geen Node op deze Mac. Nodig: `node --test tests/*.test.mjs`, plus
-   `database/first-access.sql` gevolgd door `tests/database-integration.sql` in één
-   Supabase-transactie die eindigt op `rollback`. Let specifiek op de nieuwe test
-   *"the Stripe session and the database hold expire together"* en op
-   `confirm_tavern_payment` met de grace van 5 minuten, en op de nieuwe test
-   *"internal working documents are never served from the public site"*.
-4. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
+2. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-5. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+3. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-6. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+4. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-7. **[Wie het eerst kan, na 5 en 6] Vul de bedrijfsgegevens in.** In `/terms/` en
+5. **[Wie het eerst kan, na 3 en 4] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-8. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+6. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-9. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+7. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Node geïnstalleerd, suite gedraaid, foto's naar WebP · TE CONTROLEREN
+
+**Wat**
+- Node.js v24.20.0 (LTS) staat nu in `~/.local/node`, uitgepakt uit het officiële
+  darwin-arm64-pakket van nodejs.org. De SHA256 is tegen `SHASUMS256.txt` gecontroleerd en
+  klopt. `~/.zshrc` kreeg één PATH-regel met een comment hoe je het weer weghaalt. Geen
+  beheerdersrechten gebruikt, niets systeembreed aangeraakt.
+- **De volledige suite is gedraaid: 63 tests, alle geslaagd.** Daarmee is al het werk van
+  vandaag ook echt getest en niet alleen nagelezen.
+- `tavern/assets/tavern-asturias-hero.webp` (215 kB) en
+  `tavern-asturias-hero-portrait.webp` (112 kB) vervangen de JPEG-versies, die verwijderd
+  zijn. Alle zeven verwijzingen in `tavern/index.html` en `index.html` zijn mee omgezet en
+  de cache-parameters opgehoogd.
+
+**Waarom**
+- Zonder Node moest elke codewijziging van Claude door Codex worden natest. Dat is een
+  onnodige wachttijd in een samenwerking die juist snel moet schakelen.
+- De foto's waren JPEG omdat `sips` webp niet kan schrijven. Met `sharp` kan het wel:
+  215 kB tegen 302 kB voor de liggende versie, 112 kB tegen 196 kB voor de staande. Bij
+  elkaar 171 kB minder op de zwaarste pagina van de site.
+- Twee dingen om te weten voor de volgende keer. `sips` schrijft een uitsnede uit een
+  HEIC standaard weer als HEIC, ook als het bestand `.png` heet — geef altijd expliciet
+  `-s format png` mee. En de nieuwe WebP's zijn zichtbaar scherper dan de eerdere JPEG's,
+  omdat `sharp` vanaf het volledige origineel van 9610 px schaalt in plaats van vanaf een
+  al verkleind tussenbestand.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` → 63 geslaagd, 0 gefaald.
+- `grep -rn "tavern-asturias-hero" --include="*.html" .` geeft zeven regels, allemaal
+  `.webp`. Er staan geen JPEG-versies meer in `tavern/assets/`.
+
+**Niet geverifieerd**
+- De nieuwe WebP's zijn niet opnieuw in de browser bekeken; de uitsnede en afmetingen zijn
+  identiek aan de JPEG-versies die wel visueel gecontroleerd zijn, alleen het
+  compressieformaat verschilt.
+- De databaseproeven blijven openstaan voor Codex; daar heeft Claude geen toegang toe.
+
+**Wat nu volgt**
+- Codex: alleen nog de gracemarge in de echte database. De rest van de testtaken is weg.
+
+---
 
 ### 2026-08-29 · Claude · Verplichte aanbiedergegevens discreet ondergebracht · TE CONTROLEREN
 
@@ -156,7 +188,8 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   grijs tegen 16 px body. Klein en onderaan, zoals bedoeld.
 
 **Niet geverifieerd**
-- Geen Node op deze Mac, dus de suite is niet gedraaid.
+- ~~Geen Node op deze Mac.~~ **Bijgewerkt 29 aug, later die dag:** Node staat er inmiddels
+  wel en de volledige suite is gedraaid — 63 tests, alle geslaagd.
 - De bron is de officiële overheidstoelichting op de LSSI, geen advies van een jurist.
   Voor de definitieve versie hoort dit blok samen met de reisbureauregistratie nog één
   keer juridisch nagekeken te worden.
@@ -195,7 +228,7 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 - Bron: https://es.wikipedia.org/wiki/Llerandi
 
 **Niet geverifieerd**
-- Geen Node op deze Mac, dus de suite is niet gedraaid.
+- ~~Geen Node op deze Mac.~~ **Bijgewerkt:** suite gedraaid, 63 tests geslaagd.
 
 **Wat nu volgt**
 - Punt 2 uit *Openstaand* kan weg zodra dit is nagekeken.
@@ -239,7 +272,8 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   moet blijven slagen.
 
 **Niet geverifieerd**
-- Geen Node op deze Mac, dus de suite is niet gedraaid.
+- ~~Geen Node op deze Mac.~~ **Bijgewerkt:** suite gedraaid, 63 tests geslaagd. De foto's
+  zijn intussen ook naar WebP omgezet; zie het bovenste logboekitem.
 - De Tavern-kaart op de homepage is niet visueel bevestigd: de afbeelding laadt daar
   aantoonbaar (HTTP 200, element zichtbaar met opacity 1), maar het screenshot-mechanisme
   gaf een leeg beeld terug. De DOM klopt; de weergave is niet met eigen ogen gezien.
@@ -288,9 +322,8 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   absent"* moet blijven slagen: de toevoeging gebruikt *taxes*, niet *VAT*.
 
 **Niet geverifieerd**
-- Geen Node op deze Mac; de suite is niet gedraaid. De nieuwe testregels zijn met python3
-  tegen de echte bestandsinhoud nagerekend en slagen.
-- De erfgoedclaims op de Tavern-pagina zijn niet nagetrokken. Zie *Openstaand* 3.
+- ~~Geen Node op deze Mac.~~ **Bijgewerkt:** suite gedraaid, 63 tests geslaagd.
+- De erfgoedclaims zijn intussen wél nagetrokken; zie het aparte logboekitem daarover.
 
 **Wat nu volgt**
 - Robert beantwoordt *Openstaand* 1 en 2. Punt 1 blokkeert: zolang dat niet vaststaat
@@ -355,9 +388,8 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   `lewos.co/HANDOVER.md` moeten 404 geven.
 
 **Niet geverifieerd**
-- De testsuite is niet gedraaid. De nieuwe testregels zijn wel met python3 tegen de
-  echte bestandsinhoud nagerekend; de patronen matchen. Dat is geen vervanging voor
-  `node --test`.
+- ~~De testsuite is niet gedraaid.~~ **Bijgewerkt 29 aug, later die dag:** Node is
+  geïnstalleerd en de suite is gedraaid — 63 tests, alle geslaagd, inclusief de nieuwe.
 
 **Wat nu volgt**
 - Codex: *Openstaand* 1 en 2.

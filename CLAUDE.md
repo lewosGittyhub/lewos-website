@@ -19,16 +19,20 @@ Dit is de Lewos-website. Aan deze repo werken twee assistenten om beurten: **Cla
 Roberts eigen `CLAUDE.md` in `~/Downloads` blijft leidend voor merk, huisstijl, stem en
 de harde grenzen. `HANDOVER.md` vat de grenzen samen die deze repo raken.
 
-## Wat jij als Claude niet kunt
+## Wat jij als Claude wel en niet kunt
 
-Op deze Mac staat **geen Node.js**. Je kunt `node --test tests/*.test.mjs` niet draaien
-en je hebt geen Supabase-toegang. Codex heeft beide. Verander je code, dan zet je die
-onder *Niet geverifieerd* in je logboekitem en in *Openstaand* voor Codex, met precies
-welk scenario hij moet natesten. Schrijf nooit "getest".
+Node.js v24 staat sinds 29 augustus 2026 in `~/.local/node` en zit via `~/.zshrc` op je
+PATH. **Draai dus altijd zelf `node --test tests/*.test.mjs` voordat je iets als af
+meldt.** Voor beeldbewerking is `sharp` beschikbaar; installeer die buiten de repo, in een
+tijdelijke map, zodat de site zonder dependencies blijft.
 
-Wat je wél kunt: code en SQL lezen en narekenen, teksten en juridische pagina's
-controleren, regexpatronen met `python3` tegen de echte bestandsinhoud verifiëren, git,
-en de site lokaal bekijken met `python3 -m http.server 8000`.
+Wat je **niet** kunt is de echte databaseproef: je hebt geen Supabase-toegang, Codex wel.
+Raak je de SQL aan, zet dan onder *Niet geverifieerd* welk scenario Codex moet natesten.
+Schrijf nooit "getest" als je het niet hebt gedraaid.
+
+Let op bij de lokale preview: `python3 -m http.server` weigert te starten met de werkmap
+in `~/Documents` (macOS blokkeert daar `os.getcwd()`). Kopieer de site naar een map buiten
+`~/Documents` en serveer die.
 
 ## Nooit doen
 
