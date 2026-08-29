@@ -116,6 +116,43 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Stoelen als bolletjes in plaats van een getal · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html` en `tavern/first-access.js`: het pilletje *"6 vrij"* op de vrijdag
+  van elk weekend is vervangen door zes bolletjes in twee rijtjes van drie. Ingekleurd is
+  bezet, open is nog vrij. Bij twee stoelen of minder kleuren ze goud, bij het gekozen
+  weekend wit op oranje, bij een vol weekend vlak gevuld.
+- `tests/site.test.mjs`: nieuwe test *"seat availability is shown as one dot per seat,
+  with a text alternative"*.
+
+**Waarom**
+- Een getal moet je lezen; een rij bolletjes zie je. Bij het aftasten van een kalender
+  met veel weekenden scheelt dat echt.
+- **Eerste poging was een balkje van zes segmenten en die is verworpen.** Op ware grootte
+  waren de segmenten ongeveer vier pixels breed en las het als een streepjespatroon, niet
+  als telbare stoelen. Bolletjes in een raster van drie bij twee zijn op desktop 10 × 10
+  px en op mobiel 8 × 8 px — dat telt wel.
+- De bolletjes staan op `aria-hidden`, want een rij vormpjes zegt niets tegen een
+  schermlezer. Het aantal staat voluit in het `aria-label` van de knop, en sinds deze
+  wijziging ook in een `title` zodat het bij zweven als tekst verschijnt.
+- Bij een tafel groter dan acht stoelen worden de bolletjes te klein om te tellen. Dan
+  valt de weergave terug op een getal; dat is eerlijker dan een raster dat niets zegt.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 68 geslaagd**.
+- In de browser met een nagebootst antwoord waarin weekend 02 nog twee stoelen vrij heeft:
+  30 oktober toont zes open bolletjes, 6 november vier ingekleurde en twee open. Op
+  mobiel past de meter binnen de cel van 38 × 44 px zonder overloop.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij wil draaien.
+
+---
+
 ### 2026-08-29 · Claude · Eigen privé-pagina en een beeldclausule · TE CONTROLEREN
 
 **Wat**

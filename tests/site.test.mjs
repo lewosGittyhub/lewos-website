@@ -295,3 +295,18 @@ test("the weekend menu becomes a read-out and a private Tavern has its own route
   assert.match(script,/submit\.textContent=submitLabel\(\)/);
   assert.doesNotMatch(script,/submit\.textContent='Claim my seats/);
 });
+
+test("seat availability is shown as one dot per seat, with a text alternative",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  assert.match(html,/\.calday__gauge \{[^}]*grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(html,/\.calday__gauge i \{[^}]*border-radius: 50%/);
+  assert.match(script,/length:item\.capacity/,"one dot per seat, taken from the real capacity");
+  assert.match(script,/item\.capacity-item\.remaining/);
+  // A row of dots says nothing to a screen reader, so the count stays in the label.
+  assert.match(script,/aria-hidden="true"/);
+  assert.match(script,/seats free/);
+  assert.match(script,/aria-label="\$\{label\}" title="\$\{label\}"/);
+  // Too many seats would make the dots unreadable; then a number is honest instead.
+  assert.match(script,/item\.capacity<=8/);
+});

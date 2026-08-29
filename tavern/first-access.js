@@ -64,9 +64,14 @@
         const {item,first}=found;
         const full=item.remaining<=0;
         const low=!full&&item.remaining<=2;
-        const seats=first?`<span class="calday__seats">${full?'full':`${item.remaining} free`}</span>`:'';
+        // Een meter met één segment per stoel. Bij een ongebruikelijk grote tafel
+        // worden de segmenten te dun om iets te zeggen; dan blijft het een getal.
+        const taken=Math.max(0,item.capacity-item.remaining);
+        const gauge=item.capacity<=8
+          ?`<span class="calday__gauge" aria-hidden="true">${Array.from({length:item.capacity},(_,index)=>`<i${index<taken?' class="is-taken"':''}></i>`).join('')}</span>`
+          :`<span class="calday__seats">${full?'full':`${item.remaining} free`}</span>`;
         const label=`${item.label}, ${item.dateLabel}, ${full?'no seats left':`${item.remaining} of ${item.capacity} seats free`}`;
-        cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}"><span class="calday__n">${day}</span>${seats}</button>`;
+        cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}" title="${label}"><span class="calday__n">${day}</span>${first?gauge:''}</button>`;
       }
       return `<div class="calmonth"><h4>${MONTHS[month]} ${year}</h4><div class="calmonth__dow">${DOW.map(name=>`<span>${name}</span>`).join('')}</div><div class="calmonth__grid">${cells}</div></div>`;
     }).join('');
