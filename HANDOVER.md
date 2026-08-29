@@ -214,6 +214,10 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 
 ## Logboek — nieuwste bovenaan
 
+> Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
+> nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
+> logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
 ### 2026-08-29 · Claude · Pre-deploy eindcontrole, met één blokkade · TE CONTROLEREN
 
 **Wat**
