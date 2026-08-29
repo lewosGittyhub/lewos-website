@@ -29,6 +29,7 @@
       --beige: #EDE6DA;
       --brown: #4B2E20;
       --grey: #6B6F72;
+      --gold: #D9A23B;
       --white: #FFFCF7;
       --max: 1180px;
       --radius-small: 10px;
@@ -192,6 +193,29 @@
        Zonder deze regel staan alle drie de toestanden van de aanmeldsectie tegelijk
        op de pagina. */
     [hidden] { display: none !important; }
+    .calendar { display: none; }
+    .calendar[data-ready] { display: grid; gap: 16px; }
+    .calendar__months { display: grid; grid-template-columns: repeat(auto-fit, minmax(226px, 1fr)); gap: 16px; }
+    .calmonth { padding: 15px; border: 1px solid rgba(237,230,218,.24); border-radius: var(--radius-small); background: rgba(247,243,236,.07); }
+    .calmonth h4 { margin: 0 0 11px; font: 600 .92rem/1.2 "Poppins", sans-serif; color: var(--cream); }
+    .calmonth__dow, .calmonth__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+    .calmonth__dow span { padding-bottom: 6px; color: rgba(237,230,218,.6); font-size: .6rem; font-weight: 600; letter-spacing: .05em; text-align: center; text-transform: uppercase; }
+    .calday { aspect-ratio: 1; min-width: 0; display: flex; flex-direction: column; padding: 3px 4px; margin: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: rgba(237,230,218,.45); font: inherit; font-size: .72rem; line-height: 1.1; text-align: left; }
+    .calday.is-weekend { border-color: rgba(237,230,218,.42); background: rgba(247,243,236,.12); color: var(--cream); font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s; }
+    .calday.is-low { border-color: rgba(217,162,59,.75); background: rgba(217,162,59,.22); }
+    .calday.is-hot { border-color: var(--orange); background: rgba(229,100,58,.32); }
+    .calday.is-chosen { border-color: var(--orange); background: var(--orange); color: var(--white); }
+    .calday.is-full { border-color: rgba(237,230,218,.16); background: repeating-linear-gradient(135deg, rgba(247,243,236,.06), rgba(247,243,236,.06) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.42); cursor: not-allowed; }
+    .calday.is-full .calday__n { text-decoration: line-through; }
+    .calday:focus-visible { outline: 3px solid #f4a285; outline-offset: 2px; }
+    .calday__seats { margin-top: auto; min-width: 0; padding: 0 4px; border-radius: 20px; background: rgba(9,35,32,.85); color: var(--cream); font-size: .55rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; }
+    .calday.is-low .calday__seats { background: var(--gold); color: var(--brown); }
+    .calday.is-chosen .calday__seats { background: var(--white); color: var(--orange); }
+    .calendar__chosen { margin: 0; color: var(--beige); font-size: .92rem; }
+    .calendar__chosen b { color: var(--cream); }
+    /* Een vierkant hokje wordt op een telefoon te klein om met een duim te raken.
+       Laat de hoogte dan los van de breedte lopen. */
+    @media (max-width: 460px) { .calmonth { padding: 11px; } .calday { aspect-ratio: auto; min-height: 44px; font-size: .66rem; } }
     .signup-form { display: grid; gap: 22px; padding: clamp(26px, 4vw, 42px); border: 1px solid rgba(237,230,218,.28); border-radius: var(--radius-medium); background: rgba(15,59,53,.78); box-shadow: 0 24px 65px rgba(0,0,0,.3); backdrop-filter: blur(8px); }
     .form-field { display: grid; gap: 8px; }
     .form-field label, .consent label { font: 600 .86rem/1.4 "Poppins", sans-serif; }
@@ -532,6 +556,10 @@
           <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
           <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
           <div class="form-field">
+            <div class="calendar" data-weekend-calendar aria-label="Pick a Tavern weekend">
+              <div class="calendar__months" data-calendar-months></div>
+              <p class="calendar__chosen" data-calendar-chosen role="status"></p>
+            </div>
             <label for="weekend">Which weekend?</label>
             <select id="weekend" name="weekend" required>
               <option value="" selected disabled>Choose an option</option>

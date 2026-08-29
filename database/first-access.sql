@@ -28,6 +28,11 @@ create table if not exists public.tavern_seat_claims (
   created_at timestamptz not null default now()
 );
 
+-- Echte datums naast het tekstlabel. Zonder deze twee kan de kalender een weekend
+-- niet op een maandrooster plaatsen; date_label is alleen bedoeld om te tonen.
+alter table public.tavern_weekends add column if not exists starts_on date;
+alter table public.tavern_weekends add column if not exists ends_on date;
+
 alter table public.tavern_seat_claims add column if not exists hold_expires_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists payment_reference text;
 alter table public.tavern_seat_claims add column if not exists checkout_token_hash text;
@@ -66,9 +71,10 @@ alter table public.tavern_weekends enable row level security;
 alter table public.tavern_seat_claims enable row level security;
 alter table public.tavern_request_limits enable row level security;
 
-insert into public.tavern_weekends (slug, label, date_label, sort_order)
-values ('weekend-01', 'Weekend 01', '30 Oct to 2 Nov 2026', 1), ('weekend-02', 'Weekend 02', '6 to 9 Nov 2026', 2)
-on conflict (slug) do update set label=excluded.label,date_label=excluded.date_label,sort_order=excluded.sort_order;
+insert into public.tavern_weekends (slug, label, date_label, sort_order, starts_on, ends_on)
+values ('weekend-01', 'Weekend 01', '30 Oct to 2 Nov 2026', 1, date '2026-10-30', date '2026-11-02'),
+       ('weekend-02', 'Weekend 02', '6 to 9 Nov 2026', 2, date '2026-11-06', date '2026-11-09')
+on conflict (slug) do update set label=excluded.label,date_label=excluded.date_label,sort_order=excluded.sort_order,starts_on=excluded.starts_on,ends_on=excluded.ends_on;
 
 -- Never free an attached Stripe checkout on a local timer alone: a paid
 -- webhook may still be in flight. Only orphan holds without an attached
@@ -167,6 +173,8 @@ begin
     'label',w.label,
     'dateLabel',w.date_label,
     'capacity',w.capacity,
+    'startsOn',w.starts_on,
+    'endsOn',w.ends_on,
     'remaining',greatest(w.capacity-coalesce(c.occupied,0),0)
   ) order by w.sort_order),'[]'::jsonb) into result
   from tavern_weekends w

@@ -116,6 +116,58 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Weekendkalender in het First Access-formulier · TE CONTROLEREN
+
+**Wat**
+- `database/first-access.sql`: `tavern_weekends` krijgt `starts_on date` en `ends_on date`
+  (beide `add column if not exists`). De twee bestaande weekenden worden gevuld via de
+  bestaande seed, en `get_tavern_availability` geeft ze mee als `startsOn` en `endsOn`.
+- `tavern/index.html`: een kalenderblok boven het keuzemenu in het aanmeldformulier, met
+  eigen opmaak. Nieuwe merkkleur als variabele: `--gold: #D9A23B`.
+- `tavern/first-access.js`: bouwt de maanden op uit de beschikbaarheid, kleurt het hele
+  weekend bij zweven, zet de keuze bij klikken, en houdt kalender en keuzemenu in beide
+  richtingen gelijk. Het eerste weekend met vrije stoelen staat vooraf geselecteerd.
+- `tests/site.test.mjs`: nieuwe test *"the weekend calendar is driven by real dates and
+  degrades to the menu"*.
+
+**Waarom**
+- Robert wil dat gasten een weekend in een kalender aanklikken in plaats van uit een
+  keuzemenu. De doordeweekse dagen staan er bewust bij: zo ziet iemand meteen of er
+  ruimte is om dagen aan te plakken.
+- `date_label` is vrije tekst en dus onbruikbaar om een weekend op een maandrooster te
+  plaatsen. Vandaar echte datumkolommen; het label blijft puur om te tonen.
+- **Het keuzemenu blijft staan en blijft het veld dat verstuurd wordt.** Dat is bewust:
+  de kalender is een bedieningslaag erbovenop. Komen er geen datums uit de database — de
+  migratie is nog niet gedraaid, of de API is even weg — dan verbergt de kalender
+  zichzelf en werkt het formulier gewoon als voorheen. Liever geen kalender dan een halve.
+  Het houdt ook de optie *private Tavern* bereikbaar, want die is geen weekend met datums.
+- Vier toestanden per dag: open, nog twee stoelen of minder (goud), jouw keuze (oranje),
+  vol of geblokkeerd (gearceerd en doorgestreept). Zweven kleurt alle vier de dagen van
+  het weekend, ook als de maandag op de volgende regel of in de volgende maand valt —
+  zonder dat lijkt het of je drie dagen boekt.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 66 geslaagd**.
+- Visueel gecontroleerd op 900 × 820 en op 375 × 812, met een nagebootst antwoord van de
+  database (de Netlify-functie draait lokaal niet). Weekend 01 loopt van 30 oktober tot
+  2 november en wordt correct over beide maandkaarten gemarkeerd. Tikdoelen op mobiel zijn
+  38 × 44 px, geen horizontale overloop.
+
+**Niet geverifieerd — belangrijk**
+- **De migratie is niet in Supabase gedraaid.** Codex moet `database/first-access.sql`
+  opnieuw uitvoeren zodat de twee kolommen bestaan en gevuld raken, en daarna controleren
+  dat `get_tavern_availability` `startsOn` en `endsOn` teruggeeft. Tot dat moment blijft
+  de kalender op de echte site onzichtbaar en toont de pagina het keuzemenu — dat is
+  bedoeld gedrag, geen storing.
+- De kalender is niet getest tegen de echte API, alleen tegen een nagebootst antwoord.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij echt wil draaien; die worden dan als rijen met
+  datums toegevoegd. Vanaf dat moment verschijnen en verdwijnen weekenden op de site
+  puur door de `visible`-vlag in Supabase.
+
+---
+
 ### 2026-08-29 · Claude · Verborgen blokken stonden gewoon op de pagina · TE CONTROLEREN
 
 **Wat**

@@ -251,3 +251,23 @@ test("a hidden element is never left visible by a competing display rule",async(
     assert.match(html,/\[hidden\]\s*\{\s*display:\s*none\s*!important/,`${path.relative(root,file)} uses the hidden attribute without a [hidden] display rule to protect it`);
   }
 });
+
+test("the weekend calendar is driven by real dates and degrades to the menu",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  // Real dates, not the display label, decide where a weekend sits in a month.
+  assert.match(sql,/add column if not exists starts_on date/);
+  assert.match(sql,/add column if not exists ends_on date/);
+  assert.match(sql,/'startsOn',w\.starts_on/);
+  assert.match(sql,/'endsOn',w\.ends_on/);
+  assert.match(html,/data-weekend-calendar/);
+  assert.match(html,/data-calendar-months/);
+  // The select stays the submitted field, so the form still works without a calendar.
+  assert.match(html,/<select id=["']weekend["'] name=["']weekend["'] required>/);
+  assert.match(script,/item\.startsOn/);
+  assert.match(script,/removeAttribute\('data-ready'\)/,"without dated weekends the calendar must hide itself");
+  assert.match(html,/\.calendar \{ display: none; \}/,"the calendar stays hidden until the script marks it ready");
+  // A private Tavern is not a dated weekend and must remain reachable in the menu.
+  assert.match(html,/value=["']private["']/);
+});
