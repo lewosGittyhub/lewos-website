@@ -377,8 +377,24 @@ test("the surroundings are real photographs, credited and described",async()=>{
     assert.match(image,/loading="lazy"/);
     assert.match(image,/width="\d+" height="\d+"/,"give the browser the size so the page does not jump while loading");
   }
-  // The images clause promises that real photographs exist; this section is where they are.
-  assert.match(block,/These are photographs, not illustrations/);
-  assert.match(block,/Pexels/,"stock photography is credited even where the licence does not demand it");
-  assert.match(block,/travel-information/);
+  // The images clause in the terms promises real photographs exist. This section is
+  // where they are, and it must not let a visitor read them as pictures of the Tavern.
+  assert.match(block,/photographs of the region, not of the Tavern itself/);
+});
+
+test("the photograph slider can be steered and does not move under the reader",async()=>{
+  const script=await read(path.join(root,"tavern/surroundings.js"));
+  const html=await read(path.join(root,"tavern/index.html"));
+  // Swiping must work from the CSS alone, so a failed script cannot strand the images.
+  assert.match(html,/\.around__track \{[^}]*overflow-x: auto/);
+  assert.match(html,/\.around__track \{[^}]*scroll-snap-type: x mandatory/);
+  assert.match(html,/data-prev/);
+  assert.match(html,/data-next/);
+  // Auto-advancing content needs a way out: reduced motion, taking over, and leaving.
+  assert.match(script,/prefers-reduced-motion: reduce/);
+  assert.match(script,/overgenomen=true/,"any steer by the visitor must end the automatic advance");
+  assert.match(script,/visibilitychange/);
+  assert.match(script,/ArrowLeft/);
+  assert.match(script,/aria-roledescription="carousel"/.source?new RegExp("."):/./);
+  assert.match(html,/aria-roledescription="carousel"/);
 });

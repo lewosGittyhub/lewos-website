@@ -133,6 +133,50 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Sfeersectie wordt een schuifpresentatie · TE CONTROLEREN
+
+**Wat**
+- De zes beelden staan niet meer naast elkaar maar als één presentatie: één foto met
+  bijschrift tegelijk, die om de drie seconden doorschuift. Pijlen links en rechts,
+  stippen eronder, vegen op een telefoon, en de pijltjestoetsen op een toetsenbord.
+- Nieuw bestand `tavern/surroundings.js`. De slotalinea met de herkomst is op verzoek van
+  Robert verwijderd.
+- `tests/site.test.mjs`: nieuwe test *"the photograph slider can be steered and does not
+  move under the reader"*.
+
+**Waarom / hoe**
+- **Het schuiven zelf zit in CSS, niet in JavaScript.** Het spoor is een gewone
+  horizontale scroller met `scroll-snap`. Daardoor werkt vegen ook als het script niet
+  laadt; de knoppen sturen datzelfde spoor aan. Zonder script blijven alle zes foto's
+  gewoon bereikbaar.
+- **Automatisch doorschuiven stopt zodra de bezoeker zelf stuurt** — klik, veeg, scrol of
+  toets — en komt niet meer terug. Iets dat onder je vinger wegbeweegt terwijl je kijkt is
+  vervelender dan een presentatie die stilstaat. Verder staat het stil buiten beeld, in
+  een verborgen tabblad, en zolang de muis of het toetsenbord erop staat. Wie beweging
+  heeft uitgezet in zijn systeeminstellingen krijgt helemaal geen automatisch verloop.
+- **De slotregel is weg, maar één zin eruit is verhuisd naar de inleiding:** *"These are
+  photographs of the region, not of the Tavern itself."* Die doet echt werk — de
+  beeldclausule in de voorwaarden belooft dat er echte foto's bestaan én dat een beeld
+  geen beschrijving van het verblijf is. Naamsvermelding is bij Pexels niet verplicht, dus
+  het schrappen daarvan mag.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 76 geslaagd.**
+- In de browser gemeten: vanaf stip 0 na zeven seconden vanzelf op stip 2; één klik op
+  volgende brengt hem op 3; daarna zeven seconden wachten en hij staat nog steeds op 3.
+  Op 375 px schuift het spoor mee met een veeg en volgen de stippen; geen horizontale
+  overloop op de pagina.
+
+**Niet geverifieerd**
+- Echt vegen met een vinger is niet getest, alleen de schuifpositie die een veeg
+  oplevert. Het onderliggende mechanisme is standaard browsergedrag.
+
+**Wat nu volgt**
+- De twee bijschriften wachten nog op Robert: is het stenen huis het verblijf, en waar is
+  de luchtfoto genomen.
+
+---
+
 ### 2026-08-29 · Claude · Sfeersectie over Asturië, met licentiecontrole · TE CONTROLEREN
 
 **Wat**

@@ -129,12 +129,29 @@
     .around { padding: 92px 0; background: var(--beige); color: var(--green); }
     .around__head { max-width: 720px; margin-bottom: 40px; }
     .around h2 { margin-bottom: 14px; font-size: clamp(2.3rem, 4.4vw, 3.9rem); }
-    .around__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 26px; }
-    .around figure { margin: 0; }
+    .around__slider { position: relative; max-width: 880px; margin-inline: auto; }
+    /* Een schuifspoor met scroll-snap: vegen werkt daarmee vanzelf op een telefoon,
+       ook als het schuifscript niet laadt. De knoppen sturen datzelfde spoor aan. */
+    .around__track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; border-radius: var(--radius-medium); }
+    .around__track::-webkit-scrollbar { display: none; }
+    .around__track:focus-visible { outline: 3px solid #f4a285; outline-offset: 4px; }
+    .around figure { flex: 0 0 100%; min-width: 0; margin: 0; scroll-snap-align: center; }
     .around img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-medium); box-shadow: 0 18px 44px rgba(15,59,53,.18); }
-    .around figcaption { margin-top: 13px; font: 600 1rem/1.4 "Poppins", sans-serif; }
-    .around figcaption span { display: block; margin-top: 5px; color: var(--grey); font: 400 .92rem/1.5 Inter, sans-serif; }
-    .around__note { margin: 34px 0 0; color: var(--grey); font-size: .86rem; }
+    .around figcaption { min-height: 92px; padding: 15px 4px 0; font: 600 1.05rem/1.4 "Poppins", sans-serif; }
+    .around figcaption span { display: block; margin-top: 5px; color: var(--grey); font: 400 .94rem/1.5 Inter, sans-serif; }
+    /* De knoppen liggen over de foto, dus ze hebben een eigen ondergrond nodig: boven
+       een lichte lucht is wit zonder achtergrond onzichtbaar. */
+    .around__nav { position: absolute; top: 0; bottom: 92px; width: 62px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; }
+    .around__nav::before { content: attr(data-glyph); display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: rgba(9,35,32,.55); color: var(--white); font: 400 1.7rem/1 "Poppins", sans-serif; padding-bottom: 4px; backdrop-filter: blur(6px); transition: background .2s, transform .2s; }
+    .around__nav:hover::before { background: var(--orange); transform: scale(1.06); }
+    .around__nav:focus-visible::before { outline: 3px solid #f4a285; outline-offset: 3px; }
+    .around__nav--prev { left: 4px; }
+    .around__nav--next { right: 4px; }
+    .around__dots { display: flex; justify-content: center; gap: 9px; margin-top: 6px; }
+    .around__dots button { width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; background: rgba(15,59,53,.28); cursor: pointer; transition: background .2s, transform .2s; }
+    .around__dots button[aria-selected="true"] { background: var(--orange); transform: scale(1.35); }
+    .around__dots button:focus-visible { outline: 3px solid #f4a285; outline-offset: 3px; }
+    @media (max-width: 520px) { .around__nav { width: 42px; font-size: 2rem; } .around figcaption { min-height: 104px; } }
     .rhythm { padding: 116px 0; color: var(--green); background: var(--beige); }
     .rhythm__head { display: grid; grid-template-columns: 1.15fr .85fr; gap: 70px; align-items: end; margin-bottom: 52px; }
     .rhythm__head h2 { max-width: 720px; margin: 0; font-size: clamp(2.6rem, 5vw, 4.8rem); }
@@ -431,9 +448,10 @@
         <div class="around__head">
           <p class="eyebrow">Beyond the table</p>
           <h2 id="around-title">And when the dice are down.</h2>
-          <p>The Tavern weekend fills three nights, but Asturias does not stop at the gate. The lakes above Covadonga, the valleys of Ponga, the beaches at Ribadesella, the old town in Gij&oacute;n &mdash; guests who arrive early or stay on have more than one kind of day to choose from.</p>
+          <p>The Tavern weekend fills three nights, but Asturias does not stop at the gate. The lakes above Covadonga, the valleys of Ponga, the beaches at Ribadesella, the old town in Gij&oacute;n &mdash; guests who arrive early or stay on have more than one kind of day to choose from. These are photographs of the region, not of the Tavern itself.</p>
         </div>
-        <div class="around__grid">
+        <div class="around__slider" data-surroundings>
+          <div class="around__track" data-track role="group" aria-roledescription="carousel" aria-label="Asturias in six photographs" tabindex="0">
           <figure>
             <img src="assets/surroundings-house.webp?v=1" width="900" height="675" loading="lazy" decoding="async" alt="A stone house with a red tiled roof and a covered porch, under a blue sky with scattered cloud.">
             <figcaption>Where you sleep<span>Stone, timber and a roof that has seen a few winters.</span></figcaption>
@@ -458,8 +476,11 @@
             <img src="assets/surroundings-cliffs.webp?v=1" width="900" height="675" loading="lazy" decoding="async" alt="Gorse-covered cliffs dropping into a grey-blue sea, with headlands fading into the distance.">
             <figcaption>Where the land stops<span>Gorse, rock and the Cantabrian Sea.</span></figcaption>
           </figure>
+          </div>
+          <button class="around__nav around__nav--prev" type="button" data-prev data-glyph="&#8249;" aria-label="Previous photograph"></button>
+          <button class="around__nav around__nav--next" type="button" data-next data-glyph="&#8250;" aria-label="Next photograph"></button>
+          <div class="around__dots" data-dots role="tablist" aria-label="Choose a photograph"></div>
         </div>
-        <p class="around__note">These are photographs, not illustrations. The landscapes come from Pexels, by Enrique, Marcio Costa and other photographers there; the house is our own. They show Asturias, not the Tavern itself. What a booking includes is described in the <a href="/travel-information/">travel information</a>, not in an image.</p>
       </div>
     </section>
 
@@ -746,6 +767,7 @@
     </div>
   </footer>
   <script src="first-access.js" defer></script>
+  <script src="surroundings.js" defer></script>
   <script>
     const faqItems=[...document.querySelectorAll(".faq details")].map(item=>({"@type":"Question",name:item.querySelector("summary")?.textContent.trim(),acceptedAnswer:{"@type":"Answer",text:[...item.querySelectorAll("p")].map(p=>p.textContent.trim()).join(" ")}})).filter(item=>item.name&&item.acceptedAnswer.text);
     if(faqItems.length){const schema=document.createElement("script");schema.type="application/ld+json";schema.textContent=JSON.stringify({"@context":"https://schema.org","@type":"FAQPage",mainEntity:faqItems});document.head.append(schema);}
