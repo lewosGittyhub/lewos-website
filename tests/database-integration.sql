@@ -68,4 +68,42 @@ begin
   if closed_blocked is not true then raise exception 'late_first_access_was_not_blocked'; end if;
 end $$;
 
+-- Waarom de fasechecks clock_timestamp() gebruiken en niet now(). Binnen één transactie
+-- staat now() stil; clock_timestamp() loopt door. Een aanvraag die vóór een deadline
+-- begint en daarna op de advisory lock wacht, zou met now() nog steeds als 'op tijd'
+-- gelden. Deze controle bewijst het verschil in dezelfde sessie en toont daarna dat een
+-- deadline die tijdens het wachten verstrijkt, ook echt sluit.
+do $$
+declare
+  transactietijd timestamptz;
+  kloktijd_na_wachten timestamptz;
+  deadline timestamptz;
+  te_laat boolean:=false;
+begin
+  transactietijd:=now();
+  deadline:=clock_timestamp()+interval '300 milliseconds';
+  perform pg_sleep(0.6);
+  kloktijd_na_wachten:=clock_timestamp();
+  if now()<>transactietijd then
+    raise exception 'now_bleek_niet_bevroren';
+  end if;
+  if kloktijd_na_wachten<=transactietijd then
+    raise exception 'clock_timestamp_liep_niet_door';
+  end if;
+  -- De deadline is tijdens het wachten verstreken. Met now() zou dit erdoor glippen.
+  if now()>=deadline then
+    raise exception 'proef_ongeldig_de_transactietijd_lag_al_na_de_deadline';
+  end if;
+  insert into public.tavern_weekends(slug,label,date_label,sort_order,capacity,starts_on,ends_on) values
+    ('codex-test-clock','Test Clock','Test',900003,6,date '2027-03-05',date '2027-03-08');
+  begin
+    perform public.register_tavern_interest('Clock Guest','clock-test@example.invalid',1,'codex-test-clock',null,deadline);
+  exception when raise_exception then
+    if sqlerrm='first_access_closed' then te_laat:=true; else raise; end if;
+  end;
+  if te_laat is not true then
+    raise exception 'deadline_die_tijdens_het_wachten_verstreek_hield_niet_tegen';
+  end if;
+end $$;
+
 rollback;

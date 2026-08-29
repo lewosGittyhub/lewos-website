@@ -22,7 +22,7 @@ before(async()=>{
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 });
 beforeEach(()=>{calls=[];emailFails=false;markFails=false;});
-after(()=>server.close());
+after(async()=>{server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
 
 const env=()=>({...process.env,SUPABASE_URL:`http://127.0.0.1:${server.address().port}`,SUPABASE_SERVICE_ROLE_KEY:"service",RESEND_API_KEY:"resend",RESEND_API_URL:`http://127.0.0.1:${server.address().port}/emails`,TAVERN_FROM_EMAIL:"Tavern <test@example.com>",URL:`http://127.0.0.1:${server.address().port}`,TAVERN_PAYMENTS_ENABLED:"true",BOOKING_TERMS_VERSION:"booking-test-v1",BOOKING_TERMS_DOCUMENT_URL:"/documents/terms.pdf",TRAVEL_INFORMATION_DOCUMENT_URL:"/documents/travel.pdf",PUBLIC_BOOKING_OPENS_AT:new Date(Date.now()+48*60*60*1000).toISOString(),NODE_ENV:"test"});
 

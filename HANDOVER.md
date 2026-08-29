@@ -77,37 +77,13 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-0. **[Claude] Onderzoek de hangende integratietests uit commit `40cfe90`.** Codex heeft
-   op 29 augustus zowel parallel als met `--test-concurrency=1` getest met
-   `~/.local/node/bin/node`. De statische tests slagen (30 checks, inclusief dynamische
-   prijs, echte kloktijd en volledige groepsgrootte), maar `checkout.test.mjs` blijft na
-   de eerste twee configuratietests wachten; daardoor worden ook de twee First
-   Access-suites geannuleerd. Bepaal of een lokale mockserver/poort niet sluit of dat de
-   nieuwe checkout-code op een onafgemaakte promise wacht. Pas oplossen en opnieuw de
-   hele suite groen draaien; niet aannemen dat dit alleen de omgeving is.
-
-1. **[Claude/Codex] Maak de prijs één atomaire bron vóór publicatie.** De kalender toont
-   `tavern_weekends.price_cents`, maar Stripe gebruikt nog de vaste literal `202500` in
-   `create-checkout-session.mjs`. Laat beide checkout-RPC's onder de bestaande lock de
-   actuele prijs retourneren, sla bij voorkeur een prijssnapshot op de claim op en gebruik
-   uitsluitend die waarde voor Stripe. Test expliciet een afwijkende weekendprijs.
-2. **[Claude/Codex] Sluit de deadline-race met echte kloktijd.** De fasechecks staan onder
-   de advisory lock, maar gebruiken PostgreSQL `now()`, dat de transactiestarttijd
-   vasthoudt. Gebruik bij de checks na het wachten op de lock `clock_timestamp()`, ook
-   waar een actief uitnodigingsvenster tegen de actuele locktijd wordt vergeleken. Voeg
-   een tweesessie- of anderszins aantoonbare regressietest toe.
-3. **[Claude/Codex] Laat de kalender de volledige groep respecteren.** Een kalenderdag is
-   nu klikbaar zolang `remaining>0`, terwijl het menu terecht blokkeert als
-   `partySize>remaining`. Kalender, automatische selectie en prijsweergave moeten alleen
-   een weekend kiezen dat de volledige groep kan plaatsen, of duidelijk tonen dat die
-   groep niet past.
-4. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
+1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
    registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
    met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
    wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
    Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
-5. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
+2. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
    Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
    De site en de seed in `database/first-access.sql` kennen alleen de eerste twee. In
    diezelfde briefing staat wel *"Elke stap gaat pas open als de vorige vol is"*, dus dit
@@ -116,40 +92,84 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
    `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
    pagina haalt de beschikbaarheid live op.
-6. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
+3. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
    volledig.** Bij een pakketreis moet de reiziger vóór het boeken een formulier met
    gestandaardiseerde informatie krijgen (richtlijn 2015/2302 bijlage I, in Spanje via het
    TRLGDCU). `/travel-information/` kondigt het zelf aan, maar het bestaat nergens. Dit is
    geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.
-7. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
+4. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
    en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
    dat ze nog volgen.
-8. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
+5. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
    zodra een verwerker buiten de EER verwerkt. Zoek eerst uit in welke regio de
    Supabase-instantie draait en wat Netlify, Stripe en Resend daarover zeggen. Niets over
    beweren voordat dat vaststaat.
-9. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+6. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-10. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+7. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-11. **[Wie het eerst kan, na 9 en 10] Vul de bedrijfsgegevens in.** In `/terms/` en
+8. **[Wie het eerst kan, na 6 en 7] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-12. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+9. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-13. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+10. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Verkoopgereedheid opnieuw beoordeeld · TE CONTROLEREN
+### 2026-08-29 · Claude · Hangende suite onderzocht, en de netwerkval gedicht · TE CONTROLEREN
+
+**Wat**
+- `tests/checkout.test.mjs`, `tests/first-access.test.mjs`,
+  `tests/first-access-invitations.test.mjs`: de onderschepping van `fetch` laat niets meer
+  door naar het echte netwerk. Alles wat niet expliciet naar de lokale mockserver wordt
+  omgeleid, faalt nu meteen met `test_reached_the_network: <url>`. De `after`-haken sluiten
+  de mockserver echt af, inclusief openstaande verbindingen, en wachten dat af.
+- `tests/database-integration.sql`: een tweede controleblok dat in één sessie bewijst
+  waaróm de fasechecks `clock_timestamp()` gebruiken — `now()` staat stil binnen de
+  transactie, `clock_timestamp()` loopt door — en daarna aantoont dat een deadline die
+  tijdens het wachten verstrijkt de aanvraag ook echt tegenhoudt.
+
+**Waarom**
+- **Ik kan het vastlopen niet reproduceren.** `node --test tests/checkout.test.mjs` liep
+  hier viermaal achter elkaar in onder de seconde: 24 tests, alle geslaagd, ook met
+  `--test-concurrency=1`. De volledige suite doet 74 in één seconde. Zelfde binary
+  (`~/.local/node/bin/node`, v24.20.0), zelfde commit.
+- Wat wél opviel: de mockserver luistert op poort 0, dus een poortconflict kan het niet
+  zijn — maar de oude onderschepping stuurde elk niet-herkend verzoek door naar het echte
+  internet. In een omgeving zonder netwerktoegang blijft zo'n verzoek hangen tot een
+  time-out, en dan lijkt de suite stil te staan zonder te zeggen waarop. Dat is de enige
+  plausibele oorzaak die ik in de code kon vinden, en die is nu weg: zo'n verzoek faalt
+  direct en noemt de URL.
+- Daarnaast sloot `server.close()` zonder te wachten en zonder open verbindingen te
+  verbreken. Dat houdt een Node-proces aan het eind in leven. Ook dat is gedicht.
+
+**Hoe te controleren — voor Codex**
+- Draai `node --test tests/*.test.mjs` opnieuw. Loopt het nog vast, dan noemt de fout nu
+  de URL waarop het stukloopt; stuur die regel door, dan weten we het meteen.
+- Draai `database/first-access.sql` gevolgd door `tests/database-integration.sql`. Het
+  nieuwe blok is de aantoonbare regressietest voor de tijdrace waar je om vroeg. Hij duurt
+  ongeveer een seconde langer door een korte `pg_sleep`.
+
+**Niet geverifieerd**
+- Of dit de oorzaak bij jou was. Ik heb een reële valkuil weggenomen, geen bewezen
+  diagnose gesteld.
+
+**Wat nu volgt**
+- Openstaand 1, 2 en 3 waren al hersteld in `40cfe90`; ze staan hieronder afgesloten met
+  de verwijzing daarheen.
+
+---
+
+### 2026-08-29 · Codex · Verkoopgereedheid opnieuw beoordeeld · GECONTROLEERD door Claude, 2026-08-29
 
 **Uitkomst**
 - **Nog geen betaalde verkoop vrijgeven.** De technische poort werkt correct en houdt
@@ -167,6 +187,11 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   leeg totdat Robert de externe stukken werkelijk heeft.
 - Daarna alleen technische voorbereiding en visuele verbetering; verzin geen juridische
   nummers, garanties of documentinhoud.
+
+**Nagelopen door Claude, 29 augustus 2026:** eens met de uitkomst — geen betaalde verkoop
+vrijgeven. Punt 0 onderzocht, zie het item hierboven; niet reproduceerbaar, maar de meest
+plausibele oorzaak is weggenomen. Punt 1, 2 en 3 waren al hersteld in `40cfe90` en zijn
+daarom uit *Openstaand* gehaald; de databaseproef erover blijft bij Codex.
 
 ### 2026-08-29 · Claude · De drie bevindingen van Codex hersteld · TE CONTROLEREN
 

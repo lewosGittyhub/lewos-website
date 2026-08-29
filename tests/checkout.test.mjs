@@ -20,7 +20,17 @@ before(async()=>{
     response.statusCode=404;response.end("{}");});});
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
-  globalThis.fetch=(input,options)=>{const url=String(input);if(url==="https://api.stripe.com/v1/checkout/sessions")return nativeFetch(`${base}/v1/checkout/sessions`,options);if(url.startsWith("https://api.stripe.com/v1/checkout/sessions/"))return nativeFetch(`${base}${new URL(url).pathname}`,options);if(url.startsWith("https://api.resend.com/"))return nativeFetch(`${base}/emails`,options);return nativeFetch(input,options);};
+  // Een test mag nooit het echte netwerk op. Alles wat we niet zelf omleiden faalt hier
+  // hard: in een afgeschermde omgeving zou zo'n verzoek anders blijven hangen tot een
+  // time-out, en dan lijkt de suite vast te lopen zonder te zeggen waarop.
+  globalThis.fetch=(input,options)=>{
+    const url=String(input);
+    if(url==="https://api.stripe.com/v1/checkout/sessions")return nativeFetch(`${base}/v1/checkout/sessions`,options);
+    if(url.startsWith("https://api.stripe.com/v1/checkout/sessions/"))return nativeFetch(`${base}${new URL(url).pathname}`,options);
+    if(url.startsWith("https://api.resend.com/"))return nativeFetch(`${base}/emails`,options);
+    if(url.startsWith(base))return nativeFetch(input,options);
+    return Promise.reject(new Error(`test_reached_the_network: ${url}`));
+  };
   process.env.SUPABASE_URL=base;process.env.SUPABASE_SERVICE_ROLE_KEY="service";process.env.STRIPE_SECRET_KEY="sk_test_fake";process.env.STRIPE_WEBHOOK_SECRET="whsec_test";process.env.RESEND_API_KEY="re_test";process.env.TAVERN_FROM_EMAIL="Tavern <test@example.com>";process.env.RATE_LIMIT_SECRET="rate-test-secret";process.env.URL=base;
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
@@ -31,7 +41,9 @@ before(async()=>{
 });
 beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,priceCents:202500,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
 beforeEach(()=>{attachResult={status:"attached"};});
-after(()=>{globalThis.fetch=nativeFetch;server.close();});
+// Sluit de mockserver echt af. Zonder de open verbindingen te verbreken blijft het
+// proces na de laatste test wachten en lijkt de suite te hangen.
+after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");

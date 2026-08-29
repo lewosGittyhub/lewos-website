@@ -34,7 +34,12 @@ before(async()=>{
   });
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   base=`http://127.0.0.1:${server.address().port}`;
-  globalThis.fetch=(input,options)=>nativeFetch(String(input).startsWith("https://api.resend.com/")?`${base}/emails`:input,options);
+  globalThis.fetch=(input,options)=>{
+    const url=String(input);
+    if(url.startsWith("https://api.resend.com/"))return nativeFetch(`${base}/emails`,options);
+    if(url.startsWith(base))return nativeFetch(input,options);
+    return Promise.reject(new Error(`test_reached_the_network: ${url}`));
+  };
   process.env.SUPABASE_URL=base;
   process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
   process.env.RESEND_API_KEY="test-resend-key";
@@ -45,7 +50,7 @@ before(async()=>{
 beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",claimId:"00000000-0000-4000-8000-000000000001",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
 beforeEach(()=>{markRequests=0;markStatus="marked";publicReady=true;process.env.PUBLIC_BOOKING_OPENS_AT="2099-01-01T00:00:00Z";});
 beforeEach(()=>{process.env.URL=base;});
-after(()=>{globalThis.fetch=nativeFetch;server.close();});
+after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
 
 const post=(body,headers={"content-type":"application/json",accept:"application/json"})=>({httpMethod:"POST",headers,body:JSON.stringify(body)});
 const valid={name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,consent:"agreed","bot-field":""};
