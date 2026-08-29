@@ -363,3 +363,21 @@ test("the calendar refuses a weekend that cannot hold the whole party",async()=>
   assert.match(script,/current\.remaining<wantedSeats\(\)/,"a chosen weekend must be let go when the party grows");
   assert.match(script,/not enough for \$\{wanted\}/,"the reason belongs in the accessible label");
 });
+
+test("the surroundings are real photographs, credited and described",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const block=html.match(/<section class="around"[\s\S]*?<\/section>/)?.[0]??"";
+  assert.ok(block,"the surroundings section must exist");
+  // Three photographs, each with words for a reader who cannot see them.
+  const images=[...block.matchAll(/<img[^>]*>/g)].map(match=>match[0]);
+  assert.equal(images.length,3);
+  for(const image of images){
+    assert.match(image,/alt="[^"]{40,}"/,"every photograph needs a description that stands on its own");
+    assert.match(image,/loading="lazy"/);
+    assert.match(image,/width="\d+" height="\d+"/,"give the browser the size so the page does not jump while loading");
+  }
+  // The images clause promises that real photographs exist; this section is where they are.
+  assert.match(block,/These are photographs, not illustrations/);
+  assert.match(block,/Pexels/,"stock photography is credited even where the licence does not demand it");
+  assert.match(block,/travel-information/);
+});

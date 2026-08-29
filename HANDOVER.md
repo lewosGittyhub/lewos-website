@@ -133,13 +133,66 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Omgevingsbeelden als volgende Claude-opdracht · TE CONTROLEREN
+### 2026-08-29 · Claude · Sfeersectie over Asturië, met licentiecontrole · TE CONTROLEREN
+
+**Wat**
+- Nieuwe sectie *"And when the dice are down."* op `tavern/index.html`, na Fontecha: drie
+  foto's met bijschriften — het huis, de Picos de Europa en de kust — plus een regel die
+  benoemt dat het echte foto's zijn en waar ze vandaan komen.
+- Drie nieuwe bestanden in `tavern/assets/`: `surroundings-house.webp` (101 kB),
+  `surroundings-picos.webp` (64 kB), `surroundings-coast.webp` (87 kB).
+- `tests/site.test.mjs`: nieuwe test *"the surroundings are real photographs, credited and
+  described"*.
+
+**Licentie — geverifieerd, niet aangenomen**
+- Bron gecontroleerd op https://www.pexels.com/license/. Letterlijk: *"All photos and
+  videos on Pexels are free to use"* en *"Attribution is not required."* De beperkingen
+  gaan over doorverkoop, merkgebruik en gesuggereerde sponsoring; geen daarvan raakt deze
+  toepassing. Codex' voorzichtigheid was terecht als houding, maar de licentie staat dit
+  gebruik gewoon toe.
+- Er staat tóch een naamsvermelding onder de sectie. Dat kost niets en het versterkt de
+  positie die we vandaag in de voorwaarden hebben ingenomen: dit zijn echte foto's, met
+  een herkomst.
+
+**⚠️ Belangrijk voor Robert — persoonsgegevens tussen het aangeleverde beeld**
+- Een van de vijf bestanden, `IMG_1762.HEIC` in `~/Downloads`, is **geen sfeerbeeld maar
+  een foto van een RETA-inschrijving** met NIE, telefoonnummer, e-mailadres en een
+  instapkaart in beeld. Die is **niet** gebruikt en hoort nergens op de site of in de
+  repo. Het bestand is niet aangeraakt of verplaatst; Robert is erover ingelicht.
+- Dat nummer is ook **niet** gebruikt om *Openstaand* punt 1 in te vullen. Wat er publiek
+  komt te staan beslist Robert zelf, niet een assistent die het ergens tegenkwam.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 75 geslaagd.**
+- Visueel op 1100 × 780 en 375 × 812: drie tegels van 4:3, geen horizontale overloop.
+- Twee dingen zaten er eerst naast en zijn hersteld: de tegels werden 675 px hoog omdat
+  het `height`-attribuut van de afbeelding won van de opgegeven verhouding, en de
+  automatische uitsnede koos bij het huis de lucht in plaats van het huis.
+
+**Niet geverifieerd — vraag aan Robert**
+- **De bijschriften.** Ik weet niet zeker of de stenen woning op `IMG_1725.HEIC` het
+  daadwerkelijke verblijf is; het bijschrift zegt nu *"Where you sleep"*. Klopt dat niet,
+  dan moet het bijschrift veranderen — dat is precies het soort claim waar we vandaag de
+  hele dag streng op zijn geweest.
+- Van de luchtfoto weet ik niet welke kustplaats het is; het bijschrift blijft daarom
+  algemeen bij *"The coast"*.
+
+**Wat nu volgt**
+- Robert bevestigt of weerlegt die twee bijschriften.
+
+---
+
+### 2026-08-29 · Codex · Omgevingsbeelden als volgende Claude-opdracht · GECONTROLEERD door Claude, 2026-08-29
 
 Robert wil een visuele slide voor een indruk van Asturias en activiteiten rond de
 Tavern. De aangeleverde internetbeelden zijn niet automatisch vrijgegeven voor
 commercieel gebruik; licentiecontrole en credits zijn daarom onderdeel van de opdracht.
 Claude bouwt dit pas na de technische testblokkade en zonder de verkoopbeveiliging te
 omzeilen.
+
+**Nagelopen door Claude, 29 augustus 2026:** gebouwd, zie het item hierboven. De
+licentie is bij Pexels zelf gecontroleerd en staat dit gebruik toe. Eén aangeleverd
+bestand bleek persoonsgegevens te bevatten en is niet gebruikt.
 
 ### 2026-08-29 · Claude · Hangende suite onderzocht, en de netwerkval gedicht · TE CONTROLEREN
 
