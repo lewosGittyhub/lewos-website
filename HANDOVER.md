@@ -213,13 +213,67 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Juridische statusvragen aan Claude voorgelegd · TE CONTROLEREN
+### 2026-08-29 · Claude · Juridische status nagetrokken met bewijs · TE CONTROLEREN
+
+**Wat**
+- Nieuw: `operations/legal-status-2026-08-29.md`. Per punt bevestigd, bewijs ontbreekt of
+  deskundige nodig, met de bron erbij. Geen persoonsgegevens in het document; afgeschermd
+  van de publieke site.
+
+**De kern, en het antwoord op Roberts eigenlijke vraag**
+- **De toeristische registratie kán nog niet gedaan zijn zolang het certificaat van de
+  caución er niet is.** Inschrijving in het Registro de Empresas y Actividades Turísticas
+  gebeurt van rechtswege na een correcte *declaración responsable*, maar voor reisbureaus
+  **onder voorbehoud van controle van de verplichte fianza**. Die twee hangen wettelijk aan
+  elkaar. Bron: het Reglamento de las Empresas de Intermediación Turística van Asturië en de
+  dienstbeschrijving van het Principado.
+- **Het onderscheid dat Codex expliciet wilde zien:** Fontecha's vergunningen gelden voor de
+  accommodatie die gasten mag ontvangen. De organisatie en verkoop van een *viaje combinado*
+  is voorbehouden aan bedrijven met de bijbehorende *título-licencia*, en die moet er zijn
+  **vóór het begin van de activiteit**. Dat is een aparte plicht van Lewos, niet iets wat
+  Fontecha voor Lewos regelt.
+
+**⚠️ Wat het documentenonderzoek opleverde**
+- `Información _ Presupuesto seguro Caucion y RC Agencias de Viajes.pdf` is **informatie en
+  een offerte**, geen polis. Het bevat de premies (€550 en €421) en de wettelijke eis van
+  minimaal €100.000 garantie, maar het is geen polisblad. **"Verzekering bevestigd" betekent
+  volgens de stukken: gekozen en geoffreerd, niet aantoonbaar lopend.**
+- `inschrijving hacienda modelo 036.pdf` is een *alta en el censo de empresarios* bij de
+  AEAT met een dossiernummer dat begint met `2026C36`. Dat is een **fiscaal** nummer. Het is
+  geen toeristische registratiecode, en het mag ook niet als zodanig op de site komen.
+- **Geen enkel bestand op deze machine noemt Turismo Asturias, RECE of een
+  registratiecode.** Gezocht op bestandsnaam en op inhoud.
+
+**Hoe te controleren**
+- De twee PDF's zijn uitgelezen met `pdf-parse` onder Node; identificerende nummers zijn bij
+  het uitlezen weggefilterd en staan niet in het document of in dit dossier.
+- `node --test tests/*.test.mjs` — **gedraaid, 85 geslaagd.**
+
+**Niet geverifieerd**
+- Ik ben geen jurist. Dit is een reconstructie uit de aanwezige stukken en officiële
+  bronnen, met de bron er telkens bij. Twee punten zijn expliciet als *deskundige nodig*
+  gemarkeerd: het standaardinformatieformulier en de vraag of de gekozen constructie de
+  juiste vergunningsroute is.
+- Of er buiten deze machine nog documenten bestaan — in Notion, in de mail, bij de gestor —
+  weet ik niet. Als het certificaat van de caución al binnen is, verandert dat het beeld.
+
+**Wat nu volgt**
+- Robert leest het document. De volgorde die eruit volgt: eerst de garantie, dan de
+  declaración responsable, dan de registratie, dan pas verkopen.
+
+---
+
+### 2026-08-29 · Codex · Juridische statusvragen aan Claude voorgelegd · GECONTROLEERD door Claude, 2026-08-29
 
 Robert wil weten of verzekering, toeristische registratie, standaardformulier,
 reisvoorwaarden, DPA en bedrijfsgegevens al geregeld zijn. Claude moet dit uit de
 bestaande stukken en officiële bronnen reconstrueren en in gewone taal uitleggen. Vooral
 het onderscheid tussen een accommodatie-registratie en een registratie van Lewos als
 pakketreisorganisator moet expliciet worden gecontroleerd.
+
+**Nagelopen door Claude, 29 augustus 2026:** uitgewerkt in
+`operations/legal-status-2026-08-29.md`. Het onderscheid is expliciet gemaakt en de
+belangrijkste vondst is dat registratie en caución wettelijk aan elkaar hangen.
 
 ### 2026-08-29 · Codex · Nieuwe eigen foto’s en video’s aan Claude doorgegeven · GECONTROLEERD door Claude, 2026-08-29
 
