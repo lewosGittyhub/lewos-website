@@ -489,3 +489,14 @@ test("the standard information form stays a draft until it can name its guaranto
     assert.match(await read(path.join(root,page)),/href="\/standard-information\/"/,`${page} must link to the form`);
   }
 });
+
+test("every environment variable the booking function needs is written down",async()=>{
+  const handler=await read(path.join(root,"netlify/functions/first-access.mjs"));
+  const runbook=await read(path.join(root,"operations/booking-runbook.md"));
+  const predeploy=await read(path.join(root,"operations/pre-deploy-2026-08-29.md"));
+  // A function that quietly needs a new variable is how a live form starts answering 503.
+  const needed=[...new Set([...handler.matchAll(/process\.env\.([A-Z_]+)/g)].map(m=>m[1]))];
+  const documented=`${runbook}\n${predeploy}`;
+  const missing=needed.filter(name=>!documented.includes(name));
+  assert.deepEqual(missing,[],`not documented anywhere for the operator: ${missing.join(", ")}`);
+});
