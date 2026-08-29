@@ -44,6 +44,14 @@ test("public checkout holds the complete group before contacting Stripe",async()
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:3,adultConfirmed:true,privacyAccepted:true})});
   assert.equal(result.statusCode,200);assert.equal(calls[0].url,"/rest/v1/rpc/tavern_public_booking_ready");assert.equal(calls[3].url,"/rest/v1/rpc/begin_tavern_checkout");
+  const beginBody=JSON.parse(calls[3].body);assert.equal(beginBody.p_public_booking_opens_at,"2026-01-01T00:00:00Z");
+});
+
+test("the atomic database gate can still stop public checkout after the readiness check",async()=>{
+  holdResult={status:"first_access_windows_active"};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:1,adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,409);assert.equal(JSON.parse(result.body).error,"first_access_windows_active");assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
 });
 
 test("an existing First Access checkout resumes without creating another Stripe session",async()=>{

@@ -116,6 +116,9 @@ test("active private invitation windows block an accidentally early public openi
   assert.match(sql,/checkout_token_hash is null/);
   assert.match(sql,/status in\('first_access_held','payment_pending'\)/);
   assert.match(checkout,/first_access_windows_active/);
+  assert.match(sql,/p_public_booking_opens_at/);
+  assert.match(sql,/tavern_seat_claims_active_invite_idx/);
+  assert.match(sql,/tavern_seat_claims_uninvited_hold_idx/);
   assert.match(html,/data-first-access-closed/);
 });
 

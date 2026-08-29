@@ -59,6 +59,8 @@ create unique index if not exists tavern_seat_claims_payment_reference_idx on pu
 create unique index if not exists tavern_seat_claims_checkout_token_hash_idx on public.tavern_seat_claims (checkout_token_hash) where checkout_token_hash is not null;
 create unique index if not exists tavern_seat_claims_checkout_session_id_idx on public.tavern_seat_claims (checkout_session_id) where checkout_session_id is not null;
 create index if not exists tavern_seat_claims_invitation_expiry_idx on public.tavern_seat_claims (invitation_expires_at) where status='first_access_held' and invitation_expires_at is not null;
+create index if not exists tavern_seat_claims_active_invite_idx on public.tavern_seat_claims (invitation_expires_at) where status in('first_access_held','payment_pending') and checkout_token_hash is not null;
+create index if not exists tavern_seat_claims_uninvited_hold_idx on public.tavern_seat_claims (id) where status='first_access_held' and checkout_token_hash is null;
 create index if not exists tavern_seat_claims_orphan_hold_idx on public.tavern_seat_claims (hold_expires_at) where status='payment_pending' and checkout_session_id is null;
 alter table public.tavern_weekends enable row level security;
 alter table public.tavern_seat_claims enable row level security;
@@ -106,12 +108,12 @@ begin
     insert into tavern_seat_claims(name,email,party_size,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),now()) returning id into claim_id;
     return jsonb_build_object('status','private_inquiry','claimId',claim_id);
   end if;
-  if p_first_access_closes_at is null or now()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
   select * into requested from tavern_weekends where slug=p_weekend_slug and visible=true;
   if not found then raise exception 'unknown_weekend'; end if;
   if p_party_size > requested.capacity then raise exception 'party_too_large'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
+  if p_first_access_closes_at is null or now()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
   select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid') order by created_at limit 1;
   if found then
     return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
@@ -218,7 +220,7 @@ grant execute on function public.check_tavern_request_limit(text,integer,integer
 -- receives a short hold; payment speed never decides who gets the seats.
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,integer);
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,integer);
-create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_hold_minutes integer default 30)
+create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_public_booking_opens_at timestamptz,p_hold_minutes integer default 30)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare requested tavern_weekends%rowtype; occupied integer; claim_id uuid; expires_at timestamptz;
 begin
@@ -229,6 +231,12 @@ begin
   if not found then raise exception 'unknown_weekend'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
+  if p_public_booking_opens_at is null or now()<p_public_booking_opens_at then return jsonb_build_object('status','booking_not_open'); end if;
+  if exists(select 1 from tavern_seat_claims where
+    (status='first_access_held' and checkout_token_hash is null)
+    or
+    (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>now()))
+  then return jsonb_build_object('status','first_access_windows_active'); end if;
   select coalesce(sum(party_size),0)::integer into occupied from tavern_seat_claims
     where assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid');
   if requested.capacity-occupied < p_party_size then
@@ -240,8 +248,8 @@ begin
   returning id into claim_id;
   return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
 end; $$;
-revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,integer) from public, anon, authenticated;
-grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,integer) to service_role;
+revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) from public, anon, authenticated;
+grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) to service_role;
 
 drop function if exists public.confirm_tavern_payment(text);
 create or replace function public.confirm_tavern_payment(p_payment_reference text,p_paid_at timestamptz)

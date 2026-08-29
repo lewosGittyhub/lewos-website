@@ -57,6 +57,9 @@ begin
   if public.tavern_public_booking_ready() is not false then
     raise exception 'uninvited_gate_failed';
   end if;
+  if (public.begin_tavern_checkout('Public Guest','public-test@example.invalid',1,'codex-test-next','public-test-reference',true,true,'test-terms',false,now()-interval '1 minute',30)->>'status')<>'first_access_windows_active' then
+    raise exception 'atomic_public_gate_failed';
+  end if;
   begin
     perform public.register_tavern_interest('Late Guest','late-test@example.invalid',1,'codex-test-next',null,now()-interval '1 minute');
   exception when raise_exception then
