@@ -1,20 +1,11 @@
 import {createHash,randomUUID} from "node:crypto";
+import {paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const tokenHash=token=>createHash("sha256").update(token).digest("hex");
 const emailOk=email=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
 const clientAddress=event=>getHeader(event,"x-nf-client-connection-ip")||getHeader(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
-const publicBookingIsOpen=()=>{
-  const value=process.env.PUBLIC_BOOKING_OPENS_AT;
-  if(!value)return false;
-  const opensAt=Date.parse(value);
-  return Number.isFinite(opensAt)&&Date.now()>=opensAt;
-};
-// Deliberately empty while the public booking terms still contain placeholders.
-// Publishing final terms requires a reviewed code change as well as the matching environment value.
-const PUBLISHED_TERMS_VERSION="";
-
 const rpc=async(name,body)=>{
   const response=await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:"POST",headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,authorization:`Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,"content-type":"application/json"},body:JSON.stringify(body)});
   if(!response.ok)throw new Error(`${name}:${response.status}:${await response.text()}`);
@@ -49,10 +40,9 @@ const expireStripeSession=async sessionId=>{
 
 export const handler=async event=>{
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
-  if(process.env.TAVERN_PAYMENTS_ENABLED!=="true")return json(503,{error:"checkout_not_open"});
+  if(!paymentsAreEnabled())return json(503,{error:"checkout_not_open"});
   const termsVersion=String(process.env.BOOKING_TERMS_VERSION||"").trim();
-  const termsArePublished=process.env.NODE_ENV==="test"?Boolean(termsVersion):Boolean(PUBLISHED_TERMS_VERSION)&&termsVersion===PUBLISHED_TERMS_VERSION;
-  if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.STRIPE_SECRET_KEY||!termsArePublished)return json(503,{error:"checkout_not_open"});
+  if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.STRIPE_SECRET_KEY)return json(503,{error:"checkout_not_open"});
   let input;
   try{input=JSON.parse(event.body||"{}");}catch{return json(400,{error:"invalid_request"});}
   const mode=input.mode==="public"?"public":"first_access";

@@ -36,7 +36,7 @@ before(async()=>{
   process.env.RATE_LIMIT_SECRET="a-long-random-test-secret";
 });
 
-beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
+beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
 after(()=>{globalThis.fetch=nativeFetch;server.close();});
 
 const post=(body,headers={"content-type":"application/json",accept:"application/json"})=>({httpMethod:"POST",headers,body:JSON.stringify(body)});
@@ -47,6 +47,38 @@ test("returns live remaining capacity",async()=>{
   const response=await handler({httpMethod:"GET",headers:{}});
   assert.equal(response.statusCode,200);
   assert.equal(JSON.parse(response.body).weekends[0].remaining,2);
+  assert.equal(JSON.parse(response.body).publicBookingOpen,false);
+});
+
+test("switches featured weekends from First Access to public booking at opening time",async()=>{
+  process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
+  process.env.BOOKING_TERMS_VERSION="booking-test-v1";
+  process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";
+  process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";
+  process.env.NODE_ENV="test";
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const status=JSON.parse((await handler({httpMethod:"GET",headers:{}})).body);
+  assert.equal(status.publicBookingOpen,true);
+  const response=await handler(post(valid));
+  assert.equal(response.statusCode,409);
+  assert.deepEqual(JSON.parse(response.body),{error:"public_booking_open",bookingUrl:"/tavern/book/"});
+  assert.equal(rateBodies.length,0);
+  assert.equal(emailRequests,0);
+});
+
+test("private enquiries remain available after public booking opens",async()=>{
+  process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
+  process.env.BOOKING_TERMS_VERSION="booking-test-v1";
+  process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";
+  process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";
+  process.env.NODE_ENV="test";
+  registrationResult={status:"private_inquiry"};
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const response=await handler(post({...valid,weekend:"private",people:4}));
+  assert.equal(response.statusCode,200);
+  assert.equal(JSON.parse(response.body).status,"private_inquiry");
 });
 
 test("holds an entire fitting party",async()=>{

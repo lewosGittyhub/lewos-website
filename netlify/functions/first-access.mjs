@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import {publicBookingIsOpen} from "./_booking-config.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const redirect=location=>({statusCode:303,headers:{location,"cache-control":"no-store"},body:""});
@@ -47,7 +48,7 @@ export const handler=async event=>{
     try{
       const availability=await fetch(`${supabaseUrl}/rest/v1/rpc/get_tavern_availability`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:"{}"});
       if(!availability.ok){console.error("Availability database error",availability.status,await availability.text());return json(503,{error:"booking_service_unavailable"});}
-      return json(200,{weekends:await availability.json()});
+      return json(200,{weekends:await availability.json(),publicBookingOpen:publicBookingIsOpen()});
     }catch(error){console.error("Availability connection error",error);return json(503,{error:"booking_service_unavailable"});}
   }
   if(event.httpMethod!=="POST") return json(405,{error:"method_not_allowed"});
@@ -63,6 +64,7 @@ export const handler=async event=>{
   if(!["weekend-01","weekend-02","private"].includes(weekend)) return json(400,{error:"invalid_weekend"});
   if(weekend==="private"&&people<4) return json(400,{error:"private_party_too_small"});
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
+  if(weekend!=="private"&&publicBookingIsOpen())return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});
   if(!process.env.RATE_LIMIT_SECRET) return json(503,{error:"booking_service_not_configured"});
   try{
     const checks=[
