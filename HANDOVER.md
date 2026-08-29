@@ -107,10 +107,17 @@ in het logboek. De lijst loopt nu op volgorde van urgentie: eerst wat de deploy 
 dan wat de verkoop tegenhoudt, dan de open vragen.*
 
 
-1. **[Robert, vóór de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** Een ISO-tijdstip
+1. **[Robert, vóór of bij de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** **Niet
+   wachten tot de echte openingsdatum vaststaat** — dan breekt het formulier. De code
+   antwoordt met 503 op elke aanvraag voor een vast weekend zolang die variabele ontbreekt.
+   Zet er voorlopig een datum in die nog niet verstreken is; dat houdt alles zoals het nu
+   werkt en verkopen gaat er niet door open, want de betaalpoort staat los daarvan dicht.
+   Verfijnen kan later.
+
+~~1. **[Robert, vóór de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** Een ISO-tijdstip
    in de toekomst. Zonder die variabele antwoordt het First Access-formulier op de live site
    met 503 zodra deze release erop staat, terwijl privé-aanvragen blijven werken. Zie
-   `operations/pre-deploy-2026-08-29.md`.
+   `operations/pre-deploy-2026-08-29.md`.~~
 
 ~~22. **[Claude] Voer de volledige pre-deploy eindcontrole uit. Gedaan op 29 augustus.** Controleer alle publieke
    pagina’s en routes, links, formulieren, mobiele layout, media/credits, toegankelijkheid,
@@ -225,6 +232,48 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 > Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
+### 2026-08-29 · Claude · Onafhankelijke controle van de afrondingslijst · TE CONTROLEREN
+
+Robert legde de gezamenlijke lijst voor. Alles nagelopen tegen de code. **Eén punt is fout
+en zou bij het deployen het First Access-formulier op de live site breken.**
+
+**⛔ Fout in de lijst: "`PUBLIC_BOOKING_OPENS_AT` alleen instellen zodra de echte
+openingsdatum vaststaat"**
+- Dat is precies andersom. De variabele moet er zijn **vóór of bij de deploy**, ongeacht of
+  de echte openingsdatum vaststaat. `netlify/functions/first-access.mjs`:
+  `if(weekend!=="private"&&closesAt===null)return json(503,{error:"booking_service_not_configured"});`
+  Ontbreekt hij, dan krijgt elke aanvraag voor een vast weekend een 503, terwijl
+  privé-aanvragen blijven werken. Het formulier lijkt dan half te leven.
+- **Hij hoeft niet de echte datum te zijn.** Hij doet twee dingen tegelijk: sluitingsmoment
+  van First Access én vroegst mogelijke opening van de publieke verkoop. Zet er een datum in
+  die nog niet verstreken is en alles blijft precies werken zoals nu. Verfijnen kan later.
+- Verkopen gaat er niet door open: `publicBookingIsOpen()` eist óók dat de betaalpoort aan
+  staat, en die is dicht.
+
+**⚠️ Wat er in de lijst ontbreekt bij "voor echte verkoop"**
+- **Het Supabase-plan.** Een gratis project wordt na zeven dagen met weinig activiteit
+  gepauzeerd, en back-ups zijn er niet te downloaden. Geverifieerd bij Supabase zelf. Een
+  gepauzeerde database betekent mislukte aanvragen terwijl de site er normaal uitziet, en de
+  privacyverklaring belooft bewaartermijnen die je zonder back-up niet waarmaakt. Staat als
+  punt 2 in *Openstaand*, maar niet in de lijst.
+
+**✅ Wat ik wél kon bevestigen**
+- 88 tests groen, nu opnieuw gedraaid.
+- Push naar `origin/main` is een fast-forward; geen force nodig.
+- Alle drie de publicatieconstanten leeg: de betaalpoort staat dicht.
+- De releasecode is sinds mijn pre-deploycontrole niet gewijzigd — alleen het dossier.
+- De negen punten onder *voor echte verkoop* komen overeen met
+  `operations/legal-status-2026-08-29.md`.
+
+**Niet te verifiëren vanaf hier**
+- De deploy zelf, de productiecheck erna en de Supabase-migratie. Dat zijn handelingen, geen
+  eigenschappen van de code.
+
+**Wat nu volgt**
+- De lijst aanpassen op dat ene punt, dan is er één definitieve lijst.
+
+---
 
 ### 2026-08-29 · Codex · Vertaalvolgorde en beeldherkomst aangescherpt · TE CONTROLEREN
 
