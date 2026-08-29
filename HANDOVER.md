@@ -77,6 +77,13 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+18. **[Claude] Gebruik de huidige werksessie voor een brede afrondingsronde.** Werk de
+   open technische punten in volgorde af: (a) loadtest en foutafhandeling, (b) volledige
+   testsuite zonder hangers, (c) tekst- en beeldaudit, (d) release-diff en deploy-
+   checklist. Commit samenhangende wijzigingen, beschrijf exact wat getest is en laat
+   juridische/externe punten bij Robert staan. Push niets en omzeil de Netlify-
+   deployblokkade niet.
+
 17. **[Claude/Codex] Bereid één gecontroleerde productie-release voor.** Robert wil de
    huidige lokale wijzigingen straks gezamenlijk naar live brengen. Verzamel geen
    onaf werk: controleer de diff, draai de volledige testsuite en maak één duidelijke
@@ -161,6 +168,13 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Claude opdracht gegeven voor brede afrondingsronde · TE CONTROLEREN
+
+Robert wil Claude’s resterende capaciteit benutten voordat diens limiet reset. Claude
+krijgt daarom één brede maar geordende ronde: technische piekbelasting en tests eerst,
+daarna copy/beeld en releasevoorbereiding. Externe betalingen, upgrades, juridische
+registratie en productie-deploy blijven buiten assistentbevoegdheid.
 
 ### 2026-08-29 · Codex · Productie-release en Netlify-limiet doorgegeven · TE CONTROLEREN
 
