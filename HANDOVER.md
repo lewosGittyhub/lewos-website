@@ -77,13 +77,28 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
+1. **[Claude/Codex] Maak de prijs één atomaire bron vóór publicatie.** De kalender toont
+   `tavern_weekends.price_cents`, maar Stripe gebruikt nog de vaste literal `202500` in
+   `create-checkout-session.mjs`. Laat beide checkout-RPC's onder de bestaande lock de
+   actuele prijs retourneren, sla bij voorkeur een prijssnapshot op de claim op en gebruik
+   uitsluitend die waarde voor Stripe. Test expliciet een afwijkende weekendprijs.
+2. **[Claude/Codex] Sluit de deadline-race met echte kloktijd.** De fasechecks staan onder
+   de advisory lock, maar gebruiken PostgreSQL `now()`, dat de transactiestarttijd
+   vasthoudt. Gebruik bij de checks na het wachten op de lock `clock_timestamp()`, ook
+   waar een actief uitnodigingsvenster tegen de actuele locktijd wordt vergeleken. Voeg
+   een tweesessie- of anderszins aantoonbare regressietest toe.
+3. **[Claude/Codex] Laat de kalender de volledige groep respecteren.** Een kalenderdag is
+   nu klikbaar zolang `remaining>0`, terwijl het menu terecht blokkeert als
+   `partySize>remaining`. Kalender, automatische selectie en prijsweergave moeten alleen
+   een weekend kiezen dat de volledige groep kan plaatsen, of duidelijk tonen dat die
+   groep niet past.
+4. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
    registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
    met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
    wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
    Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
-2. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
+5. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
    Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
    De site en de seed in `database/first-access.sql` kennen alleen de eerste twee. In
    diezelfde briefing staat wel *"Elke stap gaat pas open als de vorige vol is"*, dus dit
@@ -92,43 +107,93 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
    `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
    pagina haalt de beschikbaarheid live op.
-3. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
-   betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
-   `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-4. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
+6. **[Robert, met deskundige] Het wettelijke standaardinformatieformulier ontbreekt
    volledig.** Bij een pakketreis moet de reiziger vóór het boeken een formulier met
    gestandaardiseerde informatie krijgen (richtlijn 2015/2302 bijlage I, in Spanje via het
    TRLGDCU). `/travel-information/` kondigt het zelf aan, maar het bestaat nergens. Dit is
    geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.
-5. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
+7. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
    en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
    dat ze nog volgen.
-6. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
+8. **[Wie het eerst kan] Doorgifte buiten de EU benoemen in de privacyverklaring.** Nodig
    zodra een verwerker buiten de EER verwerkt. Zoek eerst uit in welke regio de
    Supabase-instantie draait en wat Netlify, Stripe en Resend daarover zeggen. Niets over
    beweren voordat dat vaststaat.
-7. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+9. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-8. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+10. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
+11. **[Wie het eerst kan, na 9 en 10] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+12. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-11. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+13. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Claude · Twee ontbrekende verplichtingen in de privacyverklaring · TE CONTROLEREN
+### 2026-08-29 · Codex · Controle van Claude-ronde tot d6954df · TE CONTROLEREN
+
+**Wat**
+- De volledige wijzigingsreeks `614d6c4..d6954df` gelezen en gecontroleerd.
+- `node --test tests/*.test.mjs`: **70 tests geslaagd, 0 gefaald**.
+- `database/first-access.sql` plus `tests/database-integration.sql` uitgevoerd in één
+  echte Supabase-transactie met `rollback`; geen testgegevens achtergelaten.
+- Extra databaseproef: betaling 2 minuten na `hold_expires_at` werd `paid`, 10 minuten
+  erna bleef `expired`; kalenderdatums en de standaardprijs van 202500 cent werkten.
+- Privacygrondslagen, AEPD-klachtroute en de notitie over het wettelijke
+  standaardinformatieformulier vergeleken met officiële AEPD/LSSI/BOE-bronnen. Geen
+  concrete nieuwe juridische regressie gevonden; de al genoemde externe gaten blijven.
+
+**Waarom / gevonden**
+- **P0 prijsverschil:** de UI leest `price_cents`, Stripe rekent nog altijd de vaste
+  literal `202500`. Een gewijzigde weekendprijs kan daardoor anders worden getoond dan
+  geïncasseerd.
+- **P0 deadline-race:** de checks staan na de advisory lock, maar PostgreSQL `now()`
+  blijft de transactiestarttijd. Een aanvraag die vóór de deadline start en op de lock
+  wacht, kan daarna nog met de oude tijd worden beoordeeld. Gebruik `clock_timestamp()`
+  voor de fasechecks onder de lock.
+- **P1 kalender-fit:** kalenderknoppen en automatische selectie kijken alleen of er ten
+  minste één stoel vrij is; het menu kijkt terecht of de volledige groep past. Daardoor
+  kan een groep van drie visueel een weekend met twee vrije stoelen kiezen. De server
+  overboekt niet, maar de UI moet dit eerder en eerlijk aangeven.
+- De gedeelde holdconstant van 40 minuten, de vijf minuten bevestigingsmarge, de nieuwe
+  privé-route, verborgen-toestandenfix, WebP-afbeeldingen en receipt/privacywijzigingen
+  zijn in deze controle technisch consistent bevonden.
+
+**Hoe te controleren**
+- Voeg een afwijkende `price_cents` toe in een test en bewijs dat exact dat bedrag als
+  Stripe `unit_amount` wordt verstuurd én als snapshot op de claim staat.
+- Test de deadline met twee databaseverbindingen waarbij de First Access-transactie vóór
+  de deadline begint maar pas erna de advisory lock krijgt.
+- Test een groep van drie tegen een weekend met twee vrije stoelen in de kalender.
+- Draai daarna opnieuw de volledige Node-suite en de Supabase rollbacktest.
+
+**Niet geverifieerd**
+- Visuele browsercontrole van elke nieuwe kalendertoestand is in deze Codex-ronde niet
+  herhaald; Claude heeft desktop en mobiel eerder zelf bekeken.
+- De nieuwe databasekolommen zijn nog niet naar productie gemigreerd en niets uit deze
+  ronde is naar `main` gepusht of live gezet.
+
+**Wat nu volgt**
+- Claude of Codex herstelt eerst de drie technische punten hierboven. Daarna volgt een
+  nieuwe onafhankelijke controle vóór enige publicatie.
+
+---
+
+### 2026-08-29 · Claude · Twee ontbrekende verplichtingen in de privacyverklaring · GECONTROLEERD door Codex, 2026-08-29
+
+Codex heeft de tekst, de afwezigheid van trackers, de volledige testsuite en de genoemde
+officiële AEPD-grondslagen gecontroleerd. Geen concrete regressie gevonden; doorgifte
+buiten de EER blijft terecht openstaan.
 
 **Wat**
 - `privacy/index.html`: nieuwe sectie *On what basis* met per doel de grondslag, en in
