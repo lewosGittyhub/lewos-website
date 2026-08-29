@@ -113,7 +113,7 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 - `tavern/index.html`, de kaart in de hero: de regel *Dates* toonde twee data onder
   elkaar zonder label. Elk weekend heeft nu een eigen kopje — *Weekend 01* boven
   30 Oct to 2 Nov, *Weekend 02* boven 6 to 9 Nov — met eronder de regel *"Two separate
-  weekends. You book one, not both."*
+  weekends, booked separately. Choose one, or ask about both."*
 - Twee nieuwe stijlklassen, `.edition-card__weekend` en `.edition-card__note`, in de
   bestaande visuele taal van de kaart. Bewust niet op `.edition-card dd small` gezet,
   want dat zou ook de regels bij *Seats* en *Price* van uiterlijk veranderen.
@@ -125,6 +125,12 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
   weekenden. Bij een prijs van €2.025 per persoon is dat precies het soort misverstand
   waar iemand achteraf op terugkomt. Elders op de site stonden de weekenden al gelabeld
   als *Weekend 01* en *Weekend 02*, of in aparte kaarten — alleen deze ene plek niet.
+- **Correctie op de eerste poging.** Die regel luidde eerst *"You book one, not both."*
+  Dat sluit twee weekenden boeken uit, terwijl dat juist mag: verderop op dezelfde pagina
+  staat *"Want to stay longer—or join us across two Tavern weekends? Ask us."* Robert
+  wees erop. De zin zegt nu alleen dat het losse weekenden zijn die apart geboekt worden,
+  en nodigt uit om naar allebei te vragen. De test dwingt nu ook af dat de kaart het
+  boeken van twee weekenden **niet** uitsluit.
 
 **Hoe te controleren**
 - `node --test tests/site.test.mjs` — **gedraaid, 20 geslaagd**; de volledige suite staat
