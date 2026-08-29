@@ -5,9 +5,35 @@ gebeuren. Twee assistenten werken om beurten aan deze repo: **Codex** (ChatGPT) 
 **Claude** (Claude Code). Ze zitten niet in elkaars gesprek. Dit bestand is de
 overdracht.
 
+## Openstaande vragen aan de ander
+
+Kort blok, bewust bovenaan. Hier staat alleen wat de één van de ánder nodig heeft om verder
+te kunnen. Beantwoord? Dan haal je de vraag hier weg en zet je het antwoord in het logboek.
+Het lange logboek hieronder is naslag, geen postvak.
+
+**Van Claude aan Codex, 29 augustus 2026 — Spaanse juridische termen.**
+Klopt de woordkeus in `/travel-information/#es`? Concreet *viaje combinado* ·
+*penalización adecuada y justificable basada en las pérdidas reales, los ahorros y la
+reventa* · *entidad garante frente a la insolvencia* · *soporte duradero* · *la reserva
+puede cederse a otro viajero*. Gebruikt het TRLGDCU deze termen zelf, of heb ik een
+gangbare vertaling gekozen waar de wet een vaste term heeft? Ik heb die tekst geschreven en
+kan mijn eigen vertaling niet goedkeuren.
+
+**Van Claude aan Codex, 29 augustus 2026 — reikwijdte van artikel 153.**
+Eist dat artikel vervoer *"met tijden"* ook voor een transfer die wij zelf regelen, of
+alleen voor lijnvluchten en treinen? Ik heb aankomst vanaf 16:00 en vertrek na het ontbijt
+toegevoegd omdat ik het eerste lees. Te ruim gelezen? Zeg het.
+
+**Wacht op Robert, niet op Codex.** `PUBLIC_BOOKING_OPENS_AT` staat op 2026-09-09T09:00:00Z
+en sluit het aanmeldformulier over elf dagen, zeven weken vóór het weekend van 30 oktober.
+En of `/tavern/book/` dicht moet tot de verkoop open mag.
+
+
 ## Werkwijze — altijd in deze volgorde
 
-1. **Lees dit bestand voordat je iets aanraakt.** Begin bij het bovenste logboekitem.
+1. **Lees dit bestand voordat je iets aanraakt.** Begin bij *Openstaande vragen aan de
+   ander* helemaal bovenaan, daarna het bovenste logboekitem. Staat er een vraag van de
+   ander open, dan beantwoord je die eerst — daar wacht iemand op.
 2. **Staat het bovenste item op `TE CONTROLEREN` en is het van de ánder?** Dan is dat je
    eerste taak. Controleer het echt — code lezen, tests draaien, aannames narekenen —
    en zet het op `GECONTROLEERD` met je naam en wat je nagelopen hebt. Vind je iets
@@ -242,6 +268,120 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 > Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
+### 2026-08-29 · Claude · Vraag aan Codex over de Spaanse juridische termen · TE CONTROLEREN
+
+Afschermregels live gecontroleerd na Codex' deploy: `/HANDOVER.md`, `/CLAUDE.md`,
+`/AGENTS.md` en alle vijf bestanden in `/operations/` geven 404, en er komt een echte
+404-pagina terug, niet de markdown met een 404-status erboven. De acht publieke routes en
+`/api/first-access` staan nog op 200. Elk markdown-bestand in de repo langs de regels gelegd:
+alle acht gedekt. `.internal/filming-consent-v1.1.md` valt buiten de test omdat die mappen
+met een punt overslaat — apart nagekeken, geeft 404, net als `/.git/config` en `/.env`.
+
+Eén eigen fout in de Spaanse vertaling gevonden en hersteld: ik had `notíficandolo`
+geschreven, dat moet `notificándolo` zijn.
+
+**Twee vragen aan Codex, en dit staat nog open.**
+
+1. Klopt de Spaanse juridische woordkeus in `/travel-information/#es`? Concreet:
+   *viaje combinado* · *penalización adecuada y justificable basada en las pérdidas reales,
+   los ahorros y la reventa* · *entidad garante frente a la insolvencia* · *soporte duradero*
+   · *la reserva puede cederse a otro viajero*. Ik heb die tekst zelf geschreven en kan mijn
+   eigen vertaling niet goedkeuren.
+2. Bedoelt artikel 153 TRLGDCU met vervoer *"met tijden"* ook een transfer bij aankomst, of
+   alleen lijnvluchten en treinen? Ik heb aankomst vanaf 16:00 en vertrek na het ontbijt
+   toegevoegd omdat ik lees dat het ook daarvoor geldt. Als dat te ruim gelezen is, hoor ik
+   het graag.
+
+**Twee beslissingen liggen bij Robert, niet bij Codex.** `PUBLIC_BOOKING_OPENS_AT` staat op
+2026-09-09T09:00:00Z; dat sluit het aanmeldformulier over elf dagen, zeven weken vóór het
+weekend van 30 oktober, en de tekst die het dan toont noemt privévensters als reden terwijl
+de echte reden de vergunningsketen is. En of `/tavern/book/` dicht moet tot de verkoop open
+mag — die pagina staat live, is `noindex`, niet gelinkt en niet in de sitemap, maar zegt wel
+*"pay securely through Stripe"*.
+
+### 2026-08-29 · Claude · Site live; interne stukken stonden open, hersteld · TE CONTROLEREN
+
+Robert meldde dat Codex de site live zette. Nagekeken op lewos.co. Het meeste is goed, één
+ding was fout en is hier gerepareerd.
+
+**Fout, en het was mijn fout.** `lewos.co/HANDOVER.md`, `/CLAUDE.md`, `/AGENTS.md` en
+`/operations/*` waren voor iedereen leesbaar. De regels stonden netjes in `_redirects`, maar
+**Netlify laat een bestaand bestand vóórgaan op een redirect-regel**; zonder het uitroepteken
+achter de status serveert het de markdown gewoon. `/api/first-access` werkte wél, omdat daar
+geen echt bestand ligt — precies het verschil.
+
+Mijn pre-deploy-check van dezelfde dag meldde deze vier als afgeschermd. Die check draaide
+tegen een lokale `python3 -m http.server`, en die past `_redirects` helemaal niet toe. Dat
+was dus een vals groen vinkje. **Les voor ons allebei: een redirect-regel kun je niet lokaal
+verifiëren. Wat van Netlify afhangt, controleer je op een deploy preview of niet.**
+
+Gerepareerd: alle vier de regels staan nu op `404!`. De bestaande test zocht letterlijk naar
+`404` en eiste het uitroepteken niet — die is aangescherpt en valt nu om zodra het weg is.
+Beide richtingen gecontroleerd: 88 groen met, rood zonder.
+
+**Wat er open heeft gestaan.** Interne werkdocumenten: het logboek, de openstaande lijst en
+de juridische status, inclusief de vaststelling dat de toeristische registratie nog niet rond
+is. Gescand op geheimen — **geen sleutels, tokens, NIE, IBAN of wachtwoorden gevonden**;
+CLAUDE.md §5.4 is dus nagekomen. Het is reputatie, geen beveiliging. Hoe lang het open stond
+weet ik niet; het hing aan deze deploy.
+
+**Wat er goed staat.** Alle acht routes 200. De database-migratie is gedraaid: de GET op
+`/api/first-access` geeft `startsOn`, `endsOn` en `priceCents` 202500 terug voor beide
+weekends, zes plaatsen vrij. Kalender en fotoslider staan op de Tavernpagina. De Spaanse
+sectie en de aankomsttijden staan in de reisinformatie. De drie conceptpagina's dragen
+`noindex`. Alleen €2.025 komt voor, geen enkele oude prijs. De betaalpoort is dicht.
+
+**Wat ik niet heb kunnen vaststellen.** Of `PUBLIC_BOOKING_OPENS_AT` in Netlify staat. De
+GET-route raakt die variabele niet, en de POST-route zou een echte aanvraag en een echte mail
+opleveren. Robert kijkt dat zelf na in de Netlify-instellingen.
+
+*TE CONTROLEREN door Codex.* Zet `_redirects` met de uitroeptekens live en bevestig daarna
+dat `https://lewos.co/HANDOVER.md` een 404 geeft. Tot dat moment staat het dossier open.
+
+### 2026-08-29 · Claude · Reisinformatie langs artikel 153 gelegd en vertaald · TE CONTROLEREN
+
+Robert vroeg of de bedrijfsgegevens, de reisvoorwaarden met standaardinformatie en de
+Spaanse reisinformatie niet nu al geregeld konden worden. Antwoord: twee van de drie
+grotendeels wel, de derde niet — die hangt aan hem.
+
+**Wat er is gecontroleerd.** `/travel-information/` is regel voor regel vergeleken met de
+acht verplichte onderdelen van artikel 153 TRLGDCU (de Spaanse omzetting van richtlijn
+2015/2302 art. 5). Bron: de tekst van artikel 153 RDL 1/2007, geraadpleegd 29 augustus 2026.
+
+| Eis | Stond erin |
+| --- | --- |
+| a. Voornaamste kenmerken: bestemming, data, vervoer **met tijden**, verblijf, maaltijden, activiteiten, taal, geschiktheid bij beperkte mobiliteit | Bijna volledig — **aankomst- en vertrektijden ontbraken**, nu toegevoegd |
+| b. Handelsnaam, **volledig adres**, telefoon, e-mail | ⬜ Naam en e-mail staan er; adres en telefoon niet |
+| c. Totaalprijs inclusief belastingen en bijkomende kosten | ✅ |
+| d. Betalingsregeling | ✅ |
+| e. Minimumaantal deelnemers met opzegtermijn | ✅ |
+| f. Paspoort-, visum- en gezondheidsvereisten | ✅ |
+| g. Opzeggingsrecht met vermelding van de vergoeding | ✅ |
+| h. Informatie over optionele verzekering | ✅ |
+
+**Wat ik heb gedaan.** De aankomst- en vertrektijden toegevoegd (aankomst vanaf 16:00 op
+vrijdag, vertrek maandag na het ontbijt tussen 08:30 en 09:30) — die stonden al in Roberts
+eigen dagindeling op de Tavernpagina, dus dat is geen verzonnen feit maar één document dat
+achterliep op het andere. Daarna de hele pagina naar het Spaans vertaald en als sectie
+`#es` onder de Engelse tekst gezet, met bovenaan die sectie de mededeling dat het een
+vertaling is en dat bij verschil de Spaanse tekst geldt voor een Spaanse consument.
+88 tests draaien nog groen.
+
+**Wat ik bewust niet heb gedaan.** Het adres en telefoonnummer invullen. Ik ben ze op deze
+machine tegengekomen in gescande documenten; CLAUDE.md §5.4 verbiedt persoonsgegevens in de
+repo en Robert moet zelf beslissen welk adres een klant te zien krijgt. Ze blijven in beide
+talen als open veld staan.
+
+**Wat dit níét oplost.** De vergunningsketen uit `operations/legal-status-2026-08-29.md`
+staat er los van: caución → declaración responsable → registratiecode → verkopen. Een
+completere reisinformatiepagina brengt de verkoop geen dag dichterbij, en de betaalpoort in
+`_booking-config.mjs` blijft dicht.
+
+*TE CONTROLEREN door Codex.* Twee dingen graag: is de Spaanse juridische woordkeus correct
+(*viaje combinado*, *penalización adecuada y justificable*, *entidad garante*), en klopt
+mijn lezing dat artikel 153 met "vervoer met tijden" ook een transfer-bij-aankomst bedoelt
+en niet alleen lijnvluchten?
 
 ### 2026-08-29 · Claude · Onafhankelijke controle van de afrondingslijst · TE CONTROLEREN
 
@@ -2172,117 +2312,3 @@ buiten de EER blijft terecht openstaan.
 
 Bij controle: zet `TE CONTROLEREN` om naar `GECONTROLEERD door <naam>, <datum>` en zet
 er direct onder wat je hebt nagelopen en wat de uitkomst was. Ook als alles klopte.
-
-### 29 augustus 2026 — Claude — reisinformatie langs artikel 153 gelegd en vertaald
-
-Robert vroeg of de bedrijfsgegevens, de reisvoorwaarden met standaardinformatie en de
-Spaanse reisinformatie niet nu al geregeld konden worden. Antwoord: twee van de drie
-grotendeels wel, de derde niet — die hangt aan hem.
-
-**Wat er is gecontroleerd.** `/travel-information/` is regel voor regel vergeleken met de
-acht verplichte onderdelen van artikel 153 TRLGDCU (de Spaanse omzetting van richtlijn
-2015/2302 art. 5). Bron: de tekst van artikel 153 RDL 1/2007, geraadpleegd 29 augustus 2026.
-
-| Eis | Stond erin |
-| --- | --- |
-| a. Voornaamste kenmerken: bestemming, data, vervoer **met tijden**, verblijf, maaltijden, activiteiten, taal, geschiktheid bij beperkte mobiliteit | Bijna volledig — **aankomst- en vertrektijden ontbraken**, nu toegevoegd |
-| b. Handelsnaam, **volledig adres**, telefoon, e-mail | ⬜ Naam en e-mail staan er; adres en telefoon niet |
-| c. Totaalprijs inclusief belastingen en bijkomende kosten | ✅ |
-| d. Betalingsregeling | ✅ |
-| e. Minimumaantal deelnemers met opzegtermijn | ✅ |
-| f. Paspoort-, visum- en gezondheidsvereisten | ✅ |
-| g. Opzeggingsrecht met vermelding van de vergoeding | ✅ |
-| h. Informatie over optionele verzekering | ✅ |
-
-**Wat ik heb gedaan.** De aankomst- en vertrektijden toegevoegd (aankomst vanaf 16:00 op
-vrijdag, vertrek maandag na het ontbijt tussen 08:30 en 09:30) — die stonden al in Roberts
-eigen dagindeling op de Tavernpagina, dus dat is geen verzonnen feit maar één document dat
-achterliep op het andere. Daarna de hele pagina naar het Spaans vertaald en als sectie
-`#es` onder de Engelse tekst gezet, met bovenaan die sectie de mededeling dat het een
-vertaling is en dat bij verschil de Spaanse tekst geldt voor een Spaanse consument.
-88 tests draaien nog groen.
-
-**Wat ik bewust niet heb gedaan.** Het adres en telefoonnummer invullen. Ik ben ze op deze
-machine tegengekomen in gescande documenten; CLAUDE.md §5.4 verbiedt persoonsgegevens in de
-repo en Robert moet zelf beslissen welk adres een klant te zien krijgt. Ze blijven in beide
-talen als open veld staan.
-
-**Wat dit níét oplost.** De vergunningsketen uit `operations/legal-status-2026-08-29.md`
-staat er los van: caución → declaración responsable → registratiecode → verkopen. Een
-completere reisinformatiepagina brengt de verkoop geen dag dichterbij, en de betaalpoort in
-`_booking-config.mjs` blijft dicht.
-
-*TE CONTROLEREN door Codex.* Twee dingen graag: is de Spaanse juridische woordkeus correct
-(*viaje combinado*, *penalización adecuada y justificable*, *entidad garante*), en klopt
-mijn lezing dat artikel 153 met "vervoer met tijden" ook een transfer-bij-aankomst bedoelt
-en niet alleen lijnvluchten?
-
-### 29 augustus 2026 — Claude — de site is live, en de interne stukken stonden open
-
-Robert meldde dat Codex de site live zette. Nagekeken op lewos.co. Het meeste is goed, één
-ding was fout en is hier gerepareerd.
-
-**Fout, en het was mijn fout.** `lewos.co/HANDOVER.md`, `/CLAUDE.md`, `/AGENTS.md` en
-`/operations/*` waren voor iedereen leesbaar. De regels stonden netjes in `_redirects`, maar
-**Netlify laat een bestaand bestand vóórgaan op een redirect-regel**; zonder het uitroepteken
-achter de status serveert het de markdown gewoon. `/api/first-access` werkte wél, omdat daar
-geen echt bestand ligt — precies het verschil.
-
-Mijn pre-deploy-check van dezelfde dag meldde deze vier als afgeschermd. Die check draaide
-tegen een lokale `python3 -m http.server`, en die past `_redirects` helemaal niet toe. Dat
-was dus een vals groen vinkje. **Les voor ons allebei: een redirect-regel kun je niet lokaal
-verifiëren. Wat van Netlify afhangt, controleer je op een deploy preview of niet.**
-
-Gerepareerd: alle vier de regels staan nu op `404!`. De bestaande test zocht letterlijk naar
-`404` en eiste het uitroepteken niet — die is aangescherpt en valt nu om zodra het weg is.
-Beide richtingen gecontroleerd: 88 groen met, rood zonder.
-
-**Wat er open heeft gestaan.** Interne werkdocumenten: het logboek, de openstaande lijst en
-de juridische status, inclusief de vaststelling dat de toeristische registratie nog niet rond
-is. Gescand op geheimen — **geen sleutels, tokens, NIE, IBAN of wachtwoorden gevonden**;
-CLAUDE.md §5.4 is dus nagekomen. Het is reputatie, geen beveiliging. Hoe lang het open stond
-weet ik niet; het hing aan deze deploy.
-
-**Wat er goed staat.** Alle acht routes 200. De database-migratie is gedraaid: de GET op
-`/api/first-access` geeft `startsOn`, `endsOn` en `priceCents` 202500 terug voor beide
-weekends, zes plaatsen vrij. Kalender en fotoslider staan op de Tavernpagina. De Spaanse
-sectie en de aankomsttijden staan in de reisinformatie. De drie conceptpagina's dragen
-`noindex`. Alleen €2.025 komt voor, geen enkele oude prijs. De betaalpoort is dicht.
-
-**Wat ik niet heb kunnen vaststellen.** Of `PUBLIC_BOOKING_OPENS_AT` in Netlify staat. De
-GET-route raakt die variabele niet, en de POST-route zou een echte aanvraag en een echte mail
-opleveren. Robert kijkt dat zelf na in de Netlify-instellingen.
-
-*TE CONTROLEREN door Codex.* Zet `_redirects` met de uitroeptekens live en bevestig daarna
-dat `https://lewos.co/HANDOVER.md` een 404 geeft. Tot dat moment staat het dossier open.
-
-### 29 augustus 2026 — Claude — vraag aan Codex over de Spaanse tekst
-
-Afschermregels live gecontroleerd na Codex' deploy: `/HANDOVER.md`, `/CLAUDE.md`,
-`/AGENTS.md` en alle vijf bestanden in `/operations/` geven 404, en er komt een echte
-404-pagina terug, niet de markdown met een 404-status erboven. De acht publieke routes en
-`/api/first-access` staan nog op 200. Elk markdown-bestand in de repo langs de regels gelegd:
-alle acht gedekt. `.internal/filming-consent-v1.1.md` valt buiten de test omdat die mappen
-met een punt overslaat — apart nagekeken, geeft 404, net als `/.git/config` en `/.env`.
-
-Eén eigen fout in de Spaanse vertaling gevonden en hersteld: ik had `notíficandolo`
-geschreven, dat moet `notificándolo` zijn.
-
-**Twee vragen aan Codex, en dit staat nog open.**
-
-1. Klopt de Spaanse juridische woordkeus in `/travel-information/#es`? Concreet:
-   *viaje combinado* · *penalización adecuada y justificable basada en las pérdidas reales,
-   los ahorros y la reventa* · *entidad garante frente a la insolvencia* · *soporte duradero*
-   · *la reserva puede cederse a otro viajero*. Ik heb die tekst zelf geschreven en kan mijn
-   eigen vertaling niet goedkeuren.
-2. Bedoelt artikel 153 TRLGDCU met vervoer *"met tijden"* ook een transfer bij aankomst, of
-   alleen lijnvluchten en treinen? Ik heb aankomst vanaf 16:00 en vertrek na het ontbijt
-   toegevoegd omdat ik lees dat het ook daarvoor geldt. Als dat te ruim gelezen is, hoor ik
-   het graag.
-
-**Twee beslissingen liggen bij Robert, niet bij Codex.** `PUBLIC_BOOKING_OPENS_AT` staat op
-2026-09-09T09:00:00Z; dat sluit het aanmeldformulier over elf dagen, zeven weken vóór het
-weekend van 30 oktober, en de tekst die het dan toont noemt privévensters als reden terwijl
-de echte reden de vergunningsketen is. En of `/tavern/book/` dicht moet tot de verkoop open
-mag — die pagina staat live, is `noindex`, niet gelinkt en niet in de sitemap, maar zegt wel
-*"pay securely through Stripe"*.

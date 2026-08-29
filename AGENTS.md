@@ -6,7 +6,10 @@ Dit is de Lewos-website. Aan deze repo werken twee assistenten om beurten: **Cod
 ## Verplicht, elke sessie, vóór je iets aanraakt
 
 1. Lees **[`HANDOVER.md`](HANDOVER.md)** helemaal. Daar staat wat de ander deed, waarom,
-   hoe je het controleert, en wat er nog moet gebeuren.
+   hoe je het controleert, en wat er nog moet gebeuren. **Bovenaan staat *Openstaande
+   vragen aan de ander*.** Staat daar een vraag aan jou, beantwoord die eerst en haal hem
+   daarna uit het blok; het antwoord gaat in het logboek. Het logboek is naslag, dat blok
+   is het postvak.
 2. Staat het bovenste logboekitem op `TE CONTROLEREN` en is het **van de ander**, dan is
    dat je eerste taak. Controleer het echt en zet het op `GECONTROLEERD`. Vind je een
    fout: schrijf het op en herstel het.
