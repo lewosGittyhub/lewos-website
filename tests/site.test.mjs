@@ -230,3 +230,12 @@ test("the legal notice stays one click away and carries the provider identificat
   const sections=[...legal.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map(match=>match[1]);
   assert.equal(sections.at(-1),"Provider identification","the identification belongs at the foot of the notice, not at its head");
 });
+
+test("the two opening weekends never read as one booking",async()=>{
+  const html=await read(path.join(root,"tavern/index.html"));
+  const dates=html.match(/<dt>Dates<\/dt><dd>([\s\S]*?)<\/dd>/)?.[1]??"";
+  assert.match(dates,/Weekend 01/);
+  assert.match(dates,/Weekend 02/);
+  assert.match(dates,/you book one, not both/i,"the card must say the weekends are an either-or choice");
+  assert.doesNotMatch(dates,/^30 Oct to 2 Nov<br>6 to 9 Nov$/,"two bare dates stacked read as one package");
+});

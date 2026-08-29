@@ -76,6 +76,9 @@
     .edition-card div { display: grid; grid-template-columns: 86px 1fr; gap: 12px; padding: 13px 0; border-top: 1px solid rgba(237,230,218,.16); }
     .edition-card dt { color: rgba(237,230,218,.68); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
     .edition-card dd { margin: 0; font-weight: 600; line-height: 1.4; }
+    .edition-card__weekend { display: block; margin-top: 11px; color: rgba(237,230,218,.68); font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .edition-card__weekend:first-child { margin-top: 0; }
+    .edition-card__note { display: block; margin-top: 9px; color: rgba(237,230,218,.72); font-weight: 400; }
     .release { padding: 104px 0; color: var(--cream); background: var(--green); }
     .release__head { display: grid; grid-template-columns: 1fr .72fr; gap: 70px; align-items: end; margin-bottom: 48px; }
     .release__head h2 { margin-bottom: 0; font-size: clamp(2.4rem, 4.8vw, 4.4rem); }
@@ -306,7 +309,7 @@
         <aside class="edition-card" aria-label="Opening weekend details">
           <p class="edition-card__label">Opening weekends · 2026</p>
           <dl>
-            <div><dt>Dates</dt><dd>30 Oct to 2 Nov<br>6 to 9 Nov</dd></div>
+            <div><dt>Dates</dt><dd><span class="edition-card__weekend">Weekend 01</span>30 Oct to 2 Nov<span class="edition-card__weekend">Weekend 02</span>6 to 9 Nov<small class="edition-card__note">Two separate weekends. You book one, not both.</small></dd></div>
             <div><dt>Location</dt><dd>The misty mountains of Asturias, Spain</dd></div>
             <div><dt>Seats</dt><dd>6 per featured weekend<br><small>Private groups: 4–12 players</small></dd></div>
             <div><dt>Status</dt><dd>First Access now open</dd></div>

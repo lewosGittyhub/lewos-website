@@ -107,6 +107,39 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · De twee openingsweekenden uit elkaar gehaald · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`, de kaart in de hero: de regel *Dates* toonde twee data onder
+  elkaar zonder label. Elk weekend heeft nu een eigen kopje — *Weekend 01* boven
+  30 Oct to 2 Nov, *Weekend 02* boven 6 to 9 Nov — met eronder de regel *"Two separate
+  weekends. You book one, not both."*
+- Twee nieuwe stijlklassen, `.edition-card__weekend` en `.edition-card__note`, in de
+  bestaande visuele taal van de kaart. Bewust niet op `.edition-card dd small` gezet,
+  want dat zou ook de regels bij *Seats* en *Price* van uiterlijk veranderen.
+- `tests/site.test.mjs`: nieuwe test *"the two opening weekends never read as one
+  booking"*.
+
+**Waarom**
+- Robert zag het zelf: twee data onder elkaar in één veld lezen als één pakket van twee
+  weekenden. Bij een prijs van €2.025 per persoon is dat precies het soort misverstand
+  waar iemand achteraf op terugkomt. Elders op de site stonden de weekenden al gelabeld
+  als *Weekend 01* en *Weekend 02*, of in aparte kaarten — alleen deze ene plek niet.
+
+**Hoe te controleren**
+- `node --test tests/site.test.mjs` — **gedraaid, 20 geslaagd**; de volledige suite staat
+  op 64.
+- Visueel gecontroleerd op 1440 × 900 en op 375 × 812. De kaart blijft 348 px breed op
+  desktop en 343 px op mobiel, geen horizontale overloop.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Robert bekijkt de rest van de site in de lokale preview.
+
+---
+
 ### 2026-08-29 · Claude · Node geïnstalleerd, suite gedraaid, foto's naar WebP · TE CONTROLEREN
 
 **Wat**
