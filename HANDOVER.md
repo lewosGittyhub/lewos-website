@@ -83,6 +83,15 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+20. **[Claude] Beoordeel Roberts nieuwe eigen media voor de omgevingspresentatie.**
+   Inventariseer `984712e4-b586-4e02-8682-5df5a8fe7ed9.MP4`, `IMG_4778.MOV` en de
+   aangeleverde HEIC/JPG-bestanden. Gebruik alleen media die Robert zelf bezit of mag
+   publiceren. Zet geschikte beelden om naar webvriendelijke formaten, voeg een
+   passende posterafbeelding en beschrijvende alt-/track-tekst toe, laad video’s pas
+   wanneer nodig en speel nooit automatisch met geluid. Controleer mobiel dat de
+   pagina niet zwaarder of horizontaal breder wordt. Werk de interne credits/media-
+   registratie bij en voeg geen privé- of identiteitsdocumenten toe.
+
 19. **[Claude/Codex] Best-effort bescherming tot juridisch budget beschikbaar is.** Bouw
    en controleer alsof een specialist later alle stukken definitief zal beoordelen:
    verzamel zo weinig mogelijk persoonsgegevens, maak privacy/film/18+ en boekings-
@@ -182,6 +191,13 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Nieuwe eigen foto’s en video’s aan Claude doorgegeven · TE CONTROLEREN
+
+Robert heeft extra bestanden uit Downloads aangeleverd, waaronder twee video’s en
+meerdere foto’s. Claude moet eerst vaststellen welke media geschikt zijn voor publicatie,
+ze technisch optimaliseren en alleen eigen/toegestane beelden gebruiken. De bestaande
+licentie- en privacyregels blijven gelden.
 
 ### 2026-08-29 · Codex · Best-effort juridische bescherming bevestigd · TE CONTROLEREN
 
