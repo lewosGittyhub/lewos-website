@@ -87,8 +87,7 @@
     .weekends { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .weekend { position: relative; padding: clamp(32px, 5vw, 54px); overflow: hidden; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-medium); background-image: linear-gradient(rgba(10,42,38,.78), rgba(10,42,38,.70)), url("assets/weekend-01-dark-dice.webp?v=1"); background-position: center; background-size: cover; text-shadow: 0 2px 16px rgba(0,0,0,.35); }
     .weekend:nth-child(2) { background-image: linear-gradient(rgba(10,42,38,.80), rgba(10,42,38,.72)), url("assets/dice-character-sheet.webp?v=1"); background-position: center; }
-    .weekend::after { content: "6 seats"; position: absolute; top: 28px; right: 28px; color: var(--orange); font: 600 .72rem/1 "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
-    .weekend--first::after { content: "Only 6 seats"; }
+    .weekend::after { content: "Six seats per weekend"; position: absolute; top: 28px; right: 28px; color: var(--orange); font: 600 .72rem/1 "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
     .weekend__number { display: block; margin-bottom: 54px; color: rgba(237,230,218,.55); font: 600 .76rem/1 "Poppins", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
     .weekend h3 { margin-bottom: 10px; font-size: clamp(2rem, 3.8vw, 3.2rem); }
     .weekend p { margin-bottom: 0; color: var(--beige); }
@@ -408,6 +407,8 @@
             <span class="weekend__number">Weekend 02</span>
             <h3>6 to 9 November</h3>
             <p>Friday evening through Monday morning · Asturias · 2026</p>
+            <p class="weekend__hook">The second chapter, one week after the opening.</p>
+            <a class="weekend__link" href="#book">Claim a First Edition seat →</a>
           </article>
         </div>
         <p class="release__rule"><strong>The Tavern continues beyond these two dates.</strong> Further featured weekends may be announced, and following weekends may also be available on request. Featured weekends are designed for six guests, while private and custom Tavern experiences can welcome parties of up to twelve. Exclusive seasonal editions may also be created on request, such as an immersive Christmas Tavern with a tailored campaign, festive setting and premium package price.</p>
@@ -668,7 +669,7 @@
             <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
             <div class="form-field"><label for="party-price">Total</label><output class="party__price" id="party-price" data-party-price for="people" data-empty>Enter a number</output></div>
           </div>
-          <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message"></textarea></div>
+          <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message" placeholder="Allergies, dietary needs, anything that affects the weekend, or anything else you want to tell us."></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
           <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
           <button class="button" type="submit" aria-describedby="booking-note">Hold my seats →</button>
