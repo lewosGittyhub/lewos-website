@@ -121,9 +121,13 @@ begin
   end if;
   select w.* into alternative from tavern_weekends w where w.visible=true and w.sort_order>requested.sort_order and w.capacity-coalesce((select sum(c.party_size) from tavern_seat_claims c where c.assigned_weekend_id=w.id and c.status in('first_access_held','payment_pending','paid')),0)>=p_party_size order by w.sort_order limit 1;
   if found then
+    select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and requested_weekend_id=requested.id and offered_weekend_id=alternative.id and status='alternative_offered' order by created_at limit 1;
+    if found then return jsonb_build_object('status','alternative_offered','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'offeredWeekend',alternative.slug,'offeredWeekendLabel',alternative.label||' · '||alternative.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
     insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,offered_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,alternative.id,'alternative_offered',nullif(trim(p_message),''),now()) returning id into claim_id;
     return jsonb_build_object('status','alternative_offered','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'offeredWeekend',alternative.slug,'offeredWeekendLabel',alternative.label||' · '||alternative.date_label,'seats',p_party_size);
   end if;
+  select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and requested_weekend_id=requested.id and status='future_weekend_interest' order by created_at limit 1;
+  if found then return jsonb_build_object('status','future_weekend_interest','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
   insert into tavern_seat_claims(name,email,party_size,requested_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,'future_weekend_interest',nullif(trim(p_message),''),now()) returning id into claim_id;
   return jsonb_build_object('status','future_weekend_interest','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',p_party_size);
 end; $$;
@@ -172,6 +176,23 @@ end;
 $$;
 revoke all on function public.get_tavern_availability() from public, anon, authenticated;
 grant execute on function public.get_tavern_availability() to service_role;
+
+-- Public booking may open only after every promised private invitation window
+-- has ended. This remains fail-closed even if the configured opening time is
+-- accidentally moved forward after invitations have already been issued.
+create or replace function public.tavern_public_booking_ready()
+returns boolean language plpgsql security definer set search_path=public as $$
+begin
+  perform private.cleanup_tavern_claims();
+  return not exists(
+    select 1 from tavern_seat_claims
+      where status='first_access_held'
+        and checkout_token_hash is not null
+        and invitation_expires_at>now()
+  );
+end; $$;
+revoke all on function public.tavern_public_booking_ready() from public, anon, authenticated;
+grant execute on function public.tavern_public_booking_ready() to service_role;
 
 create or replace function public.check_tavern_request_limit(p_key_hash text,p_limit integer default 5,p_window_minutes integer default 15)
 returns boolean language plpgsql security definer set search_path=public as $$

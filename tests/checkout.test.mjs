@@ -8,6 +8,7 @@ before(async()=>{
   server=http.createServer((request,response)=>{let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{calls.push({url:request.url,body,headers:request.headers});response.setHeader("content-type","application/json");
     if(request.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"||request.url==="/rest/v1/rpc/begin_tavern_checkout")return response.end(JSON.stringify(holdResult));
     if(request.url==="/rest/v1/rpc/check_tavern_request_limit")return response.end("true");
+    if(request.url==="/rest/v1/rpc/tavern_public_booking_ready")return response.end("true");
     if(request.url==="/rest/v1/rpc/attach_tavern_checkout_session"){if(attachFails){response.statusCode=500;return response.end(JSON.stringify({message:"attach_failed"}));}return response.end(JSON.stringify(attachResult));}
     if(request.url==="/rest/v1/rpc/release_tavern_checkout")return response.end(JSON.stringify({status:"released"}));
     if(request.url==="/rest/v1/rpc/confirm_tavern_payment")return response.end(JSON.stringify(confirmationResult));
@@ -42,7 +43,7 @@ test("First Access invitation creates a Stripe session only after a seat hold",a
 test("public checkout holds the complete group before contacting Stripe",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:3,adultConfirmed:true,privacyAccepted:true})});
-  assert.equal(result.statusCode,200);assert.equal(calls[2].url,"/rest/v1/rpc/begin_tavern_checkout");
+  assert.equal(result.statusCode,200);assert.equal(calls[0].url,"/rest/v1/rpc/tavern_public_booking_ready");assert.equal(calls[3].url,"/rest/v1/rpc/begin_tavern_checkout");
 });
 
 test("an existing First Access checkout resumes without creating another Stripe session",async()=>{

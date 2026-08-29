@@ -15,6 +15,12 @@ const databaseError=async response=>{
   const message=String(detail.message||"").trim();
   return knownInputErrors.has(message)?message:null;
 };
+const databasePublicBookingReady=async({supabaseUrl,serviceKey})=>{
+  if(!publicBookingIsOpen())return false;
+  const response=await fetch(`${supabaseUrl}/rest/v1/rpc/tavern_public_booking_ready`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:"{}"});
+  if(!response.ok)throw new Error(`public_booking_ready:${response.status}:${await response.text()}`);
+  return await response.json()===true;
+};
 
 const sendGuestEmail=async({email,name,people,result})=>{
   const apiKey=process.env.RESEND_API_KEY;
@@ -49,7 +55,9 @@ export const handler=async event=>{
     try{
       const availability=await fetch(`${supabaseUrl}/rest/v1/rpc/get_tavern_availability`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:"{}"});
       if(!availability.ok){console.error("Availability database error",availability.status,await availability.text());return json(503,{error:"booking_service_unavailable"});}
-      return json(200,{weekends:await availability.json(),publicBookingOpen:publicBookingIsOpen()});
+      const weekends=await availability.json();
+      const publicBookingOpen=await databasePublicBookingReady({supabaseUrl,serviceKey});
+      return json(200,{weekends,publicBookingOpen});
     }catch(error){console.error("Availability connection error",error);return json(503,{error:"booking_service_unavailable"});}
   }
   if(event.httpMethod!=="POST") return json(405,{error:"method_not_allowed"});
@@ -65,7 +73,10 @@ export const handler=async event=>{
   if(!["weekend-01","weekend-02","private"].includes(weekend)) return json(400,{error:"invalid_weekend"});
   if(weekend==="private"&&people<4) return json(400,{error:"private_party_too_small"});
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
-  if(weekend!=="private"&&publicBookingIsOpen())return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});
+  if(weekend!=="private"&&publicBookingIsOpen()){
+    try{if(await databasePublicBookingReady({supabaseUrl,serviceKey}))return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});}
+    catch(error){console.error("Public booking readiness error",error);return json(503,{error:"booking_service_unavailable"});}
+  }
   if(!process.env.RATE_LIMIT_SECRET) return json(503,{error:"booking_service_not_configured"});
   try{
     const checks=[
@@ -98,6 +109,10 @@ export const handler=async event=>{
       try{
         const marked=await fetch(`${supabaseUrl}/rest/v1/rpc/mark_tavern_receipt_email_sent`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_claim_id:result.claimId,p_provider_id:providerId})});
         if(!marked.ok)console.error("First Access email mark error",marked.status,await marked.text());
+        else{
+          const markResult=await marked.json();
+          if(!["marked","already_marked"].includes(markResult.status))console.error("First Access email remains unmarked",markResult);
+        }
       }catch(error){console.error("First Access email mark connection error",error);}
     }
   }

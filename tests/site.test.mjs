@@ -107,6 +107,24 @@ test("the Tavern can switch automatically from First Access to public booking",a
   assert.match(handler,/public_booking_open/);
 });
 
+test("active private invitation windows block an accidentally early public opening",async()=>{
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  const checkout=await read(path.join(root,"netlify/functions/create-checkout-session.mjs"));
+  assert.match(sql,/tavern_public_booking_ready/);
+  assert.match(sql,/invitation_expires_at>now\(\)/);
+  assert.match(checkout,/first_access_windows_active/);
+});
+
+test("operators have a fail-safe payment reconciliation audit and runbook",async()=>{
+  const audit=await read(path.join(root,"scripts/audit-payment-reconciliation.mjs"));
+  const runbook=await read(path.join(root,"operations/booking-runbook.md"));
+  assert.match(audit,/paid_webhook_missing/);
+  assert.match(audit,/expiry_webhook_missing/);
+  assert.match(audit,/process\.exitCode=2/);
+  assert.match(runbook,/do not release the seats/i);
+  assert.match(runbook,/Never free an attached checkout/i);
+});
+
 test("seat accounting never frees an attached Stripe checkout on a local timer",async()=>{
   const sql=await read(path.join(root,"database/first-access.sql"));
   assert.match(sql,/checkout_session_id is null[\s\S]{0,160}hold_expires_at<=now\(\)/);
@@ -143,4 +161,6 @@ test("First Access receipt delivery is durable and retry-safe",async()=>{
   assert.match(handler,/mark_tavern_receipt_email_sent/);
   assert.match(sql,/receipt_email_sent_at/);
   assert.match(sql,/receiptEmailSent/);
+  assert.match(sql,/status='alternative_offered'/);
+  assert.match(sql,/status='future_weekend_interest'/);
 });

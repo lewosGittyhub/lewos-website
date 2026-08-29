@@ -47,6 +47,10 @@ export const handler=async event=>{
   try{input=JSON.parse(event.body||"{}");}catch{return json(400,{error:"invalid_request"});}
   const mode=input.mode==="public"?"public":"first_access";
   if(mode==="public"&&!publicBookingIsOpen())return json(403,{error:"booking_not_open"});
+  if(mode==="public"){
+    try{if(await rpc("tavern_public_booking_ready",{})!==true)return json(403,{error:"first_access_windows_active"});}
+    catch(error){console.error("Public booking readiness error",error);return json(503,{error:"checkout_unavailable"});}
+  }
   let reference=randomUUID();
   const limiterIdentity=mode==="first_access"?String(input.token||""):String(input.email||"").trim().toLowerCase();
   if(!process.env.RATE_LIMIT_SECRET)return json(503,{error:"checkout_not_open"});
