@@ -10,7 +10,7 @@
   <meta property="og:title" content="The Lewos Tavern — Be First at the Table">
   <meta property="og:description" content="Featured Tavern weekends for six guests, plus private and custom experiences for parties of up to twelve. Join the first-access list.">
   <meta property="og:url" content="https://lewos.co/tavern/">
-  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-asturias-hero.webp">
+  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-asturias-hero.jpg">
   <meta property="og:image:alt" content="Adventurers travelling through the mountains of Asturias toward The Lewos Tavern">
   <meta property="og:image:width" content="1983">
   <meta property="og:image:height" content="793">
@@ -18,7 +18,8 @@
   <meta property="og:site_name" content="Lewos">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://lewos.co/tavern/">
-  <link rel="preload" as="image" href="/tavern/assets/tavern-asturias-hero.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="/tavern/assets/tavern-asturias-hero.jpg" media="(min-width: 901px)" fetchpriority="high">
+  <link rel="preload" as="image" href="/tavern/assets/tavern-asturias-hero-portrait.jpg" media="(max-width: 900px)" fetchpriority="high">
   <link rel="stylesheet" href="/assets/fonts.css">
   <style>
     :root {
@@ -60,7 +61,7 @@
     .nav__links a:hover { color: var(--orange); }
     .nav__cta { padding: 11px 17px; border: 1px solid rgba(229,100,58,.7); border-radius: var(--radius-small); background: rgba(75,46,32,.55); }
 
-    .hero { position: relative; min-height: 820px; display: grid; align-items: end; overflow: hidden; color: var(--cream); background: var(--green) url("assets/tavern-asturias-hero.webp?v=1") center / cover no-repeat; }
+    .hero { position: relative; min-height: 820px; display: grid; align-items: end; overflow: hidden; color: var(--cream); background: var(--green) url("assets/tavern-asturias-hero.jpg?v=2") center / cover no-repeat; }
     .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15,59,53,.96) 0%, rgba(15,59,53,.79) 38%, rgba(15,59,53,.2) 68%, rgba(15,59,53,.46) 100%), linear-gradient(0deg, rgba(15,59,53,.76), transparent 50%); }
     .hero::after { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(229,100,58,.32); border-radius: var(--radius-medium); pointer-events: none; }
     .hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .55fr); align-items: end; gap: 72px; padding-top: 180px; padding-bottom: 74px; }
@@ -222,6 +223,9 @@
     .footer__links { display: flex; justify-content: flex-end; gap: 22px; font-size: .82rem; }
 
     @media (max-width: 900px) {
+      /* The panorama is 2.5:1; on a narrow screen "cover" squeezes it to a
+         sliver of cloud. Serve an upright crop of the same photo instead. */
+      .hero { background-image: url("assets/tavern-asturias-hero-portrait.jpg?v=1"); }
       .hero__inner, .manifesto__grid, .fontecha__inner, .rhythm__head, .gm__grid, .included__grid, .stay__panel, .private__box, .release__head, .booking__grid { grid-template-columns: 1fr; }
       .hero__inner { gap: 46px; }
       .edition-card { max-width: 560px; }

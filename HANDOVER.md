@@ -78,46 +78,98 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    in je `CLAUDE.md` dat de Tavern volledig los staat van Fonteca? Jouw briefing noemt
    Fontecha wel gewoon als locatie, dus mogelijk gaat die regel over iets anders — maar
    dat moet jij zeggen, niet wij.
-3. **[Codex of Claude] Trek de erfgoedclaims na.** De Tavern-pagina stelt dat er boven
+3. **[Codex] Zet de twee hero-foto's om naar WebP.** `tavern-asturias-hero.jpg` (302 kB)
+   en `tavern-asturias-hero-portrait.jpg` (196 kB) zijn JPEG omdat er op deze Mac geen
+   webp-encoder staat. Met Node scheelt webp ongeveer een derde. Hernoem dan ook de
+   vijf verwijzingen in `tavern/index.html` en `index.html` mee en verhoog `?v=`.
+4. **[Codex of Claude] Trek de erfgoedclaims na.** De Tavern-pagina stelt dat er boven
    Fontecha een prehistorische grafheuvel geregistreerd staat en dat de oude Camino Real
    de Ponga over de bergkam liep. Officiële bron erbij, of ✅/🟡 markeren. Een 🟡 hoort
    niet in publieke content.
-4. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
+5. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
    self-employed professional established in Asturias". De Spaanse LSSI-CE (art. 10)
    vraagt naam, fiscaal nummer en adres van de aanbieder op een commerciële site. Dat
    botst met je regel dat er geen persoonsgegevens in de repo mogen. Dit moet je met je
    gestor afstemmen; hetzelfde blok is straks ook nodig in `/terms/` en
    `/travel-information/`.
-5. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
+6. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
    kon niet testen: geen Node op deze Mac. Nodig: `node --test tests/*.test.mjs`, plus
    `database/first-access.sql` gevolgd door `tests/database-integration.sql` in één
    Supabase-transactie die eindigt op `rollback`. Let specifiek op de nieuwe test
    *"the Stripe session and the database hold expire together"* en op
    `confirm_tavern_payment` met de grace van 5 minuten, en op de nieuwe test
    *"internal working documents are never served from the public site"*.
-6. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
+7. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-7. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+8. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-8. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+9. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
+10. **[Wie het eerst kan, na 8 en 9] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+11. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-11. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+12. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Nieuwe hero-foto uit Roberts eigen panorama · TE CONTROLEREN
+
+**Wat**
+- `tavern/assets/tavern-asturias-hero.jpg` (1983 × 793, 302 kB) vervangt
+  `tavern-asturias-hero.webp`, die verwijderd is. Bron: `IMG_1781.HEIC`, een panorama van
+  12998 × 3844 dat Robert aanleverde.
+- `tavern/assets/tavern-asturias-hero-portrait.jpg` (828 × 1104, 196 kB): staande
+  uitsnede van dezelfde foto, alleen voor schermen tot 900 px.
+- `tavern/index.html`: hero-achtergrond, `og:image` en twee `preload`-regels met een
+  `media`-conditie, zodat een telefoon alleen de staande versie ophaalt en een desktop
+  alleen de liggende. In het blok `@media (max-width: 900px)` wisselt de
+  achtergrondafbeelding.
+- `index.html`: de Tavern-kaart op de homepage en de `og:image` wijzen naar dezelfde
+  nieuwe foto.
+
+**Waarom**
+- Robert wilde deze foto als achtergrond. Twee dingen moesten daarbij opgelost worden.
+  Rechtsonder in het origineel staat een auto; die is weggesneden door de rechter 20 %
+  van het panorama te laten vallen. De uitsnede houdt daarna precies 2,5:1 aan, dezelfde
+  verhouding als de oude hero, zodat er niets aan de CSS-opmaak hoefde te veranderen.
+- Een panorama van 2,5:1 wordt door `cover` op een telefoon tot een smalle strook geknepen
+  waarop alleen wolk te zien is. Vandaar de tweede, staande uitsnede met bergen, vallei en
+  voorgrond erin.
+- **WebP kon niet.** `sips` op deze Mac leest wel webp maar schrijft het niet, en er is
+  geen andere encoder aanwezig — geen Node, geen PIL, geen cwebp. Vandaar JPEG. Zie
+  *Openstaand*: met Node erbij is dit alsnog naar webp te brengen en scheelt dat ongeveer
+  een derde aan gewicht.
+
+**Hoe te controleren**
+- Beide bestanden bestaan en de oude webp is nergens meer genoemd:
+  `grep -rn "tavern-asturias-hero" --include="*.html" .` geeft vijf regels, allemaal `.jpg`.
+- Visueel gecontroleerd op 1440 × 900 en op 375 × 812 via een lokale server. De hero,
+  de kaart met de weekenden en de prijsregel renderen goed; de auto is uit beeld.
+- `node --test tests/site.test.mjs` — de test die alle lokale media-verwijzingen naleeft
+  moet blijven slagen.
+
+**Niet geverifieerd**
+- Geen Node op deze Mac, dus de suite is niet gedraaid.
+- De Tavern-kaart op de homepage is niet visueel bevestigd: de afbeelding laadt daar
+  aantoonbaar (HTTP 200, element zichtbaar met opacity 1), maar het screenshot-mechanisme
+  gaf een leeg beeld terug. De DOM klopt; de weergave is niet met eigen ogen gezien.
+
+**Wat nu volgt**
+- Codex: draai de suite en zet dit om naar webp als dat kan, met dezelfde bestandsnamen
+  maar de juiste extensie en de verwijzingen mee.
+
+---
 
 ### 2026-08-29 · Claude · Misleidingscontrole op de publieke teksten · TE CONTROLEREN
 
