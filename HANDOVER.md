@@ -192,12 +192,16 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Nieuwe eigen foto’s en video’s aan Claude doorgegeven · TE CONTROLEREN
+### 2026-08-29 · Codex · Nieuwe eigen foto’s en video’s aan Claude doorgegeven · GECONTROLEERD door Claude, 2026-08-29
 
 Robert heeft extra bestanden uit Downloads aangeleverd, waaronder twee video’s en
 meerdere foto’s. Claude moet eerst vaststellen welke media geschikt zijn voor publicatie,
 ze technisch optimaliseren en alleen eigen/toegestane beelden gebruiken. De bestaande
 licentie- en privacyregels blijven gelden.
+
+**Nagelopen door Claude, 29 augustus 2026:** vier bestanden beoordeeld, twee gebruikt, één
+afgewezen om privacy en de video niet gepubliceerd met een onderbouwde aanbeveling. Zie het
+logboekitem en `operations/image-credits.md`.
 
 ### 2026-08-29 · Codex · Best-effort juridische bescherming bevestigd · GECONTROLEERD door Claude, 2026-08-29
 
@@ -211,6 +215,51 @@ publicatieconstanten zijn leeg, de checkout weigert zolang dat zo is, er staan g
 verzonnen feiten meer in de publieke teksten, elke wijziging is in dit dossier
 terug te lezen, en de gegevens die we vragen blijven beperkt tot wat de boeking nodig
 heeft. Wat een assistent níét kan leveren staat als zodanig in *Openstaand*.
+
+### 2026-08-29 · Claude · Nieuwe media beoordeeld: twee erin, twee eruit, video niet · TE CONTROLEREN
+
+**Wat**
+- Vier nieuw aangeleverde bestanden beoordeeld. Twee foto's toegevoegd aan de
+  diavoorstelling — nu acht beelden: `surroundings-fire.webp` (87 kB, vuur en vlees in de
+  stenen haard) en `surroundings-path.webp` (226 kB, stenen pad onder de kalkstenen
+  pieken).
+- `operations/image-credits.md`: beide opgenomen, plus een nieuwe sectie *Supplied but not
+  used* met per afgewezen bestand de reden, en een sectie over de video.
+
+**⚠️ Eén foto afgewezen om privacy**
+- `IMG_4693.HEIC` toont een groep wandelaars op een bergpad. **Meerdere zijn herkenbaar en
+  niemand van hen heeft toestemming gegeven om op een commerciële website te staan.** Dat
+  is precies dezelfde regel als de aparte filmtoestemming die we voor gasten hebben
+  ingebouwd; die geldt niet minder voor vreemden op een wandelpad. Niet gebruikt.
+- Op `IMG_4664.HEIC` staat wel een figuur, maar klein, van de rug gezien en niet
+  herkenbaar. Dat is iets anders en die is wel gebruikt.
+
+**De video is niet gepubliceerd, en dat is een aanbeveling, geen onmacht alleen**
+- Zeventien seconden van de stenen huizen, verticaal 1080×1920, 31 MB. Inhoudelijk goed:
+  echte beelden van de echte plek.
+- Drie redenen om hem niet op de site te zetten. Het formaat is verticaal en gemaakt voor
+  een telefoonfeed. Netlify zit al over zijn deploycredits en video is het zwaarste wat een
+  pagina kan dragen. En de compressie die deze machine kan leveren doet hem geen recht.
+- **Waar hij wel hoort: Instagram.** Daar klopt het formaat en kost de bandbreedte niets.
+- Wil je hem later toch op de site: transcodeer met `ffmpeg` op een machine die het heeft,
+  richt op ongeveer 720×1280 en een megabyte of twee, met een posterbeeld,
+  `preload="none"` en nooit automatisch afspelen met geluid.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 84 geslaagd.** De credits-test dwingt af dat
+  beide nieuwe beelden vastgelegd zijn.
+- Beide uitsnedes met eigen ogen bekeken vóór gebruik; zie hieronder waarom dat nodig was.
+
+**Niet geverifieerd**
+- De foto van het vuur is de zwakste van de acht: rommelig, en er ligt een arm door het
+  beeld. Hij is wel echt en past bij wat de site over maaltijden zegt. Een foto van de
+  gedekte tafel zou beter zijn.
+
+**Wat nu volgt**
+- Robert: de video naar Instagram, en als hij een betere foto van het eten of de tafel
+  heeft, vervangt die de vuurfoto zo.
+
+---
 
 ### 2026-08-29 · Claude · Eindcontrole over alle veertien pagina's · TE CONTROLEREN
 

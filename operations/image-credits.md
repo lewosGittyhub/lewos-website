@@ -14,6 +14,8 @@ committed to `tavern/assets/` or `assets/`.
 | `tavern/assets/tavern-asturias-hero.webp` | Panorama over an Asturian valley, used as the Tavern hero | Robert's own photograph, `IMG_1781.HEIC` | Owned by Lewos |
 | `tavern/assets/tavern-asturias-hero-portrait.webp` | Upright crop of the same panorama, for narrow screens | Same original | Owned by Lewos |
 | `tavern/assets/surroundings-house.webp` | Stone house with a tiled roof and covered porch | Robert's own photograph, `IMG_1725.HEIC` | Owned by Lewos |
+| `tavern/assets/surroundings-fire.webp` | Meat on a grill inside a stone hearth | Robert's own photograph, `IMG_4777.HEIC` | Owned by Lewos |
+| `tavern/assets/surroundings-path.webp` | Stone path across a ravine below limestone peaks | Robert's own photograph, `IMG_4664.HEIC` | Owned by Lewos. One distant figure, turned away and not identifiable |
 | `tavern/assets/surroundings-picos.webp` | The Picos de Europa above low cloud | Pexels, photographer credited there as Enrique, file `pexels-enrique72-33455263` | Pexels Licence |
 | `tavern/assets/surroundings-coast.webp` | Asturian coastline from the air | Pexels, photographer credited there as Marcio Costa, file `pexels-marcio-costa-523841540-16388707` | Pexels Licence |
 | `tavern/assets/surroundings-pasture.webp` | Misty limestone pasture with grazing cattle | Pexels, photo id `35657640` | Pexels Licence |
@@ -45,6 +47,31 @@ terms.** For a site that sells a package holiday that gap should be closed befor
 If they were generated, say by what and confirm the terms allow commercial use. If they
 came from a stock library, name it and the licence. Do not guess: an unrecorded origin is
 better written down as unrecorded than filled in with something plausible.
+
+## Supplied but not used
+
+| File | Why not |
+| --- | --- |
+| `IMG_4693.HEIC` | A group of hikers on a mountain path. **Several are identifiable and none of them agreed to appear on a commercial website.** The same rule that gives our own guests a separate filming choice applies to strangers on a footpath. Not used, and not to be used without their consent. |
+| `IMG_1762.HEIC` | Not a photograph of a place at all: a picture of a RETA registration showing a tax number, a telephone number, an email address and a boarding pass. Never for publication. Flagged to Robert on 29 August 2026. |
+| `7F0FAF19-…​.MP4` | Seventeen seconds of the stone houses, vertical, 31 MB. Worth having, but see the note below. |
+
+## The video, and why it is not on the site
+
+The clip shows the real houses and would be a genuine counterweight to the illustrations.
+It is not published, for three reasons that all point the same way.
+
+It is vertical, 1080 by 1920 — made for a phone feed, not for a page. Netlify is already
+over its deploy credits for this cycle, and video is the heaviest thing a page can carry.
+And the compression available on this machine cannot do it justice: without `ffmpeg`, the
+only tool is `avconvert` with fixed presets, which gives either 540 by 960 at nearly ten
+megabytes or 168 by 300 at half a megabyte. Neither is a video you would want to show
+somebody who is deciding whether to spend two thousand euro.
+
+Where it does belong is Instagram, where the format is right and the bandwidth is free.
+If it should go on the site later, transcode it with `ffmpeg` on a machine that has it,
+target about 720 by 1280 at a megabyte or two, add a poster image and `preload="none"`, and
+never let it autoplay with sound.
 
 ## The Pexels Licence, checked at the source
 
