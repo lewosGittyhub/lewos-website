@@ -77,6 +77,14 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+19. **[Claude/Codex] Best-effort bescherming tot juridisch budget beschikbaar is.** Bouw
+   en controleer alsof een specialist later alle stukken definitief zal beoordelen:
+   verzamel zo weinig mogelijk persoonsgegevens, maak privacy/film/18+ en boekings-
+   momenten helder, leg aannames en open punten vast, gebruik geen verzonnen juridische
+   gegevens en laat technische fail-closed poorten actief. Zodra Robert budget heeft,
+   gaan de open documenten naar een Spaanse specialist; geen assistent mag die controle
+   simuleren of ontbrekende registratie/verzekeringsgegevens invullen.
+
 18. **[Claude] Gebruik de huidige werksessie voor een brede afrondingsronde.** Werk de
    open technische punten in volgorde af: (a) loadtest en foutafhandeling, (b) volledige
    testsuite zonder hangers, (c) tekst- en beeldaudit, (d) release-diff en deploy-
@@ -168,6 +176,13 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Best-effort juridische bescherming bevestigd · TE CONTROLEREN
+
+Robert wil de site nu zo goed mogelijk afschermen en professionele juridische controle
+uitvoeren zodra er inkomsten/budget zijn. De technische lijn blijft daarom: minimale
+gegevens, duidelijke toestemmingen en voorwaarden, geen verzonnen feiten, audit trail en
+betalingen fail-closed totdat de vereiste informatie werkelijk beschikbaar is.
 
 ### 2026-08-29 · Codex · Claude opdracht gegeven voor brede afrondingsronde · TE CONTROLEREN
 
