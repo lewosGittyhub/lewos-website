@@ -143,13 +143,68 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Feedback over herhaling en echtheid doorgezet · TE CONTROLEREN
+### 2026-08-29 · Claude · Tekst ingekort en ontdaan van AI-ritme · TE CONTROLEREN
+
+**Wat**
+- Negen passages op `tavern/index.html` herschreven en één op `index.html`. De pagina gaat
+  van **2491 naar 2364 woorden**; de hoogte van 18.240 naar 12.884 px, deels door de
+  schuifpresentatie van eerder.
+
+**Wat er weg is, en waarom**
+- **De "niet X maar Y"-constructie.** *"You do not simply play the adventure. You become
+  part of it."* stond in de hero, en op de homepage stond de tweelingzin *"An adventure
+  you don't just play — you become part of it."* Dat is de meest herkenbare
+  AI-formulering die er is. Er staan nu feiten: *"Three nights, six players, one table.
+  Every meal, your own room and a professional Game Master."*
+- **Opgestapelde fragmenten.** *"The room is built. The table is in it. The fire is lit.
+  The campaign is written."* — vier korte zinnen achter elkaar leest als een generator.
+  Nu twee.
+- **Oplopende opsommingen.** *"The tale is given room to breathe, to twist, to deepen and
+  to draw you all the way in."* is geschrapt, net als *"There is only the table, the story
+  and one question: what will your party do next?"*
+- **Herhaling geteld en teruggebracht.** *fire* van 4 naar 2, *party* van 20 naar 14,
+  *first* van 32 naar 25, *outside world* van 3 naar 1. Het slotblok herhaalde de
+  openingssectie bijna woordelijk en is ingekort.
+- **Eén sfeerzin vervangen door een feit.** De hook op de eerste weekendkaart was *"The
+  first table. The first fire. Your only chance to be there when it begins."* — drie keer
+  hetzelfde beeld plus urgentie. Nu: *"The opening weekend. Halloween falls on the
+  Saturday."* Dat klopt: 30 oktober 2026 is een vrijdag, dus 31 oktober is de zaterdag van
+  editie 1. Staat ook zo in Roberts briefing aan Story Forge.
+- **"We are genuinely delighted that he is coming..."** is stijf en zegt niets. Nu: *"He
+  comes to Asturias to run the opening weekend."*
+
+**Wat bewust is blijven staan**
+- *table* komt nog 24 keer voor. Dat is een tafelspel; de meeste keren zijn functioneel en
+  verschillend. *first* staat er 25 keer, waarvan 8 als productnaam *First Access*.
+- De mythische toon zelf is niet weggehaald. De opmerking ging over herhaling en over
+  formuleringen die als machinewerk lezen, niet over sfeer. Die verkoopt een weekend van
+  €2.025; die weghalen zou het middel erger maken dan de kwaal.
+- **Er zijn geen claims bijgekomen** over lokale partners of activiteiten, zoals gevraagd.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 76 geslaagd.**
+- Pagina in de browser doorlopen op 1000 px; hero, manifest, weekendkaart en slotblok
+  tonen de nieuwe tekst.
+
+**Niet geverifieerd**
+- Of dit ver genoeg gaat. Dit is een oordeel over toon, geen meting. De vriend die het
+  opmerkte is de beste toets.
+
+**Wat nu volgt**
+- Robert leest het na en zegt of het genoeg is of dat er nog een ronde overheen moet.
+
+---
+
+### 2026-08-29 · Codex · Feedback over herhaling en echtheid doorgezet · GECONTROLEERD door Claude, 2026-08-29
 
 Roberts vriend vindt de site visueel sterk, maar signaleert herhaling en te veel
 AI-achtige formuleringen. De locatie-, verblijf- en activiteiteninformatie is inmiddels
 wel concreter en er staan echte, gecrediteerde sfeerfoto’s. Claude moet nu de copy
 inkorten en feitelijker maken; er mogen geen onbevestigde claims over lokale partners of
 activiteiten bijkomen.
+
+**Nagelopen door Claude, 29 augustus 2026:** uitgevoerd, zie het item hierboven. De
+herhaling is geteld voor en na, en er is geen enkele claim bijgekomen.
 
 ### 2026-08-29 · Claude · Sfeersectie wordt een schuifpresentatie · TE CONTROLEREN
 
