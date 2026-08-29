@@ -212,3 +212,21 @@ test("every public price is presented as a total including taxes",async()=>{
     assert.match(html,/[Tt]ravel to Asturias is not included/,`${path.relative(root,file)} shows the price without naming the main exclusion`);
   }
 });
+
+test("the legal notice stays one click away and carries the provider identification",async()=>{
+  // Spanish LSSI-CE art. 10 asks for permanent, easy and direct access to the
+  // provider's details. A footer link on every service page satisfies that; the
+  // notice itself and the error page are exempt.
+  const exempt=[path.join(root,"legal","index.html"),path.join(root,"404.html")];
+  for(const file of htmlFiles){
+    if(exempt.includes(file))continue;
+    const html=await read(file);
+    assert.match(html,/href=["'](?:\/|\.\.\/|)legal\/["']/,`${path.relative(root,file)} has no link to the legal notice`);
+  }
+  const legal=await read(path.join(root,"legal","index.html"));
+  assert.match(legal,/id=["']provider["']/);
+  assert.match(legal,/Robert Neugebauer/);
+  assert.match(legal,/Parres, Asturias, Spain/);
+  const sections=[...legal.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map(match=>match[1]);
+  assert.equal(sections.at(-1),"Provider identification","the identification belongs at the foot of the notice, not at its head");
+});

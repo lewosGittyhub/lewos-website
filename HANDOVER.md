@@ -80,12 +80,12 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    en `tavern-asturias-hero-portrait.jpg` (196 kB) zijn JPEG omdat er op deze Mac geen
    webp-encoder staat. Met Node scheelt webp ongeveer een derde. Hernoem dan ook de
    vijf verwijzingen in `tavern/index.html` en `index.html` mee en verhoog `?v=`.
-2. **[Robert] Vul het aviso legal aan.** `legal/index.html` noemt nu alleen "a
-   self-employed professional established in Asturias". De Spaanse LSSI-CE (art. 10)
-   vraagt naam, fiscaal nummer en adres van de aanbieder op een commerciële site. Dat
-   botst met je regel dat er geen persoonsgegevens in de repo mogen. Dit moet je met je
-   gestor afstemmen; hetzelfde blok is straks ook nodig in `/terms/` en
-   `/travel-information/`.
+2. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
+   structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
+   registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
+   met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
+   wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
+   Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
 3. **[Codex] Draai de volledige testsuite op de wijziging van 29 aug (Claude).** Claude
    kon niet testen: geen Node op deze Mac. Nodig: `node --test tests/*.test.mjs`, plus
    `database/first-access.sql` gevolgd door `tests/database-integration.sql` in één
@@ -116,6 +116,56 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Verplichte aanbiedergegevens discreet ondergebracht · TE CONTROLEREN
+
+**Wat**
+- `legal/index.html`: het vage openingsblok *"Website owner — Operated by a self-employed
+  professional"* is weg. Onderaan de pagina staat nu een klein, grijs blok
+  `#provider` met de kop *Provider identification*: handelsnaam, de naam Robert
+  Neugebauer, woonplaats op gemeenteniveau (concejo Parres, Asturias) en het e-mailadres.
+  Eén regel zegt dat fiscaal nummer en toeristische registratie hier komen te staan
+  vóórdat er betaald geboekt kan worden.
+- `booking-success/index.html` en `booking-cancelled/index.html`: kleine voettekst met
+  links naar de juridische kennisgeving en de privacyverklaring. Die twee pagina's hadden
+  als enige geen enkele route erheen.
+- `tests/site.test.mjs`: nieuwe test *"the legal notice stays one click away and carries
+  the provider identification"*.
+
+**Waarom**
+- ✅ **Geverifieerd bij de officiële toelichting op de LSSI** (lssi.digital.gob.es,
+  veelgestelde vragen bij artikel 10). Twee dingen staan daar die dit sturen. Voor een
+  natuurlijke persoon volstaat als adres: *"Domicilio (indicando, al menos, la localidad
+  y provincia de residencia)"* — dus woonplaats en provincie, **geen straatadres**. En
+  over de plaatsing: de informatie moet *"de forma permanente, fácil, directa y
+  gratuita"* beschikbaar zijn, wat mag via *"páginas internas con hipervínculos
+  claramente visibles"*. Het hoeft dus niet op de homepage.
+- Robert wil deze gegevens niet op de voorgrond, maar wel vindbaar. Onderaan de
+  juridische kennisgeving, in kleine letter, met een voetnootlink op elke pagina, voldoet
+  aan allebei. Daarom is het blok naar onderen verplaatst en niet naar boven.
+- Er is niets verzonnen. De naam stond al in `/terms/`, de gemeente komt uit Roberts
+  eigen `CLAUDE.md`. Het fiscaal nummer is niet ingevuld en wordt ook niet ingevuld door
+  een assistent.
+
+**Hoe te controleren**
+- `node --test tests/site.test.mjs`. De test controleert dat elke pagina behalve de
+  kennisgeving zelf en de 404 een link naar `/legal/` heeft, dat het blok `#provider`
+  bestaat met naam en gemeente, en dat *Provider identification* de **laatste** kop op de
+  pagina is — niet de eerste.
+- In de DOM nagemeten: het blok staat op 1685 px van een pagina van 2064 px, in 13 px
+  grijs tegen 16 px body. Klein en onderaan, zoals bedoeld.
+
+**Niet geverifieerd**
+- Geen Node op deze Mac, dus de suite is niet gedraaid.
+- De bron is de officiële overheidstoelichting op de LSSI, geen advies van een jurist.
+  Voor de definitieve versie hoort dit blok samen met de reisbureauregistratie nog één
+  keer juridisch nagekeken te worden.
+
+**Wat nu volgt**
+- Robert vult het fiscaal nummer aan zodra hij dat wil, en de registratiecode zodra die
+  binnen is. Beide horen in dit ene blok, niet elders op de site.
+
+---
 
 ### 2026-08-29 · Claude · Erfgoedclaim nagetrokken en gecorrigeerd · TE CONTROLEREN
 
