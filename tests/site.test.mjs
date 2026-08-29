@@ -190,7 +190,10 @@ test("the Stripe session and the database hold expire together",async()=>{
 test("internal working documents are never served from the public site",async()=>{
   const redirects=await read(path.join(root,"_redirects"));
   const robots=await read(path.join(root,"robots.txt"));
-  const blocked=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404").map(parts=>parts[0]);
+  // Netlify laat een bestaand bestand vóórgaan op een redirect-regel. Zonder het
+  // uitroepteken serveert het de markdown gewoon. Dat ging op 29 augustus 2026 live mis:
+  // HANDOVER.md was voor iedereen leesbaar terwijl de regel er netjes in stond.
+  const blocked=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404!").map(parts=>parts[0]);
   const covers=route=>blocked.some(rule=>rule.endsWith("/*")?route.startsWith(rule.slice(0,-1)):rule===route);
   const internal=files
     .map(file=>path.relative(root,file))
@@ -198,7 +201,7 @@ test("internal working documents are never served from the public site",async()=
   assert.ok(internal.length>0,"the handover documents must exist");
   for(const file of internal){
     const route=`/${file.split(path.sep).join("/")}`;
-    assert.ok(covers(route),`${route} is published but has no 404 rule in _redirects`);
+    assert.ok(covers(route),`${route} is published but has no forced 404 rule (404!) in _redirects`);
     assert.match(robots,/Disallow: \/(HANDOVER\.md|operations\/)/);
   }
 });

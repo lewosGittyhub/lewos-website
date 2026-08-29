@@ -2216,3 +2216,42 @@ completere reisinformatiepagina brengt de verkoop geen dag dichterbij, en de bet
 (*viaje combinado*, *penalización adecuada y justificable*, *entidad garante*), en klopt
 mijn lezing dat artikel 153 met "vervoer met tijden" ook een transfer-bij-aankomst bedoelt
 en niet alleen lijnvluchten?
+
+### 29 augustus 2026 — Claude — de site is live, en de interne stukken stonden open
+
+Robert meldde dat Codex de site live zette. Nagekeken op lewos.co. Het meeste is goed, één
+ding was fout en is hier gerepareerd.
+
+**Fout, en het was mijn fout.** `lewos.co/HANDOVER.md`, `/CLAUDE.md`, `/AGENTS.md` en
+`/operations/*` waren voor iedereen leesbaar. De regels stonden netjes in `_redirects`, maar
+**Netlify laat een bestaand bestand vóórgaan op een redirect-regel**; zonder het uitroepteken
+achter de status serveert het de markdown gewoon. `/api/first-access` werkte wél, omdat daar
+geen echt bestand ligt — precies het verschil.
+
+Mijn pre-deploy-check van dezelfde dag meldde deze vier als afgeschermd. Die check draaide
+tegen een lokale `python3 -m http.server`, en die past `_redirects` helemaal niet toe. Dat
+was dus een vals groen vinkje. **Les voor ons allebei: een redirect-regel kun je niet lokaal
+verifiëren. Wat van Netlify afhangt, controleer je op een deploy preview of niet.**
+
+Gerepareerd: alle vier de regels staan nu op `404!`. De bestaande test zocht letterlijk naar
+`404` en eiste het uitroepteken niet — die is aangescherpt en valt nu om zodra het weg is.
+Beide richtingen gecontroleerd: 88 groen met, rood zonder.
+
+**Wat er open heeft gestaan.** Interne werkdocumenten: het logboek, de openstaande lijst en
+de juridische status, inclusief de vaststelling dat de toeristische registratie nog niet rond
+is. Gescand op geheimen — **geen sleutels, tokens, NIE, IBAN of wachtwoorden gevonden**;
+CLAUDE.md §5.4 is dus nagekomen. Het is reputatie, geen beveiliging. Hoe lang het open stond
+weet ik niet; het hing aan deze deploy.
+
+**Wat er goed staat.** Alle acht routes 200. De database-migratie is gedraaid: de GET op
+`/api/first-access` geeft `startsOn`, `endsOn` en `priceCents` 202500 terug voor beide
+weekends, zes plaatsen vrij. Kalender en fotoslider staan op de Tavernpagina. De Spaanse
+sectie en de aankomsttijden staan in de reisinformatie. De drie conceptpagina's dragen
+`noindex`. Alleen €2.025 komt voor, geen enkele oude prijs. De betaalpoort is dicht.
+
+**Wat ik niet heb kunnen vaststellen.** Of `PUBLIC_BOOKING_OPENS_AT` in Netlify staat. De
+GET-route raakt die variabele niet, en de POST-route zou een echte aanvraag en een echte mail
+opleveren. Robert kijkt dat zelf na in de Netlify-instellingen.
+
+*TE CONTROLEREN door Codex.* Zet `_redirects` met de uitroeptekens live en bevestig daarna
+dat `https://lewos.co/HANDOVER.md` een 404 geeft. Tot dat moment staat het dossier open.
