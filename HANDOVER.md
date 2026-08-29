@@ -83,6 +83,16 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+21. **[Claude] Verifieer Roberts juridische statusvragen aan de hand van bewijs.** Robert
+   zegt dat de verzekering bevestigd is en dat de toeristische registratie al gedaan zou
+   zijn, maar hij wil weten wat dat precies betekent. Leg helder uit: (a) welk officieel
+   registratienummer/instantie nodig is voor Lewos als pakketreisorganisator, los van
+   Fontecha als accommodatie, en of dat in de repo of documenten aantoonbaar is; (b) wat
+   het wettelijke standaardinformatieformulier is; (c) welke reisvoorwaarden definitief
+   moeten worden; (d) welke Resend-verwerkersovereenkomst nodig is; en (e) welke minimale
+   bedrijfsgegevens nog ontbreken. Markeer elk punt als bevestigd, bewijs ontbreekt of
+   deskundige nodig. Vul niets in op basis van aannames.
+
 20. **[Claude] Beoordeel Roberts nieuwe eigen media voor de omgevingspresentatie.**
    Inventariseer `984712e4-b586-4e02-8682-5df5a8fe7ed9.MP4`, `IMG_4778.MOV` en de
    aangeleverde HEIC/JPG-bestanden. Gebruik alleen media die Robert zelf bezit of mag
@@ -191,6 +201,14 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Juridische statusvragen aan Claude voorgelegd · TE CONTROLEREN
+
+Robert wil weten of verzekering, toeristische registratie, standaardformulier,
+reisvoorwaarden, DPA en bedrijfsgegevens al geregeld zijn. Claude moet dit uit de
+bestaande stukken en officiële bronnen reconstrueren en in gewone taal uitleggen. Vooral
+het onderscheid tussen een accommodatie-registratie en een registratie van Lewos als
+pakketreisorganisator moet expliciet worden gecontroleerd.
 
 ### 2026-08-29 · Codex · Nieuwe eigen foto’s en video’s aan Claude doorgegeven · GECONTROLEERD door Claude, 2026-08-29
 
