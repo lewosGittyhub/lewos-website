@@ -101,6 +101,14 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+22. **[Claude] Voer de volledige pre-deploy eindcontrole uit.** Controleer alle publieke
+   pagina’s en routes, links, formulieren, mobiele layout, media/credits, toegankelijkheid,
+   console- en netwerkmeldingen, Netlify Functions, Supabase-aanroepen, rate limits,
+   dubbele stoelclaims, Stripe-webhookgedrag en de fail-closed betaalpoort. Draai de
+   volledige Node-testsuite en de beschikbare loadtest. Vergelijk de lokale release met
+   de live versie en maak een kort overzicht van verschillen en blockers. Herstel alleen
+   echte fouten; push of deploy niets en verzin geen juridische gegevens.
+
 21. **[Claude] Verifieer Roberts juridische statusvragen aan de hand van bewijs.** Robert
    zegt dat de verzekering bevestigd is en dat de toeristische registratie al gedaan zou
    zijn, maar hij wil weten wat dat precies betekent. Leg helder uit: (a) welk officieel
@@ -219,6 +227,13 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Volledige pre-deploy controle aan Claude gegeven · TE CONTROLEREN
+
+Netlify Personal is actief en nieuwe productie-deploys zijn weer mogelijk. Robert wil
+Claude nu alles laten nalopen voordat lokale wijzigingen naar live gaan. Claude moet
+alle technische en inhoudelijke routes controleren, maar mag niet zelf deployen of de
+betalingspoort openen. Daarna volgt Codex’ onafhankelijke eindcontrole.
 
 ### 2026-08-29 · Claude · Twee bevestigingen van Robert verwerkt · TE CONTROLEREN
 
