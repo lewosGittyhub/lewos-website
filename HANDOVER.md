@@ -188,16 +188,26 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
-   bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
+   bevoegde autoriteit en de insolventiegarantieverstrekker.
+   **Dit zijn ook precies de laatste inhoudelijke gaten in `/travel-information/`.** Op
+   29 augustus is die pagina langs de acht eisen van artikel 153 TRLGDCU gelegd; zeven
+   staan er compleet in, en het achtste — handelsnaam, *volledig adres*, telefoon en
+   e-mail van de organisator — mist alleen adres en telefoon. Robert moet die aanleveren;
+   ze mogen niet uit gevonden documenten worden overgenomen (CLAUDE.md §5.4). Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
 
-10. **[Wie het eerst kan, pas na 3–9] Spaanstalige kopie van de definitieve
-   reisinformatie** plus het wettelijke standaardinformatieformulier, zoals de pagina
-   zelf aankondigt. Niet nu al vertalen: eerst alle juridische gaten, garantiegegevens,
-   registratiegegevens en definitieve klantteksten invullen en laten controleren, zodat
-   er niet twee keer wordt vertaald of een concept per ongeluk als definitief gaat gelden.
+10. **[Wie het eerst kan, pas na 3–9] Spaanstalige kopie van de *definitieve*
+   reisinformatie.** Codex' waarschuwing blijft gelden: pas vertalen als de juridische
+   gaten dicht zijn, anders vertaal je twee keer of gaat een concept per ongeluk als
+   definitief gelden.
+   **Stand 29 augustus 2026:** er staat nu wél een Spaanse vertaling onder de Engelse tekst
+   op `/travel-information/#es`, en `/standard-information/` was al tweetalig. Dat is
+   uitdrukkelijk de vertaling van het *concept*: de pagina houdt haar conceptmelding,
+   houdt `noindex`, en de openstaande identiteitsvelden staan in beide talen als
+   *"Por completar"*. Wijzigt een deskundige straks de Engelse tekst, dan moet de Spaanse
+   mee. Dit punt sluit pas als beide talen definitief zijn.
    Bij de Spaanse eindtekst hoort een Nederlandse vertaling voor Robert.
 
 11. **[Concrete vraag aan Robert/Codex, vóór publicatie] Waar komen deze zeven
@@ -2162,3 +2172,47 @@ buiten de EER blijft terecht openstaan.
 
 Bij controle: zet `TE CONTROLEREN` om naar `GECONTROLEERD door <naam>, <datum>` en zet
 er direct onder wat je hebt nagelopen en wat de uitkomst was. Ook als alles klopte.
+
+### 29 augustus 2026 — Claude — reisinformatie langs artikel 153 gelegd en vertaald
+
+Robert vroeg of de bedrijfsgegevens, de reisvoorwaarden met standaardinformatie en de
+Spaanse reisinformatie niet nu al geregeld konden worden. Antwoord: twee van de drie
+grotendeels wel, de derde niet — die hangt aan hem.
+
+**Wat er is gecontroleerd.** `/travel-information/` is regel voor regel vergeleken met de
+acht verplichte onderdelen van artikel 153 TRLGDCU (de Spaanse omzetting van richtlijn
+2015/2302 art. 5). Bron: de tekst van artikel 153 RDL 1/2007, geraadpleegd 29 augustus 2026.
+
+| Eis | Stond erin |
+| --- | --- |
+| a. Voornaamste kenmerken: bestemming, data, vervoer **met tijden**, verblijf, maaltijden, activiteiten, taal, geschiktheid bij beperkte mobiliteit | Bijna volledig — **aankomst- en vertrektijden ontbraken**, nu toegevoegd |
+| b. Handelsnaam, **volledig adres**, telefoon, e-mail | ⬜ Naam en e-mail staan er; adres en telefoon niet |
+| c. Totaalprijs inclusief belastingen en bijkomende kosten | ✅ |
+| d. Betalingsregeling | ✅ |
+| e. Minimumaantal deelnemers met opzegtermijn | ✅ |
+| f. Paspoort-, visum- en gezondheidsvereisten | ✅ |
+| g. Opzeggingsrecht met vermelding van de vergoeding | ✅ |
+| h. Informatie over optionele verzekering | ✅ |
+
+**Wat ik heb gedaan.** De aankomst- en vertrektijden toegevoegd (aankomst vanaf 16:00 op
+vrijdag, vertrek maandag na het ontbijt tussen 08:30 en 09:30) — die stonden al in Roberts
+eigen dagindeling op de Tavernpagina, dus dat is geen verzonnen feit maar één document dat
+achterliep op het andere. Daarna de hele pagina naar het Spaans vertaald en als sectie
+`#es` onder de Engelse tekst gezet, met bovenaan die sectie de mededeling dat het een
+vertaling is en dat bij verschil de Spaanse tekst geldt voor een Spaanse consument.
+88 tests draaien nog groen.
+
+**Wat ik bewust niet heb gedaan.** Het adres en telefoonnummer invullen. Ik ben ze op deze
+machine tegengekomen in gescande documenten; CLAUDE.md §5.4 verbiedt persoonsgegevens in de
+repo en Robert moet zelf beslissen welk adres een klant te zien krijgt. Ze blijven in beide
+talen als open veld staan.
+
+**Wat dit níét oplost.** De vergunningsketen uit `operations/legal-status-2026-08-29.md`
+staat er los van: caución → declaración responsable → registratiecode → verkopen. Een
+completere reisinformatiepagina brengt de verkoop geen dag dichterbij, en de betaalpoort in
+`_booking-config.mjs` blijft dicht.
+
+*TE CONTROLEREN door Codex.* Twee dingen graag: is de Spaanse juridische woordkeus correct
+(*viaje combinado*, *penalización adecuada y justificable*, *entidad garante*), en klopt
+mijn lezing dat artikel 153 met "vervoer met tijden" ook een transfer-bij-aankomst bedoelt
+en niet alleen lijnvluchten?
