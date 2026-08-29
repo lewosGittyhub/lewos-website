@@ -261,7 +261,11 @@ begin
   if not found then return jsonb_build_object('status','unknown_payment'); end if;
   select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
   if claim.status='paid' then return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label,'termsVersion',claim.terms_version,'confirmationEmailSent',claim.confirmation_email_sent_at is not null,'duplicate',true); end if;
-  if claim.status<>'payment_pending' or claim.hold_expires_at is null or p_paid_at is null or p_paid_at>claim.hold_expires_at then
+  -- The Stripe session expiry is set a moment after the database hold begins, so
+  -- a payment accepted in that final sliver can carry a timestamp just past the
+  -- hold. Stripe never accepts payment on an expired session, so this narrow
+  -- grace only absorbs clock skew; a released seat is already caught above.
+  if claim.status<>'payment_pending' or claim.hold_expires_at is null or p_paid_at is null or p_paid_at>claim.hold_expires_at+interval '5 minutes' then
     return jsonb_build_object('status','expired','claimId',claim.id);
   end if;
   update tavern_seat_claims set status='paid',hold_expires_at=null where id=claim.id;

@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from "node:crypto";
-import {paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
+import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const tokenHash=token=>createHash("sha256").update(token).digest("hex");
@@ -20,7 +20,7 @@ const createStripeSession=async({reference,name,email,seats,weekendLabel})=>{
   form.set("client_reference_id",reference);
   form.set("success_url",`${origin}/booking-success/?session_id={CHECKOUT_SESSION_ID}`);
   form.set("cancel_url",`${origin}/booking-cancelled/`);
-  form.set("expires_at",String(Math.floor(Date.now()/1000)+1800));
+  form.set("expires_at",String(Math.floor(Date.now()/1000)+CHECKOUT_HOLD_MINUTES*60));
   form.set("line_items[0][price_data][currency]","eur");
   form.set("line_items[0][price_data][unit_amount]","202500");
   form.set("line_items[0][price_data][product_data][name]",`The Lewos Tavern · ${weekendLabel}`);
@@ -72,7 +72,7 @@ export const handler=async event=>{
       const filmingConsent=input.filmingConsent===true;
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
       if(!adultConfirmed||!privacyAccepted)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_hold_minutes:40});
+      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -82,7 +82,7 @@ export const handler=async event=>{
       const privacyAccepted=input.privacyAccepted===true;
       const filmingConsent=input.filmingConsent===true;
       if(name.length<2||name.length>120||!emailOk(email)||!["weekend-01","weekend-02"].includes(weekend)||!Number.isInteger(people)||people<1||people>6||!adultConfirmed||!privacyAccepted)return json(400,{error:"invalid_details"});
-      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:40});
+      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
       hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"Weekend 01 · 30 Oct to 2 Nov 2026":"Weekend 02 · 6 to 9 Nov 2026"};
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}

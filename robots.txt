@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /HANDOVER.md
+Disallow: /AGENTS.md
+Disallow: /CLAUDE.md
+Disallow: /operations/
 
 Sitemap: https://lewos.co/sitemap.xml

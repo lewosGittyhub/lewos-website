@@ -1,0 +1,44 @@
+# CLAUDE.md — lees dit eerst
+
+Dit is de Lewos-website. Aan deze repo werken twee assistenten om beurten: **Claude**
+(Claude Code) en **Codex** (ChatGPT). Ze delen geen gesprek, alleen deze repo.
+
+## Verplicht, elke sessie, vóór je iets aanraakt
+
+1. Lees **[`HANDOVER.md`](HANDOVER.md)** helemaal. Daar staat wat de ander deed, waarom,
+   hoe je het controleert, en wat er nog moet gebeuren.
+2. Staat het bovenste logboekitem op `TE CONTROLEREN` en is het **van Codex**, dan is dat
+   je eerste taak. Controleer het echt en zet het op `GECONTROLEERD`. Vind je een fout:
+   schrijf het op en herstel het.
+3. Pak daarna het bovenste punt uit *Openstaand* dat jij kunt doen.
+4. Schrijf bovenaan het logboek een nieuw item volgens het sjabloon onderaan
+   `HANDOVER.md`. Zonder dat item is je werk niet overdraagbaar en telt het niet als af.
+5. Commit op de feature-branch. **Niet pushen, niet naar `main`**, tenzij Robert er
+   expliciet om vraagt — een push naar de hoofdbranch gaat meteen live op lewos.co.
+
+Roberts eigen `CLAUDE.md` in `~/Downloads` blijft leidend voor merk, huisstijl, stem en
+de harde grenzen. `HANDOVER.md` vat de grenzen samen die deze repo raken.
+
+## Wat jij als Claude niet kunt
+
+Op deze Mac staat **geen Node.js**. Je kunt `node --test tests/*.test.mjs` niet draaien
+en je hebt geen Supabase-toegang. Codex heeft beide. Verander je code, dan zet je die
+onder *Niet geverifieerd* in je logboekitem en in *Openstaand* voor Codex, met precies
+welk scenario hij moet natesten. Schrijf nooit "getest".
+
+Wat je wél kunt: code en SQL lezen en narekenen, teksten en juridische pagina's
+controleren, regexpatronen met `python3` tegen de echte bestandsinhoud verifiëren, git,
+en de site lokaal bekijken met `python3 -m http.server 8000`.
+
+## Nooit doen
+
+- Betaling mogelijk maken of een omweg om de betaalblokkade bouwen. Verkopen mag pas als
+  RC-polis en caución actief zijn, RECE0033T06 is ingediend met registratiecode binnen,
+  én de klantdocumenten definitief zijn. `PUBLISHED_TERMS_VERSION` en de twee
+  documentconstanten in `netlify/functions/_booking-config.mjs` staan bewust leeg; dat
+  is de blokkade, niet een vergeten regel.
+- Feiten verzinnen in publieke teksten. Geen namen, reviews, statistieken of edities die
+  niet vaststaan.
+- Persoonsgegevens of geheimen in de repo zetten, ook niet in commit-berichten.
+- Een framework, bundler of dependency introduceren. Dit is losse HTML/CSS/JS zonder
+  build-stap en dat blijft zo, tenzij Robert akkoord geeft.

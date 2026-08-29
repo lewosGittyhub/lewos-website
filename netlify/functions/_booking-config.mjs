@@ -4,6 +4,11 @@ export const PUBLISHED_TERMS_VERSION="";
 export const PUBLISHED_TERMS_DOCUMENT="";
 export const PUBLISHED_TRAVEL_DOCUMENT="";
 
+// The published booking terms promise a 40 minute hold. The database hold and
+// the Stripe session must expire together: a shorter Stripe session would hand
+// a returning guest a dead payment link while the seat is still reserved.
+export const CHECKOUT_HOLD_MINUTES=40;
+
 const localTestOverridesAllowed=()=>process.env.NODE_ENV==="test"&&/^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?\/?$/.test(String(process.env.URL||""));
 
 export const bookingDocuments=()=>localTestOverridesAllowed()

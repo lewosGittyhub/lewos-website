@@ -171,3 +171,34 @@ test("First Access receipt delivery is durable and retry-safe",async()=>{
   assert.match(sql,/status='alternative_offered'/);
   assert.match(sql,/status='future_weekend_interest'/);
 });
+
+test("the Stripe session and the database hold expire together",async()=>{
+  const config=await read(path.join(root,"netlify/functions/_booking-config.mjs"));
+  const checkout=await read(path.join(root,"netlify/functions/create-checkout-session.mjs"));
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  const bookingHtml=await read(path.join(root,"tavern/book/index.html"));
+  const terms=await read(path.join(root,"terms/index.html"));
+  const holdMinutes=Number(config.match(/CHECKOUT_HOLD_MINUTES\s*=\s*(\d+)/)?.[1]);
+  assert.ok(Number.isInteger(holdMinutes)&&holdMinutes>=30&&holdMinutes<=60,"the hold length must be a Stripe-legal number of minutes");
+  assert.match(checkout,/expires_at["'],String\(Math\.floor\(Date\.now\(\)\/1000\)\+CHECKOUT_HOLD_MINUTES\*60\)\)/);
+  assert.doesNotMatch(checkout,/p_hold_minutes:\d+/,"the database hold must come from CHECKOUT_HOLD_MINUTES, never a separate literal");
+  assert.equal(checkout.match(/p_hold_minutes:CHECKOUT_HOLD_MINUTES/g)?.length,2);
+  assert.match(sql,/p_paid_at>claim\.hold_expires_at\+interval '5 minutes'/);
+  for(const page of [bookingHtml,terms])assert.match(page,new RegExp(`${holdMinutes} minutes`),"the published hold promise must match the configured hold");
+});
+
+test("internal working documents are never served from the public site",async()=>{
+  const redirects=await read(path.join(root,"_redirects"));
+  const robots=await read(path.join(root,"robots.txt"));
+  const blocked=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404").map(parts=>parts[0]);
+  const covers=route=>blocked.some(rule=>rule.endsWith("/*")?route.startsWith(rule.slice(0,-1)):rule===route);
+  const internal=files
+    .map(file=>path.relative(root,file))
+    .filter(file=>file.endsWith(".md")&&!file.split(path.sep).some(part=>part.startsWith(".")));
+  assert.ok(internal.length>0,"the handover documents must exist");
+  for(const file of internal){
+    const route=`/${file.split(path.sep).join("/")}`;
+    assert.ok(covers(route),`${route} is published but has no 404 rule in _redirects`);
+    assert.match(robots,/Disallow: \/(HANDOVER\.md|operations\/)/);
+  }
+});
