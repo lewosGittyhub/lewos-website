@@ -101,13 +101,18 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-22. **[Claude] Voer de volledige pre-deploy eindcontrole uit.** Controleer alle publieke
+23. **[Robert, vóór de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** Een ISO-tijdstip
+   in de toekomst. Zonder die variabele antwoordt het First Access-formulier op de live site
+   met 503 zodra deze release erop staat, terwijl privé-aanvragen blijven werken. Zie
+   `operations/pre-deploy-2026-08-29.md`.
+
+~~22. **[Claude] Voer de volledige pre-deploy eindcontrole uit. Gedaan op 29 augustus.** Controleer alle publieke
    pagina’s en routes, links, formulieren, mobiele layout, media/credits, toegankelijkheid,
    console- en netwerkmeldingen, Netlify Functions, Supabase-aanroepen, rate limits,
    dubbele stoelclaims, Stripe-webhookgedrag en de fail-closed betaalpoort. Draai de
    volledige Node-testsuite en de beschikbare loadtest. Vergelijk de lokale release met
    de live versie en maak een kort overzicht van verschillen en blockers. Herstel alleen
-   echte fouten; push of deploy niets en verzin geen juridische gegevens.
+   echte fouten; push of deploy niets en verzin geen juridische gegevens.~~
 
 21. **[Claude] Verifieer Roberts juridische statusvragen aan de hand van bewijs.** Robert
    zegt dat de verzekering bevestigd is en dat de toeristische registratie al gedaan zou
@@ -236,7 +241,52 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
-### 2026-08-29 · Codex · Prijs-, deadline- en kalenderfix onafhankelijk voltooid · TE CONTROLEREN
+### 2026-08-29 · Claude · Pre-deploy eindcontrole, met één blokkade · TE CONTROLEREN
+
+**Wat**
+- Volledige pre-deploycontrole uitgevoerd. Nieuw: `operations/pre-deploy-2026-08-29.md`.
+- `tests/site.test.mjs`: nieuwe test die eist dat elke omgevingsvariabele die de
+  boekingsfunctie gebruikt ergens voor de operator is opgeschreven.
+- Niets gepusht, niets gedeployed, de betaalpoort niet aangeraakt.
+
+**⚠️ De blokkade: `PUBLIC_BOOKING_OPENS_AT` moet vóór de deploy in Netlify staan**
+- De **live** versie van `first-access.mjs` gebruikt die variabele niet. De nieuwe wel. Staat
+  hij er niet, dan krijgt elke aanvraag voor een vast weekend een `503
+  booking_service_not_configured` — waar een bezoeker vandaag gewoon stoelen kan claimen.
+- Erger nog: aanvragen voor een privé-Tavern blijven wél werken, want die slaan die controle
+  over. Het formulier lijkt dan half te leven en niemand merkt het een dag lang.
+- Het is een ISO-tijdstip en doet twee dingen tegelijk: het moment waarop publieke verkoop
+  mag opengaan, én het moment waarop First Access sluit. Zet hem op een datum die nog niet
+  verstreken is en First Access blijft precies werken zoals nu.
+- De vijf andere variabelen die de functie nodig heeft, gebruikt de live versie al.
+
+**Wat er verder uit kwam**
+- **88 tests groen**, inclusief de vier belastingsproeven. Nul kapotte interne links over
+  zestien pagina's, nul knoppen zonder toegankelijke naam, nul ontbrekende bestanden, nul
+  horizontale overloop op 375 px.
+- Alle consolefouten zijn `/api/first-access` met een 404: dat is de Netlify-functieroute,
+  die op een statische lokale server niet bestaat. Geen defect.
+- De betaalpoort staat dicht: alle drie de publicatieconstanten leeg.
+- De databasemigratie is een tweede punt maar géén blokkade. Zonder migratie verbergt de
+  kalender zichzelf en neemt het oude keuzemenu het over; er gaat niets stuk.
+
+**Over de controle van Codex op commit `40cfe90`**
+- Nagelezen en akkoord. Zijn toevoeging aan `tests/database-integration.sql` zet een
+  afwijkende prijs van 234567 cent, controleert dat de hold precies dát bedrag teruggeeft en
+  dat het als momentopname op de claim blijft staan. Dat sluit het gat dat mijn eigen test
+  niet kon dichten, want die werkt met een nabootsing.
+
+**Niet geverifieerd**
+- Er is niet op een Netlify-voorbeeldomgeving gedraaid; alles is lokaal getest.
+- Kleurcontrast is op het oog beoordeeld, niet gemeten.
+
+**Wat nu volgt**
+- Robert zet `PUBLIC_BOOKING_OPENS_AT`, draait de migratie, en beslist over deployen.
+- Daarna Codex' onafhankelijke eindcontrole, zoals afgesproken.
+
+---
+
+### 2026-08-29 · Codex · Prijs-, deadline- en kalenderfix onafhankelijk voltooid · GECONTROLEERD door Claude, 2026-08-29
 
 **Wat**
 - Commit `40cfe90` onafhankelijk nagelezen: Stripe ontvangt de prijs uit de atomische
@@ -269,7 +319,7 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ---
 
-### 2026-08-29 · Codex · Volledige pre-deploy controle aan Claude gegeven · TE CONTROLEREN
+### 2026-08-29 · Codex · Volledige pre-deploy controle aan Claude gegeven · GECONTROLEERD door Claude, 2026-08-29
 
 Netlify Personal is actief en nieuwe productie-deploys zijn weer mogelijk. Robert wil
 Claude nu alles laten nalopen voordat lokale wijzigingen naar live gaan. Claude moet
