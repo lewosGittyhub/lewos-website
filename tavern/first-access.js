@@ -32,7 +32,22 @@
       cell.classList.toggle('is-chosen',cell.dataset.slug===chosen&&!cell.classList.contains('is-full'));
     });
     const item=availability.find(entry=>entry.slug===chosen);
-    calendarChosen.textContent=item?`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.`:'Pick a weekend in the calendar, or choose a private Tavern below.';
+    if(!item){calendarChosen.textContent='Pick a weekend in the calendar, or choose a private Tavern below.';return;}
+    // De prijs komt uit de database, niet uit dit bestand: één plek waar hij staat.
+    // Levert de API er geen, dan zwijgen we erover in plaats van te gokken.
+    const cents=Number(item.priceCents);
+    const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100);
+    const guests=Number.parseInt(people.value,10);
+    let price='';
+    if(Number.isFinite(cents)&&cents>0){
+      price=` ${money(cents)} per person, including taxes.`;
+      if(Number.isInteger(guests)&&guests>0&&guests<=item.capacity){
+        price=guests===1
+          ?` ${money(cents)} for one guest, including taxes.`
+          :` ${money(cents*guests)} for ${guests} guests — ${money(cents)} each, including taxes.`;
+      }
+    }
+    calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${price}`;
   };
 
   const buildCalendar=()=>{
@@ -148,7 +163,7 @@
       // Keep the published date labels when live availability cannot be reached.
     }
   };
-  people.addEventListener('input',updateWeekendOptions);
+  people.addEventListener('input',()=>{updateWeekendOptions();paintCalendar();});
   applyMode(isPrivate());
   loadAvailability();
   const query=new URLSearchParams(window.location.search);

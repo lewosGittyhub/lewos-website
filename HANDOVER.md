@@ -116,6 +116,50 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Claude · Prijs bij het gekozen weekend, meelopend met de groep · TE CONTROLEREN
+
+**Wat**
+- `database/first-access.sql`: `tavern_weekends` krijgt `price_cents integer not null
+  default 202500 check (price_cents > 0)`, en `get_tavern_availability` geeft dat mee als
+  `priceCents`.
+- `tavern/first-access.js`: de regel onder de kalender toont nu ook de prijs. Zonder
+  ingevuld aantal: *"€2,025 per person, including taxes."* Met een aantal ingevuld:
+  *"€4,050 for 2 guests — €2,025 each, including taxes."* Het aantalveld werkt de regel
+  meteen bij.
+- `tests/site.test.mjs`: nieuwe test *"the price shown with a weekend comes from the
+  database and follows the party size"*.
+
+**Waarom**
+- Robert wil dat bezoekers zien wat het voor hún groep kost, niet alleen per persoon.
+- **De prijs staat bewust in de database en niet in het script.** Hij stond al op twee
+  plekken — in de HTML en in `create-checkout-session.mjs` — en een derde kopie is precies
+  hoe er straks weer een verouderde prijs blijft hangen. De test verbiedt nu ook letterlijk
+  dat het bedrag in het script terugkomt.
+- De kolom hangt per weekend, niet globaal, omdat de plannen een seizoenseditie met een
+  andere prijs noemen.
+- **De prijs zit niet in de seed.** Die insert draait bij elke migratie opnieuw met
+  `on conflict do update`; zou de prijs erin staan, dan zou een prijs die Robert zelf in
+  Supabase aanpast bij de volgende migratie stilletjes teruggezet worden. Een test bewaakt
+  dat.
+- Levert de API geen prijs, dan zwijgt de regel erover in plaats van iets te gokken. En bij
+  een groep die niet in het weekend past, verschijnt geen totaalbedrag — alleen de prijs
+  per persoon.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 69 geslaagd**.
+- In de browser doorlopen met 1, 2, 4 en 7 personen: bij 1 staat er één bedrag, bij 2 en 4
+  het totaal plus de prijs per persoon, en bij 7 — meer dan de zes stoelen — valt hij terug
+  op alleen de prijs per persoon.
+
+**Niet geverifieerd**
+- De migratie staat nog steeds open bij Codex; nu met drie kolommen erbij in plaats van
+  twee.
+
+**Wat nu volgt**
+- Robert beslist welke weekenden hij wil draaien.
+
+---
+
 ### 2026-08-29 · Claude · Vakjes leeg, het aantal stoelen groot eronder · TE CONTROLEREN
 
 **Wat**

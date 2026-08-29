@@ -32,6 +32,10 @@ create table if not exists public.tavern_seat_claims (
 -- niet op een maandrooster plaatsen; date_label is alleen bedoeld om te tonen.
 alter table public.tavern_weekends add column if not exists starts_on date;
 alter table public.tavern_weekends add column if not exists ends_on date;
+-- Prijs per persoon in centen. Bewust per weekend, want een seizoenseditie kan een
+-- andere prijs hebben. Staat niet in de seed hieronder: die draait bij elke migratie
+-- opnieuw en zou een prijs die Robert zelf aanpast weer overschrijven.
+alter table public.tavern_weekends add column if not exists price_cents integer not null default 202500 check (price_cents > 0);
 
 alter table public.tavern_seat_claims add column if not exists hold_expires_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists payment_reference text;
@@ -175,6 +179,7 @@ begin
     'capacity',w.capacity,
     'startsOn',w.starts_on,
     'endsOn',w.ends_on,
+    'priceCents',w.price_cents,
     'remaining',greatest(w.capacity-coalesce(c.occupied,0),0)
   ) order by w.sort_order),'[]'::jsonb) into result
   from tavern_weekends w

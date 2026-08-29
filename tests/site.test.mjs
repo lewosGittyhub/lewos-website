@@ -309,3 +309,17 @@ test("a day cell shows only its date, and the seat count is read out below",asyn
   assert.match(script,/of \$\{item\.capacity\} seats free/);
   assert.match(html,/\.calendar__chosen \{[^}]*font: 700/,"the read-out carries the count, so it is set larger and bold");
 });
+test("the price shown with a weekend comes from the database and follows the party size",async()=>{
+  const script=await read(path.join(root,"tavern/first-access.js"));
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  // One source for the price. A copy in the front-end is how an old price survives.
+  assert.match(sql,/add column if not exists price_cents integer not null default 202500/);
+  assert.match(sql,/'priceCents',w\.price_cents/);
+  assert.match(script,/item\.priceCents/);
+  assert.doesNotMatch(script,/2025|202500/,"the price must not be repeated in the script");
+  // The seed re-runs on every migration, so it must not reset a price set by hand.
+  const seed=sql.match(/on conflict \(slug\) do update set[^;]*/)?.[0]??"";
+  assert.doesNotMatch(seed,/price_cents/,"re-running the migration must not overwrite a changed price");
+  assert.match(script,/including taxes/);
+  assert.match(script,/guests<=item\.capacity/,"no total for a party that cannot fit");
+});
