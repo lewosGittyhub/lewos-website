@@ -101,7 +101,13 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
-23. **[Robert, vóór de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** Een ISO-tijdstip
+*Bijgewerkt 29 augustus 2026. Vijf punten die al uitgevoerd waren zijn eruit gehaald — 17
+release, 18 brede ronde, 19 best-effort, 20 media en 21 juridische status; alle vijf staan
+in het logboek. De lijst loopt nu op volgorde van urgentie: eerst wat de deploy tegenhoudt,
+dan wat de verkoop tegenhoudt, dan de open vragen.*
+
+
+1. **[Robert, vóór de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** Een ISO-tijdstip
    in de toekomst. Zonder die variabele antwoordt het First Access-formulier op de live site
    met 503 zodra deze release erop staat, terwijl privé-aanvragen blijven werken. Zie
    `operations/pre-deploy-2026-08-29.md`.
@@ -114,49 +120,7 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    de live versie en maak een kort overzicht van verschillen en blockers. Herstel alleen
    echte fouten; push of deploy niets en verzin geen juridische gegevens.~~
 
-21. **[Claude] Verifieer Roberts juridische statusvragen aan de hand van bewijs.** Robert
-   zegt dat de verzekering bevestigd is en dat de toeristische registratie al gedaan zou
-   zijn, maar hij wil weten wat dat precies betekent. Leg helder uit: (a) welk officieel
-   registratienummer/instantie nodig is voor Lewos als pakketreisorganisator, los van
-   Fontecha als accommodatie, en of dat in de repo of documenten aantoonbaar is; (b) wat
-   het wettelijke standaardinformatieformulier is; (c) welke reisvoorwaarden definitief
-   moeten worden; (d) welke Resend-verwerkersovereenkomst nodig is; en (e) welke minimale
-   bedrijfsgegevens nog ontbreken. Markeer elk punt als bevestigd, bewijs ontbreekt of
-   deskundige nodig. Vul niets in op basis van aannames.
-
-20. **[Claude] Beoordeel Roberts nieuwe eigen media voor de omgevingspresentatie.**
-   Inventariseer `984712e4-b586-4e02-8682-5df5a8fe7ed9.MP4`, `IMG_4778.MOV` en de
-   aangeleverde HEIC/JPG-bestanden. Gebruik alleen media die Robert zelf bezit of mag
-   publiceren. Zet geschikte beelden om naar webvriendelijke formaten, voeg een
-   passende posterafbeelding en beschrijvende alt-/track-tekst toe, laad video’s pas
-   wanneer nodig en speel nooit automatisch met geluid. Controleer mobiel dat de
-   pagina niet zwaarder of horizontaal breder wordt. Werk de interne credits/media-
-   registratie bij en voeg geen privé- of identiteitsdocumenten toe.
-
-19. **[Claude/Codex] Best-effort bescherming tot juridisch budget beschikbaar is.** Bouw
-   en controleer alsof een specialist later alle stukken definitief zal beoordelen:
-   verzamel zo weinig mogelijk persoonsgegevens, maak privacy/film/18+ en boekings-
-   momenten helder, leg aannames en open punten vast, gebruik geen verzonnen juridische
-   gegevens en laat technische fail-closed poorten actief. Zodra Robert budget heeft,
-   gaan de open documenten naar een Spaanse specialist; geen assistent mag die controle
-   simuleren of ontbrekende registratie/verzekeringsgegevens invullen.
-
-18. **[Claude] Gebruik de huidige werksessie voor een brede afrondingsronde.** Werk de
-   open technische punten in volgorde af: (a) loadtest en foutafhandeling, (b) volledige
-   testsuite zonder hangers, (c) tekst- en beeldaudit, (d) release-diff en deploy-
-   checklist. Commit samenhangende wijzigingen, beschrijf exact wat getest is en laat
-   juridische/externe punten bij Robert staan. Push niets en omzeil de Netlify-
-   deployblokkade niet.
-
-17. **[Claude/Codex] Bereid één gecontroleerde productie-release voor.** Robert wil de
-   huidige lokale wijzigingen straks gezamenlijk naar live brengen. Verzamel geen
-   onaf werk: controleer de diff, draai de volledige testsuite en maak één duidelijke
-   release-commit. Push of deploy nog niet zonder Roberts expliciete opdracht. Netlify
-   Free heeft in de huidige cyclus de productie-deploylimiet bereikt; de bestaande site
-   blijft online, maar een nieuwe productie-deploy kan pas na de volgende cyclus of na
-   Roberts eigen upgrade van Netlify. Geen betaalkaart of upgrade namens Robert.
-
-16. **[Robert, vóór publicatie] Supabase-plan en back-ups.** Een gratis project wordt na
+2. **[Robert, vóór publicatie] Supabase-plan en back-ups.** Een gratis project wordt na
    zeven dagen met weinig activiteit gepauzeerd, en back-ups zijn er niet te downloaden.
    Allebei geverifieerd bij Supabase zelf. Zie het draaiboek. *(Vervangt het oude punt 16
    over de belastingstest; die is gedaan.)*
@@ -169,30 +133,14 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    alerts Robert vóór publicatie moet instellen. Geen echte productie-aanvragen of
    Stripe-betalingen in deze test.~~ **Gedaan op 29 augustus, zie `tests/load.test.mjs`.**
 
-11. **[Robert of Codex] Waar komen deze zeven illustraties vandaan?**
-   `tavern-double-doors`, `asturias-mountain-view`, `bear-4x4-mountain-wide`,
-   `dice-character-sheet`, `private-campaign-landscape`, `tavern-party-journey-bear` en
-   `weekend-01-dark-dice`. Ze staan sinds de lanceercommit in de repo zonder vastgelegde
-   herkomst. Gegenereerd? Zeg waarmee en of de voorwaarden commercieel gebruik toestaan.
-   Uit een bibliotheek? Noem welke en onder welke licentie. Zet het antwoord in
-   `operations/image-credits.md`. *(Punt 14 en 15 zijn afgerond, zie het logboek.)*
-
-1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
+3. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
    registratiecode. Let op: dit komt daarmee in de git-geschiedenis te staan. Dat botst
    met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
    wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
    Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
-2. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
-   Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
-   De site en de seed in `database/first-access.sql` kennen alleen de eerste twee. In
-   diezelfde briefing staat wel *"Elke stap gaat pas open als de vorige vol is"*, dus dit
-   kan bewust zijn. Robert noemde daarnaast een open kalender voor alle weekenden; daar
-   is in deze repo, in het dossier en in zijn eigen documenten niets over te vinden.
-   Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
-   `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
-   pagina haalt de beschikbaarheid live op.
-3. **[Robert] Vul de twee ontbrekende velden in het standaardinformatieformulier in.** Het
+
+4. **[Robert] Vul de twee ontbrekende velden in het standaardinformatieformulier in.** Het
    formulier staat er nu, naar de wettekst, in het Engels en het Spaans op
    `/standard-information/`. Het mist alleen nog de insolventiegarantie (verstrekker,
    polisnummer, adres, telefoon) en de bevoegde autoriteit. Beide volgen uit de
@@ -205,10 +153,12 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    TRLGDCU). `/travel-information/` kondigt het zelf aan, maar het bestaat nergens. Dit is
    geen tekst die wij erbij bedenken: de inhoud ligt wettelijk vast.~~ **Opgesteld op
    29 augustus, zie het logboek.**
-4. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
+
+5. **[Robert] Gegevens van de insolventiegarantie in de precontractuele informatie.** Naam
    en volledige contactgegevens van de garantieverstrekker moeten erin. Nu staat er alleen
    dat ze nog volgen.
-5. **[Robert] Verwerkersovereenkomst met Resend, of een andere maildienst.** Hun publieke
+
+6. **[Robert] Verwerkersovereenkomst met Resend, of een andere maildienst.** Hun publieke
    privacybeleid noemt geen waarborgmechanisme voor doorgifte naar de Verenigde Staten —
    geen standaardcontractbepalingen, geen Data Privacy Framework. De andere drie
    verwerkers publiceren dat wel. Vermoedelijk staat het in hun verwerkersovereenkomst;
@@ -220,22 +170,45 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    zodra een verwerker buiten de EER verwerkt. Zoek eerst uit in welke regio de
    Supabase-instantie draait en wat Netlify, Stripe en Resend daarover zeggen. Niets over
    beweren voordat dat vaststaat.~~ **Gedaan op 29 augustus.**
-6. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+
+7. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-7. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+
+8. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-8. **[Wie het eerst kan, na 6 en 7] Vul de bedrijfsgegevens in.** In `/terms/` en
+
+9. **[Wie het eerst kan, na 7 en 8] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-9. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+
+10. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-10. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+
+11. **[Robert of Codex] Waar komen deze zeven illustraties vandaan?**
+   `tavern-double-doors`, `asturias-mountain-view`, `bear-4x4-mountain-wide`,
+   `dice-character-sheet`, `private-campaign-landscape`, `tavern-party-journey-bear` en
+   `weekend-01-dark-dice`. Ze staan sinds de lanceercommit in de repo zonder vastgelegde
+   herkomst. Gegenereerd? Zeg waarmee en of de voorwaarden commercieel gebruik toestaan.
+   Uit een bibliotheek? Noem welke en onder welke licentie. Zet het antwoord in
+   `operations/image-credits.md`. *(Punt 14 en 15 zijn afgerond, zie het logboek.)*
+
+12. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
+   Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
+   De site en de seed in `database/first-access.sql` kennen alleen de eerste twee. In
+   diezelfde briefing staat wel *"Elke stap gaat pas open als de vorige vol is"*, dus dit
+   kan bewust zijn. Robert noemde daarnaast een open kalender voor alle weekenden; daar
+   is in deze repo, in het dossier en in zijn eigen documenten niets over te vinden.
+   Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
+   `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
+   pagina haalt de beschikbaarheid live op.
+
+13. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
