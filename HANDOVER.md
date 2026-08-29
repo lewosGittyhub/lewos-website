@@ -236,6 +236,39 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 
 ## Logboek — nieuwste bovenaan
 
+### 2026-08-29 · Codex · Prijs-, deadline- en kalenderfix onafhankelijk voltooid · TE CONTROLEREN
+
+**Wat**
+- Commit `40cfe90` onafhankelijk nagelezen: Stripe ontvangt de prijs uit de atomische
+  databasehold, de prijs wordt op de claim vastgezet, deadlinechecks gebruiken de actuele
+  kloktijd na de advisory lock en de kalender weigert een weekend waarin de hele groep
+  niet past.
+- `tests/database-integration.sql` uitgebreid met een afwijkende weekendprijs van 234567
+  cent. De proef controleert zowel de RPC-uitkomst als de blijvende prijssnapshot op de
+  claim.
+
+**Waarom**
+- De bestaande Node-test bewees dat Stripe het bedrag uit de hold gebruikt, maar de echte
+  databaseproef bewees nog niet dat die hold en de opgeslagen claim exact de prijs van de
+  gekozen weekendrij krijgen.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **87 geslaagd, 0 gefaald**.
+- `database/first-access.sql` en `tests/database-integration.sql` samen uitgevoerd tegen
+  Supabase in één transactie die eindigde met `rollback`; geen uitzondering.
+- Na de rollback opnieuw `information_schema` bevraagd: de testkolommen waren niet
+  achtergebleven, dus de productie-database is niet door de proef gewijzigd.
+
+**Niet geverifieerd**
+- Geen open technisch punt binnen deze drie correcties. De betaalpoort blijft bewust
+  gesloten; de schemawijzigingen zijn nog niet als productiemigratie toegepast.
+
+**Wat nu volgt**
+- Claude kan deze onafhankelijke controle nalopen. Daarna kunnen de drie punten als
+  technisch afgerond mee in de gezamenlijke pre-deploycontrole.
+
+---
+
 ### 2026-08-29 · Codex · Volledige pre-deploy controle aan Claude gegeven · TE CONTROLEREN
 
 Netlify Personal is actief en nieuwe productie-deploys zijn weer mogelijk. Robert wil
@@ -1156,7 +1189,12 @@ vrijgeven. Punt 0 onderzocht, zie het item hierboven; niet reproduceerbaar, maar
 plausibele oorzaak is weggenomen. Punt 1, 2 en 3 waren al hersteld in `40cfe90` en zijn
 daarom uit *Openstaand* gehaald; de databaseproef erover blijft bij Codex.
 
-### 2026-08-29 · Claude · De drie bevindingen van Codex hersteld · TE CONTROLEREN
+### 2026-08-29 · Claude · De drie bevindingen van Codex hersteld · GECONTROLEERD door Codex, 2026-08-29
+
+Codex heeft de gewijzigde betaalfunctie, SQL-functies, kalenderlogica en regressietests
+nagelezen. De volledige Node-suite is groen. De echte Supabase-rollbacktest is aangevuld
+met een afwijkende prijs en bevestigt dat die prijs zowel uit de hold terugkomt als op de
+claim wordt vastgezet; de rollback liet geen schema- of testdata achter.
 
 **Wat**
 - **P0 prijsverschil.** `create-checkout-session.mjs` rekent niet langer de vaste

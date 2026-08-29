@@ -12,6 +12,8 @@ declare
   future_two jsonb;
   first_mark jsonb;
   second_mark jsonb;
+  priced_checkout jsonb;
+  stored_price integer;
   closed_blocked boolean:=false;
 begin
   insert into public.tavern_weekends(slug,label,date_label,sort_order,capacity) values
@@ -66,6 +68,17 @@ begin
     if sqlerrm='first_access_closed' then closed_blocked:=true; else raise; end if;
   end;
   if closed_blocked is not true then raise exception 'late_first_access_was_not_blocked'; end if;
+
+  -- De prijs die naar Stripe gaat moet uit dezelfde weekendrij komen als de prijs die
+  -- de kalender toont, en wordt op de claim vastgezet voor latere controle.
+  update public.tavern_seat_claims set status='expired' where email='uninvited-gate@example.invalid';
+  update public.tavern_weekends set price_cents=234567 where id=full_weekend;
+  priced_checkout:=public.begin_tavern_checkout('Price Guest','price-test@example.invalid',1,'codex-test-full','price-test-reference',true,true,'test-terms',false,clock_timestamp()-interval '1 minute',30);
+  if priced_checkout->>'status'<>'payment_pending' or (priced_checkout->>'priceCents')::integer<>234567 then
+    raise exception 'checkout_price_did_not_come_from_weekend';
+  end if;
+  select price_cents into stored_price from public.tavern_seat_claims where payment_reference='price-test-reference';
+  if stored_price<>234567 then raise exception 'checkout_price_snapshot_was_not_stored'; end if;
 end $$;
 
 -- Waarom de fasechecks clock_timestamp() gebruiken en niet now(). Binnen één transactie
