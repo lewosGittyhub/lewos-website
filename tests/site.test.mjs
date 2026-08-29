@@ -398,3 +398,13 @@ test("the photograph slider can be steered and does not move under the reader",a
   assert.match(script,/aria-roledescription="carousel"/.source?new RegExp("."):/./);
   assert.match(html,/aria-roledescription="carousel"/);
 });
+
+test("every image on the site is written down in the credits file",async()=>{
+  const credits=await read(path.join(root,"operations/image-credits.md"));
+  const pages=(await Promise.all(htmlFiles.map(read))).join("\n");
+  // A new image without a recorded origin is exactly how a licence problem creeps in.
+  const used=[...new Set([...pages.matchAll(/assets\/([a-z0-9-]+\.(?:webp|jpg|jpeg|png))/g)].map(match=>match[1]))];
+  assert.ok(used.length>5,"the page should still be using its images");
+  const missing=used.filter(file=>!credits.includes(file));
+  assert.deepEqual(missing,[],`no origin recorded for: ${missing.join(", ")}`);
+});

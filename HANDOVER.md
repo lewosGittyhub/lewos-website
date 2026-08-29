@@ -90,23 +90,13 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    alerts Robert vóór publicatie moet instellen. Geen echte productie-aanvragen of
    Stripe-betalingen in deze test.~~ **Gedaan op 29 augustus, zie `tests/load.test.mjs`.**
 
-15. **[Claude] Doe een compacte tekst-audit van de publieke Tavern-pagina.** Verwijder
-   doublures over drie nachten, maaltijden, transfers, zes stoelen, Asturias en het
-   verhaal; laat één duidelijke versie per onderwerp staan en laat links/FAQ daarnaar
-   verwijzen. Schrap generieke AI-achtige sfeerzinnen waar ze geen klantinformatie
-   toevoegen. Behoud wel concrete, bevestigde feiten: Complejo Rural de Fontecha,
-   eigen slaapkamer, inbegrepen ontbijt/lunch/diner, transfer vanaf OVD of Arriondas,
-   ongeveer zestien speeluren, prijs en First Access-regels. Controleer tegelijk dat
-   de omgevingsteksten duidelijk maken welke foto’s sfeerbeelden zijn en geen beloofde
-   activiteiten of accommodatie-afbeeldingen voorstellen.
-
-14. **[Claude, na technische blokkade] Bouw een omgevings-slide voor de Tavern.**
-   Gebruik Roberts twee aangeleverde beelden alleen na controle van commerciële
-   licentie. Voeg extra aantoonbaar vrij bruikbare beelden toe van Asturias/Arriondas/
-   Cangas de Onís, mountainbiken, waterscooters, Cangas Aventura en het Ponga-klimpark
-   richting Viboli. Bewaar bron en licentie in een intern creditsbestand dat niet
-   publiek wordt geserveerd; hotlink niet. Maak de slide responsief en toegankelijk
-   (alt-teksten, toetsenbordbediening, pauze/volgende, geen autoplay met geluid).
+11. **[Robert of Codex] Waar komen deze zeven illustraties vandaan?**
+   `tavern-double-doors`, `asturias-mountain-view`, `bear-4x4-mountain-wide`,
+   `dice-character-sheet`, `private-campaign-landscape`, `tavern-party-journey-bear` en
+   `weekend-01-dark-dice`. Ze staan sinds de lanceercommit in de repo zonder vastgelegde
+   herkomst. Gegenereerd? Zeg waarmee en of de voorwaarden commercieel gebruik toestaan.
+   Uit een bibliotheek? Noem welke en onder welke licentie. Zet het antwoord in
+   `operations/image-credits.md`. *(Punt 14 en 15 zijn afgerond, zie het logboek.)*
 
 1. **[Robert] Vul het fiscaal nummer aan in `legal/index.html`, blok `#provider`.** De
    structuur staat er; alleen het NIF/NIE ontbreekt nog, plus straks de toeristische
@@ -155,6 +145,54 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Feitelijke dubbelingen weg en een creditsbestand · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`: drie plekken waar dezelfde feiten voor de derde of vierde keer
+  stonden. *three nights* van 6 naar 5, *every meal* van 5 naar 3, *non-alcoholic* van 3
+  naar 2, en de pagina van 2364 naar 2294 woorden.
+  - De FAQ *"What's included?"* somde de hele lijst opnieuw op; hij verwijst nu naar de
+    lijst hogerop en noemt alleen wat daar níét in staat: het welkomstgeschenk en dat de
+    reis naar Asturië niet is inbegrepen.
+  - De FAQ *"How do I get there?"* en het blok *Getting here* vertelden allebei het hele
+    transferverhaal; de FAQ is teruggebracht tot het verschil.
+  - Het blok *Food* herhaalde de maaltijdenregel uit de inbegrepen-lijst.
+- Nieuw: `operations/image-credits.md` — per beeld de herkomst en de licentie. Staat in de
+  repo maar niet op de site: `/operations/*` geeft 404 en `robots.txt` sluit het uit.
+- `tests/site.test.mjs`: nieuwe test *"every image on the site is written down in the
+  credits file"*.
+
+**Waarom**
+- Item 15 vroeg expliciet om de doublures over nachten, maaltijden en transfers. Ik had
+  eerder alleen de sfeerherhaling aangepakt; dit is het feitelijke deel.
+- Item 14 vroeg om een intern creditsbestand. Dat ontbrak. Nu ligt per beeld vast waar het
+  vandaan komt, en de nieuwe test laat een beeld zonder herkomst omvallen in plaats van het
+  stil te laten meeglijden.
+
+**⚠️ Wat het opschrijven aan het licht bracht**
+- **Zeven illustraties in `tavern/assets/` hebben geen vastgelegde herkomst.** De
+  taverne-deuren, de dobbelstenen, de beer, de campagnelandschappen. Ze dateren van vóór
+  dit bestand en niemand hier weet waar ze vandaan komen. Voor een site die een pakketreis
+  verkoopt hoort dat dicht vóór publicatie: zijn ze gegenereerd, dan met welk gereedschap
+  en staan de voorwaarden commercieel gebruik toe; komen ze uit een bibliotheek, dan welke
+  en onder welke licentie. Ik heb niets ingevuld wat ik niet weet.
+- **Twee bestanden zijn foto's van mensen**, geen illustraties: die van de Game Master en
+  die van Robert. Die staan nu apart, met de toestemming erbij zoals Robert die op
+  29 augustus bevestigde.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 81 geslaagd.**
+- `grep -c "" operations/image-credits.md` en de 404-regel in `_redirects`.
+
+**Niet geverifieerd**
+- De herkomst van die zeven illustraties. Dat is een vraag aan Robert of Codex, geen
+  aanname die ik ga invullen.
+
+**Wat nu volgt**
+- Openstaand 14 en 15 zijn hiermee afgerond; de herkomstvraag staat als nieuw punt.
+
+---
 
 ### 2026-08-29 · Claude · Piekbelasting getest en de limieten vastgelegd · TE CONTROLEREN
 
