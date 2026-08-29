@@ -19,7 +19,7 @@ const databaseError=async response=>{
 const sendGuestEmail=async({email,name,people,result})=>{
   const apiKey=process.env.RESEND_API_KEY;
   const from=process.env.TAVERN_FROM_EMAIL;
-  if(!apiKey||!from)return false;
+  if(!apiKey||!from)return null;
   let subject="We received your Tavern request";
   let message="Thank you. We have received your request and will contact you with the next step.";
   if(result.status==="first_access_held"){
@@ -35,9 +35,10 @@ const sendGuestEmail=async({email,name,people,result})=>{
     subject="Your private Tavern request";
     message="Thank you. We have received your request for a private Tavern and will come back to you personally.";
   }
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${apiKey}`,"content-type":"application/json"},body:JSON.stringify({from,to:[email],reply_to:"lewos.co@gmail.com",subject,html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Hi ${escapeHtml(name)},</h1><p>${message}</p><p>The first story can only be told once.</p><p>Robert<br>The Lewos Tavern</p></div>`})});
-  if(!response.ok)console.error("First Access email error",response.status,await response.text());
-  return response.ok;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${apiKey}`,"content-type":"application/json","idempotency-key":`first-access-receipt-${result.claimId}`},body:JSON.stringify({from,to:[email],reply_to:"lewos.co@gmail.com",subject,html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Hi ${escapeHtml(name)},</h1><p>${message}</p><p>The first story can only be told once.</p><p>Robert<br>The Lewos Tavern</p></div>`})});
+  if(!response.ok){console.error("First Access email error",response.status,await response.text());return null;}
+  const delivery=await response.json();
+  return delivery.id||"resend-accepted";
 };
 
 export const handler=async event=>{
@@ -88,7 +89,18 @@ export const handler=async event=>{
     }
     result=await response.json();
   }catch(error){console.error("First Access connection error",error);return json(503,{error:"booking_service_unavailable"});}
-  const emailSent=result.duplicate?false:await sendGuestEmail({email,name,people,result});
+  let emailSent=result.receiptEmailSent===true;
+  if(!emailSent&&result.claimId){
+    let providerId=null;
+    try{providerId=await sendGuestEmail({email,name,people,result});}catch(error){console.error("First Access email connection error",error);}
+    emailSent=Boolean(providerId);
+    if(providerId){
+      try{
+        const marked=await fetch(`${supabaseUrl}/rest/v1/rpc/mark_tavern_receipt_email_sent`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_claim_id:result.claimId,p_provider_id:providerId})});
+        if(!marked.ok)console.error("First Access email mark error",marked.status,await marked.text());
+      }catch(error){console.error("First Access email mark connection error",error);}
+    }
+  }
   if(header(event,"accept").includes("application/json")) return json(200,{...result,emailSent});
   if(result.status==="first_access_held") return redirect(`/thanks/?status=held&weekend=${encodeURIComponent(result.weekendLabel)}&seats=${result.seats}`);
   if(result.status==="private_inquiry") return redirect("/contact-thanks/");

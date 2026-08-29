@@ -34,6 +34,8 @@ alter table public.tavern_seat_claims add column if not exists checkout_token_ha
 alter table public.tavern_seat_claims add column if not exists invitation_expires_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists invitation_sent_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists invitation_email_provider_id text;
+alter table public.tavern_seat_claims add column if not exists receipt_email_sent_at timestamptz;
+alter table public.tavern_seat_claims add column if not exists receipt_email_provider_id text;
 alter table public.tavern_seat_claims add column if not exists checkout_session_id text;
 alter table public.tavern_seat_claims add column if not exists checkout_session_url text;
 alter table public.tavern_seat_claims add column if not exists adult_confirmed_at timestamptz;
@@ -97,7 +99,7 @@ begin
   if p_weekend_slug='private' then
     if p_party_size < 4 then raise exception 'private_party_too_small'; end if;
     select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and status='private_inquiry' order by created_at desc limit 1;
-    if found then return jsonb_build_object('status','private_inquiry','claimId',existing_claim.id,'duplicate',true); end if;
+    if found then return jsonb_build_object('status','private_inquiry','claimId',existing_claim.id,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
     insert into tavern_seat_claims(name,email,party_size,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),now()) returning id into claim_id;
     return jsonb_build_object('status','private_inquiry','claimId',claim_id);
   end if;
@@ -108,7 +110,7 @@ begin
   perform private.cleanup_tavern_claims();
   select * into existing_claim from tavern_seat_claims where lower(email)=lower(trim(p_email)) and assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid') order by created_at limit 1;
   if found then
-    return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true);
+    return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
   end if;
   select count(*)::integer into active_claims from tavern_seat_claims where lower(email)=lower(trim(p_email)) and status in('first_access_held','payment_pending','paid');
   if active_claims >= 2 then raise exception 'email_claim_limit'; end if;
@@ -127,6 +129,23 @@ begin
 end; $$;
 revoke all on function public.register_tavern_interest(text,text,integer,text,text) from public, anon, authenticated;
 grant execute on function public.register_tavern_interest(text,text,integer,text,text) to service_role;
+
+create or replace function public.mark_tavern_receipt_email_sent(p_claim_id uuid,p_provider_id text)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare marked_id uuid;
+begin
+  update tavern_seat_claims
+    set receipt_email_sent_at=coalesce(receipt_email_sent_at,now()),receipt_email_provider_id=coalesce(receipt_email_provider_id,nullif(trim(p_provider_id),''))
+    where id=p_claim_id and receipt_email_sent_at is null
+    returning id into marked_id;
+  if marked_id is null then
+    if exists(select 1 from tavern_seat_claims where id=p_claim_id and receipt_email_sent_at is not null) then return jsonb_build_object('status','already_marked','claimId',p_claim_id); end if;
+    return jsonb_build_object('status','unknown_claim');
+  end if;
+  return jsonb_build_object('status','marked','claimId',marked_id);
+end; $$;
+revoke all on function public.mark_tavern_receipt_email_sent(uuid,text) from public, anon, authenticated;
+grant execute on function public.mark_tavern_receipt_email_sent(uuid,text) to service_role;
 
 create or replace function public.get_tavern_availability()
 returns jsonb language plpgsql security definer set search_path=public as $$

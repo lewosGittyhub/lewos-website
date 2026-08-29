@@ -135,3 +135,12 @@ test("First Access invitations have a guarded, retry-safe sender",async()=>{
   assert.match(sql,/invitation_sent_at/);
   assert.match(sql,/already_invited/);
 });
+
+test("First Access receipt delivery is durable and retry-safe",async()=>{
+  const handler=await read(path.join(root,"netlify/functions/first-access.mjs"));
+  const sql=await read(path.join(root,"database/first-access.sql"));
+  assert.match(handler,/first-access-receipt-/);
+  assert.match(handler,/mark_tavern_receipt_email_sent/);
+  assert.match(sql,/receipt_email_sent_at/);
+  assert.match(sql,/receiptEmailSent/);
+});
