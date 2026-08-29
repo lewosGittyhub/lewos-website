@@ -240,3 +240,14 @@ test("the two opening weekends never read as one booking",async()=>{
   assert.doesNotMatch(dates,/not both/i,"booking both weekends is allowed on request, so the card must not rule it out");
   assert.doesNotMatch(dates,/^30 Oct to 2 Nov<br>6 to 9 Nov$/,"two bare dates stacked read as one package");
 });
+
+test("a hidden element is never left visible by a competing display rule",async()=>{
+  // The hidden attribute only wins while nothing else sets display on the element.
+  // A class like .signup-form{display:grid} silently overrides it, which once put all
+  // three states of the First Access section on the page at the same time.
+  for(const file of htmlFiles){
+    const html=await read(file);
+    if(!/\shidden(\s|>|=)/.test(html))continue;
+    assert.match(html,/\[hidden\]\s*\{\s*display:\s*none\s*!important/,`${path.relative(root,file)} uses the hidden attribute without a [hidden] display rule to protect it`);
+  }
+});

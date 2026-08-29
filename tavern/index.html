@@ -188,6 +188,10 @@
     .booking h2 { max-width: 620px; margin-bottom: 24px; font-size: clamp(2.7rem, 5.5vw, 5.2rem); }
     .booking__lead { max-width: 570px; color: var(--beige); font-size: 1.08rem; }
     .booking__lead strong { display: block; margin-bottom: 12px; color: var(--cream); }
+    /* Een class met een eigen display wint van het hidden-attribuut van de browser.
+       Zonder deze regel staan alle drie de toestanden van de aanmeldsectie tegelijk
+       op de pagina. */
+    [hidden] { display: none !important; }
     .signup-form { display: grid; gap: 22px; padding: clamp(26px, 4vw, 42px); border: 1px solid rgba(237,230,218,.28); border-radius: var(--radius-medium); background: rgba(15,59,53,.78); box-shadow: 0 24px 65px rgba(0,0,0,.3); backdrop-filter: blur(8px); }
     .form-field { display: grid; gap: 8px; }
     .form-field label, .consent label { font: 600 .86rem/1.4 "Poppins", sans-serif; }

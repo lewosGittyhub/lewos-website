@@ -83,29 +83,86 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    met de regel in je `CLAUDE.md` dat er geen persoonsgegevens in de repo horen, maar de
    wet vraagt het nummer publiek. Dat is een bewuste keuze die jij maakt, geen fout.
    Een woonadres is **niet** nodig: gemeente en provincie volstaan en die staan er al.
-2. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
+2. **[Open vraag voor Robert] Editie 3 en een kalenderweergave.** De briefing aan Story
+   Forge plant drie aaneengesloten weekenden: 30 okt–2 nov, 6–9 nov en **13–16 nov**.
+   De site en de seed in `database/first-access.sql` kennen alleen de eerste twee. In
+   diezelfde briefing staat wel *"Elke stap gaat pas open als de vorige vol is"*, dus dit
+   kan bewust zijn. Robert noemde daarnaast een open kalender voor alle weekenden; daar
+   is in deze repo, in het dossier en in zijn eigen documenten niets over te vinden.
+   Eerst uitvragen wat dat moet worden, dan pas bouwen. De basis ligt er wel:
+   `tavern_weekends` heeft label, datum, capaciteit, volgorde en een `visible`-vlag, en de
+   pagina haalt de beschikbaarheid live op.
+3. **[Codex] Controleer de gracemarge zelf in de database.** Scenario: hold verlopen,
    betaling met `p_paid_at` 2 minuten ná `hold_expires_at` → moet `paid` opleveren, niet
    `expired`. En: `p_paid_at` 10 minuten erna → moet `expired` blijven.
-3. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
+4. **[Robert, extern] Verzekeringen en registratie.** RC- en caución-polis actief,
    RECE0033T06 ingediend, registratiecode binnen. Geen van beide assistenten kan dit.
-4. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
+5. **[Robert, extern] Definitieve klantdocumenten.** Precontractuele reisinformatie,
    boekingscontract, annulerings- en terugbetalingsvoorwaarden, minimumdeelnemers-
    clausule, klachtenprocedure — als definitieve PDF's.
-5. **[Wie het eerst kan, na 3 en 4] Vul de bedrijfsgegevens in.** In `/terms/` en
+6. **[Wie het eerst kan, na 4 en 5] Vul de bedrijfsgegevens in.** In `/terms/` en
    `/travel-information/` staan nu letterlijk *"To complete before sales"*-blokken:
    volledig adres, fiscaal nummer, telefoonnummer, toeristische registratiecode,
    bevoegde autoriteit en de insolventiegarantieverstrekker. Pas daarna mogen
    `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
    `PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs` gevuld worden.
    Zolang die leeg zijn, is betalen technisch onmogelijk — dat is bewust zo.
-6. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
+7. **[Wie het eerst kan] Spaanstalige kopie van de reisinformatie** plus het wettelijke
    standaardinformatieformulier, zoals de pagina zelf aankondigt. Bij een Spaanse tekst
    hoort een Nederlandse vertaling voor Robert.
-7. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
+8. **[Open vraag voor Robert] `noindex` op `/terms/` en `/travel-information/`.** Beide
    staan nu op `noindex, nofollow` omdat ze concept zijn. Dat moet eraf op het moment
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Claude · Verborgen blokken stonden gewoon op de pagina · TE CONTROLEREN
+
+**Wat**
+- `tavern/index.html`, `tavern/book/index.html` en `tavern/checkout/index.html` krijgen
+  allemaal de regel `[hidden] { display: none !important; }`.
+- `tests/site.test.mjs`: nieuwe test *"a hidden element is never left visible by a
+  competing display rule"*.
+
+**Waarom**
+- Het `hidden`-attribuut van de browser wint alleen zolang niets anders `display` op dat
+  element zet. `.signup-form { display: grid }` doet dat wel, en daarmee stonden **alle
+  drie de toestanden** van de First Access-sectie tegelijk op de pagina: het
+  aanmeldformulier, het blok *"Public booking is open — Book the First Edition"* én het
+  blok *"First Access is closing — no new seats can be claimed"*. Robert zag het laatste
+  staan terwijl er nog geen enkele stoel geclaimd is, en dat klopte dus ook niet.
+- Het ergste van de drie is *"Public booking is open"*. Dat nodigt uit tot betaald boeken
+  terwijl verkopen juridisch geblokkeerd is. De knop had geen werkende betaling opgeleverd
+  — de functie weigert — maar op een verkooppagina mag die tekst er simpelweg niet staan.
+- Dezelfde fout zat op de boekingspagina: `.check { display: grid }` maakte het
+  toestemmingsvakje voor filmen zichtbaar bij **beide** weekenden, terwijl het alleen bij
+  Weekend 01 hoort. De bijbehorende uitleg bleef wél verborgen, want `.notice` heeft geen
+  eigen `display`. Een gast van Weekend 02 kreeg dus een los toestemmingsvakje zonder
+  context. Bij toestemming voor beeldgebruik is dat geen schoonheidsfoutje.
+- Op `tavern/checkout/index.html` werkte het toevallig goed, omdat de betrokken elementen
+  geen eigen `display`-regel hebben. De regel staat er nu toch, zodat de volgende
+  stijlwijziging daar niet stilletjes hetzelfde veroorzaakt.
+
+**Stond dit live?**
+- Nee. `git show origin/main:tavern/index.html` kent deze blokken niet; ze zitten in de
+  22 commits die nog niet gepusht zijn. De fout is dus nooit voor bezoekers zichtbaar
+  geweest.
+
+**Hoe te controleren**
+- `node --test tests/*.test.mjs` — **gedraaid, 65 geslaagd**. De nieuwe test valt over elke
+  pagina die het `hidden`-attribuut gebruikt zonder de beschermende regel.
+- In de browser nagemeten na de fix: op `/tavern/` is alleen het aanmeldformulier
+  zichtbaar, de twee andere toestanden hebben nul hoogte en breedte. Op `/tavern/book/`
+  zijn de filmtoelichting, het filmvakje en de foutmelding alle drie verborgen.
+
+**Niet geverifieerd**
+- Niets openstaand bij dit punt.
+
+**Wat nu volgt**
+- Los hiervan: Roberts briefing plant **drie** aaneengesloten weekenden, de site en de
+  database kennen er twee. Editie 3 (13–16 november 2026) ontbreekt. Zie *Openstaand*.
+
+---
 
 ### 2026-08-29 · Claude · De twee openingsweekenden uit elkaar gehaald · TE CONTROLEREN
 
