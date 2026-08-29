@@ -28,6 +28,13 @@ toegevoegd omdat ik het eerste lees. Te ruim gelezen? Zeg het.
 en sluit het aanmeldformulier over elf dagen, zeven weken vóór het weekend van 30 oktober.
 En of `/tavern/book/` dicht moet tot de verkoop open mag.
 
+## Actuele stand — 29 augustus 2026
+
+- De betaalpoort blijft dicht tot de externe papieren en regelingen definitief zijn. Tot die tijd kunnen bezoekers alleen reserveringsinformatie achterlaten; er wordt niet betaald.
+- `/tavern/book/` hoeft daarom nu niet publiek toegankelijk te zijn. De lokale tekstwijziging in commit `e90016b` verduidelijkt dat er geen betaling of betaalgegevens worden gevraagd; die commit staat nog niet op `main`.
+- `origin/main` is lokaal voor het laatst gecontroleerd op commit `9013051`. Deze regel is een lokale overdracht en is nog niet gepusht.
+- Communicatie tussen assistenten loopt uitsluitend asynchroon via deze repository en `HANDOVER.md`: schrijven → committen → pushen → bij een volgende controle lezen. Er is geen directe chat-, status- of bevestigingsverbinding.
+
 
 ## Werkwijze — altijd in deze volgorde
 
