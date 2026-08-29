@@ -380,9 +380,25 @@ test("the surroundings are real photographs, credited and described",async()=>{
     assert.match(image,/loading="lazy"/);
     assert.match(image,/width="\d+" height="\d+"/,"give the browser the size so the page does not jump while loading");
   }
-  // The images clause in the terms promises real photographs exist. This section is
-  // where they are, and it must not let a visitor read them as pictures of the Tavern.
-  assert.match(block,/photographs of the region, not of the Tavern itself/);
+  // De sectie moet de lezer vertellen wat hij ziet. Er stond eerst "photographs of the
+  // region, not of the Tavern itself" terwijl het huis en de haard wel degelijk de Tavern
+  // zijn; Robert zag dat op 29 augustus 2026. Zeg dus dat het allebei is.
+  assert.match(block,/Some of these are the Tavern and the house you sleep in/);
+
+  // Een onderschrift mag geen plaats noemen bij een foto waarvan we de locatie niet
+  // kunnen bewijzen. Een gekochte stockfoto met "The Picos de Europa" eronder is een
+  // bewering die we niet waar kunnen maken. Alleen Roberts eigen foto's mogen een plaats
+  // noemen, want daarvan weet hij waar hij stond.
+  const credits=await read(path.join(root,"operations/image-credits.md"));
+  const eigen=bestand=>credits.split("\n").some(regel=>regel.includes(bestand)&&regel.includes("Robert's own photograph"));
+  const plaatsen=/Picos de Europa|Cantabri|Covadonga|Ponga|Ribadesella|Gij|Asturias|Arriondas|Parres/i;
+  for(const figure of block.match(/<figure[\s\S]*?<\/figure>/g)??[]){
+    const bestand=figure.match(/src="([^"?]+)/)?.[1]?.split("/").pop()??"";
+    const bijschrift=figure.match(/<figcaption>([\s\S]*?)<\/figcaption>/)?.[1]??"";
+    if(eigen(bestand))continue;
+    assert.doesNotMatch(bijschrift,plaatsen,
+      `${bestand} is geen eigen foto, dus het onderschrift mag geen plaats noemen: ${bijschrift.replace(/<[^>]+>/g," ")}`);
+  }
 });
 
 test("the photograph slider can be steered and does not move under the reader",async()=>{

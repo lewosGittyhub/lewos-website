@@ -20,7 +20,6 @@ committed to `tavern/assets/` or `assets/`.
 | `tavern/assets/surroundings-picos.webp` | The Picos de Europa above low cloud | Pexels, photographer credited there as Enrique, file `pexels-enrique72-33455263` | Pexels Licence |
 | `tavern/assets/surroundings-coast.webp` | Asturian coastline from the air | Pexels, photographer credited there as Marcio Costa, file `pexels-marcio-costa-523841540-16388707` | Pexels Licence |
 | `tavern/assets/surroundings-pasture.webp` | Misty limestone pasture with grazing cattle | Pexels, photo id `35657640` | Pexels Licence |
-| `tavern/assets/surroundings-cliffs.webp` | Gorse-covered cliffs above the sea | Pexels, photo id `34483555` | Pexels Licence |
 | `tavern/assets/surroundings-lake.webp` | Mountain lake with a footpath along the shore | Pexels, photo id `11855795` | Pexels Licence |
 
 ## Photographs of people
