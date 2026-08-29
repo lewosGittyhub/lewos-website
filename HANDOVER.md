@@ -77,6 +77,16 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+15. **[Claude] Doe een compacte tekst-audit van de publieke Tavern-pagina.** Verwijder
+   doublures over drie nachten, maaltijden, transfers, zes stoelen, Asturias en het
+   verhaal; laat één duidelijke versie per onderwerp staan en laat links/FAQ daarnaar
+   verwijzen. Schrap generieke AI-achtige sfeerzinnen waar ze geen klantinformatie
+   toevoegen. Behoud wel concrete, bevestigde feiten: Complejo Rural de Fontecha,
+   eigen slaapkamer, inbegrepen ontbijt/lunch/diner, transfer vanaf OVD of Arriondas,
+   ongeveer zestien speeluren, prijs en First Access-regels. Controleer tegelijk dat
+   de omgevingsteksten duidelijk maken welke foto’s sfeerbeelden zijn en geen beloofde
+   activiteiten of accommodatie-afbeeldingen voorstellen.
+
 14. **[Claude, na technische blokkade] Bouw een omgevings-slide voor de Tavern.**
    Gebruik Roberts twee aangeleverde beelden alleen na controle van commerciële
    licentie. Voeg extra aantoonbaar vrij bruikbare beelden toe van Asturias/Arriondas/
@@ -132,6 +142,14 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
    dat ze definitief worden — zet dat niet stilzwijgend om.
 
 ## Logboek — nieuwste bovenaan
+
+### 2026-08-29 · Codex · Feedback over herhaling en echtheid doorgezet · TE CONTROLEREN
+
+Roberts vriend vindt de site visueel sterk, maar signaleert herhaling en te veel
+AI-achtige formuleringen. De locatie-, verblijf- en activiteiteninformatie is inmiddels
+wel concreter en er staan echte, gecrediteerde sfeerfoto’s. Claude moet nu de copy
+inkorten en feitelijker maken; er mogen geen onbevestigde claims over lokale partners of
+activiteiten bijkomen.
 
 ### 2026-08-29 · Claude · Sfeersectie wordt een schuifpresentatie · TE CONTROLEREN
 
