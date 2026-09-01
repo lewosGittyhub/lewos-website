@@ -165,7 +165,7 @@ test("one token can only ever belong to one participant",async()=>{
   // Een uniek index maakt hier een regel van in plaats van een belofte.
   assert.match(migration,/create unique index if not exists tavern_media_participants_token_idx on public\.tavern_media_participants \(invitation_token_hash\) where invitation_token_hash is not null/);
   // En de opzoeking gaat op de hash, niet op iets wat de bezoeker zelf kan kiezen.
-  assert.match(migration,/from tavern_media_participants where invitation_token_hash=p_token_hash/);
+  assert.match(migration,/from public\.tavern_media_participants where invitation_token_hash=p_token_hash/);
 });
 
 test("the function only ever sends a hash to the database",async()=>{
@@ -310,8 +310,8 @@ test("withdrawal is recorded rather than erased",async()=>{
   assert.equal(response.statusCode,200);
   assert.equal(JSON.parse(response.body).status,"withdrawn");
   const migration=await read("database/filming-consent.sql");
-  assert.match(migration,/update tavern_media_consents set withdrawn_at=now\(\)/);
-  assert.doesNotMatch(migration,/delete from tavern_media_consents/,"a withdrawal is evidence and may not be deleted");
+  assert.match(migration,/update public\.tavern_media_consents set withdrawn_at=now\(\)/);
+  assert.doesNotMatch(migration,/delete from public\.tavern_media_consents/,"a withdrawal is evidence and may not be deleted");
 });
 
 // ---------------------------------------------------------------- wie ziet wat
@@ -344,7 +344,7 @@ test("a participant link returns only that participant",async()=>{
 test("Weekend 01 needs a personal agreement and Weekend 02 is never dragged into it",async()=>{
   const migration=await read("database/filming-consent.sql");
   // Dit staat in de database, niet alleen in een formulier: een formulier is te omzeilen.
-  assert.match(migration,/create or replace function public\.tavern_media_agreement_required\(p_weekend_slug text\)\s*\nreturns boolean language sql immutable as \$\$ select p_weekend_slug='weekend-01'; \$\$;/);
+  assert.match(migration,/create or replace function public\.tavern_media_agreement_required\(p_weekend_slug text\)\s*\nreturns boolean language sql immutable set search_path='' as \$\$ select p_weekend_slug='weekend-01'; \$\$;/);
   // Elke ingang controleert het opnieuw.
   const guarded=migration.match(/if not public\.tavern_media_agreement_required\(weekend\.slug\) then/g)||[];
   assert.ok(guarded.length>=4,`every entry point must check it, found ${guarded.length}`);

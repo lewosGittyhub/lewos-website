@@ -335,6 +335,98 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · Lege search_path op de mediafuncties, na Codex' bevinding · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `eb00a0c`,
+`origin/main` nog steeds `9013051`.
+
+**Codex had gelijk, en het is geen schoonheidsfoutje.** Alle tien `security definer`-functies
+in `database/filming-consent.sql` draaiden met `set search_path=public`. Zo'n functie draait
+met de rechten van zijn eigenaar, maar de aanroeper bepaalt nog steeds wat `public` betekent:
+wie zijn eigen schema ervóór zet, laat zijn eigen tabel of functie uitvoeren met andermans
+rechten. Dat is een rechtenlek, geen stijlkwestie.
+
+**Wat er veranderd is.** Alle elf functies staan nu op `set search_path=''` — de tien
+definers plus `tavern_media_agreement_required`, die er nog helemaal geen had; de
+Supabase-linter (`function_search_path_mutable`) wil hem op élke functie. Daarbij zijn
+**47 verwijzingen** volledig gekwalificeerd, verdeeld over: `register_tavern_media_participants`
+(6), `issue_tavern_media_invitation` (5), `mark_tavern_media_invitation_sent` (1),
+`revoke_tavern_media_invitation` (1), `get_tavern_media_agreement_state` (6),
+`record_tavern_media_consent` (11), `withdraw_tavern_media_consent` (5),
+`get_tavern_media_progress` (7), `private.cleanup_tavern_media_invitations` (2) en
+`private.purge_tavern_media_records` (3). Ook de zestien `%rowtype`-declaraties: die worden
+net zo goed via de search_path opgezocht en zouden er even hard op stuklopen.
+
+**Twee dingen die ik onderweg tegenkwam en heb rechtgezet.**
+1. `purge_tavern_media_records` gebruikte de doeltabel óók als kolomkwalificatie
+   (`... where participant_id=tavern_media_participants.id`). Met een gekwalificeerde
+   `delete from public.…` wordt dat dubbelzinnig, dus die query heeft nu een eigen alias.
+2. De audit-referentie stond op `encode(gen_random_bytes(12),'hex')`. `gen_random_bytes`
+   komt uit pgcrypto, en Supabase zet die extensie in het schema `extensions` — niet te
+   vinden vanuit een functie met een lege search_path. Het is nu
+   `replace(gen_random_uuid()::text,'-','')`; `gen_random_uuid()` zit sinds PostgreSQL 13 in
+   de kern. Daarmee leunt de hele migratie nergens meer op een extensie. Let op: dit
+   verandert de vorm van `audit_reference` van 24 naar 32 hextekens. Er staat nog nergens
+   data, dus dat kan nu nog kosteloos.
+
+Ook toegevoegd: `create schema if not exists private;` met dezelfde `revoke` als in
+`first-access.sql`. Het bestand zei al "draai dit ná first-access.sql", maar zonder die
+regels faalt het stilletjes als iemand het toch als eerste draait. Allebei idempotent.
+
+**Rechten en RLS nagelopen, niets aan veranderd.** Elf functies, elf `revoke`s van `public`,
+`anon` en `authenticated`. Negen publieke functies, negen `grant execute` en alle negen
+alleen naar `service_role`. De twee `private.`-functies krijgen van niemand uitvoerrecht.
+RLS staat aan op alle drie de mediatabellen, er is geen enkele policy, en de tabelrechten
+zijn ook los ingetrokken. Dat was al zo en is zo gebleven.
+
+**Nieuwe statische regressietests:** `tests/media-database.test.mjs`, twaalf stuks. Lege
+search_path op élke functie · geen kale verwijzing in een functiebody · gekwalificeerde
+`%rowtype` · geen afhankelijkheid buiten `pg_catalog` · de exacte `revoke` per functie ·
+`service_role` als enige begunstigde · geen grant op de `private.`-functies · RLS aan zonder
+policy · en dat deze migratie de betaalpoort en de mediaschakelaar niet aanraakt.
+
+**Die tests zijn zelf ook getest.** Statische tests kunnen makkelijk stilletjes over nul
+gevallen lopen, dus ik heb twaalf bewuste breuken in de migratie aangebracht en gekeken of
+ze allemaal opvallen: search_path terug naar `public`, search_path helemaal weg, een tabel
+ontkwalificeerd, een `%rowtype` ontkwalificeerd, een functieaanroep ontkwalificeerd, een
+grant naar `authenticated`, een grant op een `private.`-functie, een `revoke` weggehaald,
+RLS uit, een policy erbij, pgcrypto terug, en een nieuwe functie zónder search_path.
+**Twaalf van de twaalf betrapt.** Daarna de migratie byte-voor-byte teruggezet en dat
+gecontroleerd met `diff`.
+
+Eén ding kwam daarbij aan het licht: mijn eigen toelichtingen in de SQL noemen `search_path=public`
+en `gen_random_bytes` juist omdát ze fout zijn, en daar sloegen de tests op aan. De tests
+strippen nu eerst alle `--`-regels, en er is een test bij die controleert dát dat strippen
+de SQL zelf niet weghaalt — anders zou de hele set stilletjes waardeloos worden.
+
+**PostgreSQL 17.6.** Nagelopen, niet gedraaid: er staat geen PostgreSQL op deze Mac. Elke
+aangeroepen functie zit in `pg_catalog` (`jsonb_build_object`, `make_interval`, `clock_timestamp`,
+`char_length`, `coalesce`, `count`, `greatest`, `least`, `nullif`, `replace`, `trim`, `lower`,
+`gen_random_uuid`, de `jsonb_*`-familie) en `pg_catalog` wordt altijd impliciet doorzocht,
+ook met een lege search_path — net als de operatoren `->>`, `!~` en `||`. Gebruikte typen:
+`uuid`, `text`, `jsonb`, `boolean`, `timestamptz`, `integer`, `interval`. De nieuwste
+constructie in het bestand is `gen_random_uuid()` in de kern (13); verder niets van na 9.6.
+Geen enkele constructie die in 17 vervallen of gewijzigd is.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **138 tests, 0 fouten**
+(was 126; nieuw: 12 in `tests/media-database.test.mjs`). Drie verouderde tekstasserties in
+`tests/media-consent.test.mjs` zijn meegetrokken omdat de SQL nu gekwalificeerd is.
+
+**Niet geverifieerd.** De migratie is niet gedraaid — geen PostgreSQL hier, en zeker niet
+tegen productie. Alles hierboven volgt uit lezen en statisch controleren. **Codex: dit is
+precies jouw stuk.** De integratieproeven staan onderaan `tests/database-integration.sql`.
+
+**Wat ik gevonden heb en bewust heb laten liggen.** `database/first-access.sql` heeft exact
+hetzelfde probleem: **vijftien** `security definer`-functies op `set search_path=public`, met
+ongeveer **55** onbekwalificeerde verwijzingen. Dat is de boekings- en betaalmigratie, hij
+draait al in productie, en de opdracht was uitdrukkelijk om aan de betaalpoort niets te
+veranderen. Ik heb hem daarom niet aangeraakt. Hij verdient dezelfde behandeling in een
+eigen ronde, met een eigen integratierun. **Robert: zeg het als je wil dat ik dat oppak.**
+
+**Wat nu volgt.** Codex maakt een tijdelijke Supabase-ontwikkelbranch, draait de migratie en
+de rollback-integratietests, en gooit de branch daarna weg. Aan de betaalpoort en de
+mediaschakelaar is niets veranderd; allebei staan ze nog dicht.
+
 ### 2026-09-01 · Claude · De vastlopende testsuite: gevonden, begrensd, en één echte bug eronder · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `4722de7`.

@@ -7,7 +7,18 @@
 -- Tijd onder een slot: net als in `first-access.sql` gaat elke vergelijking met een
 -- vervaltijd over `clock_timestamp()`, en leggen tijdstempels die alleen vastleggen
 -- wanneer iets gebeurde `now()` vast.
+--
+-- Zoekpad: elke functie hieronder draait met `set search_path=''`, en élke verwijzing naar
+-- een tabel, functie of `%rowtype` staat er voluit met zijn schema bij. Met
+-- `search_path=public` bepaalt de aanroeper wat `public` betekent: wie een eigen schema
+-- vóór `public` zet, krijgt zijn eigen tabel of functie uitgevoerd met de rechten van de
+-- eigenaar van deze `security definer`-functies. Leeg is de enige veilige waarde.
+-- `tests/media-database.test.mjs` bewaakt dat voor elke functie die er later bij komt.
 create extension if not exists pgcrypto;
+-- Het schema staat ook in `first-access.sql`; deze twee regels staan hier zodat dit bestand
+-- niet stilletjes faalt als iemand het als eerste draait. Allebei idempotent.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
 
 -- Elke versie van de overeenkomst staat hier met de hash van de exacte tekst erbij.
 -- Zonder die hash kun je later niet bewijzen wélke woorden iemand geaccepteerd heeft,
@@ -57,7 +68,10 @@ create table if not exists public.tavern_media_consents (
   -- waarde mag nooit uit `standard_use_consent` worden afgeleid.
   paid_advertising_consent boolean,
   confirmation_method text not null default 'secure_link',
-  audit_reference text unique not null default encode(gen_random_bytes(12),'hex'),
+  -- `gen_random_uuid()` zit sinds PostgreSQL 13 in de kern. De vorige vorm gebruikte
+  -- `gen_random_bytes()` uit pgcrypto, en die extensie staat op Supabase in het schema
+  -- `extensions` — niet te vinden vanuit een functie met een lege `search_path`.
+  audit_reference text unique not null default replace(gen_random_uuid()::text,'-',''),
   recorded_at timestamptz not null default now(),
   withdrawn_at timestamptz
 );
@@ -91,18 +105,18 @@ revoke all on table public.tavern_media_consents from public, anon, authenticate
 -- professioneel gefilmd; die gasten mogen hier nooit in terechtkomen. Dit staat als regel
 -- in de database en niet alleen in de front-end, want een formulier is te omzeilen.
 create or replace function public.tavern_media_agreement_required(p_weekend_slug text)
-returns boolean language sql immutable as $$ select p_weekend_slug='weekend-01'; $$;
+returns boolean language sql immutable set search_path='' as $$ select p_weekend_slug='weekend-01'; $$;
 revoke all on function public.tavern_media_agreement_required(text) from public, anon, authenticated;
 grant execute on function public.tavern_media_agreement_required(text) to service_role;
 
 -- De hoofdboeker geeft de deelnemers door. Namen en e-mailadressen, meer niet.
 create or replace function public.register_tavern_media_participants(p_claim_id uuid,p_participants jsonb)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare claim tavern_seat_claims%rowtype; weekend tavern_weekends%rowtype; entry jsonb; naam text; adres text; toegevoegd integer:=0;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; entry jsonb; naam text; adres text; toegevoegd integer:=0;
 begin
-  select * into claim from tavern_seat_claims where id=p_claim_id for update;
+  select * into claim from public.tavern_seat_claims where id=p_claim_id for update;
   if not found then return jsonb_build_object('status','unknown_claim'); end if;
-  select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
+  select * into weekend from public.tavern_weekends where id=claim.assigned_weekend_id;
   if not found then return jsonb_build_object('status','unknown_weekend'); end if;
   if not public.tavern_media_agreement_required(weekend.slug) then
     return jsonb_build_object('status','not_required','weekend',weekend.slug);
@@ -115,8 +129,8 @@ begin
     if char_length(naam)<2 or char_length(naam)>120 then raise exception 'invalid_participant_name'; end if;
     if adres !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then raise exception 'invalid_participant_email'; end if;
     -- Twee keer dezelfde deelnemer doorgeven maakt geen tweede rij en geen tweede link.
-    if exists(select 1 from tavern_media_participants where claim_id=claim.id and email=adres) then continue; end if;
-    insert into tavern_media_participants(claim_id,weekend_id,full_name,email,adult_declared)
+    if exists(select 1 from public.tavern_media_participants where claim_id=claim.id and email=adres) then continue; end if;
+    insert into public.tavern_media_participants(claim_id,weekend_id,full_name,email,adult_declared)
       values(claim.id,weekend.id,naam,adres,coalesce((entry->>'adultDeclared')::boolean,false));
     toegevoegd:=toegevoegd+1;
   end loop;
@@ -128,20 +142,20 @@ grant execute on function public.register_tavern_media_participants(uuid,jsonb) 
 -- De ruwe token verlaat de aanroepende functie nooit richting database: hier komt alleen
 -- de sha256-hash binnen, net als bij de First Access-uitnodigingen.
 create or replace function public.issue_tavern_media_invitation(p_participant_id uuid,p_token_hash text,p_window_days integer default 21)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare deelnemer tavern_media_participants%rowtype; weekend tavern_weekends%rowtype; vervalt timestamptz;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare deelnemer public.tavern_media_participants%rowtype; weekend public.tavern_weekends%rowtype; vervalt timestamptz;
 begin
   if p_token_hash is null or char_length(p_token_hash)<>64 then raise exception 'invalid_token_hash'; end if;
-  select * into deelnemer from tavern_media_participants where id=p_participant_id for update;
+  select * into deelnemer from public.tavern_media_participants where id=p_participant_id for update;
   if not found then return jsonb_build_object('status','unknown_participant'); end if;
   if deelnemer.status='withdrawn' then return jsonb_build_object('status','participant_withdrawn'); end if;
-  select * into weekend from tavern_weekends where id=deelnemer.weekend_id;
+  select * into weekend from public.tavern_weekends where id=deelnemer.weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required'); end if;
   if deelnemer.invitation_token_hash is not null and deelnemer.invitation_expires_at>clock_timestamp() then
     return jsonb_build_object('status','already_invited','participantId',deelnemer.id);
   end if;
   vervalt:=clock_timestamp()+make_interval(days=>greatest(1,least(p_window_days,60)));
-  update tavern_media_participants
+  update public.tavern_media_participants
     set invitation_token_hash=p_token_hash,invitation_expires_at=vervalt,invitation_sent_at=null,invitation_email_provider_id=null,
         status=case when status in('granted','declined') then status else 'invited' end
     where id=deelnemer.id;
@@ -151,10 +165,10 @@ revoke all on function public.issue_tavern_media_invitation(uuid,text,integer) f
 grant execute on function public.issue_tavern_media_invitation(uuid,text,integer) to service_role;
 
 create or replace function public.mark_tavern_media_invitation_sent(p_participant_id uuid,p_provider_id text)
-returns jsonb language plpgsql security definer set search_path=public as $$
+returns jsonb language plpgsql security definer set search_path='' as $$
 declare gemarkeerd uuid;
 begin
-  update tavern_media_participants
+  update public.tavern_media_participants
     set invitation_sent_at=coalesce(invitation_sent_at,now()),invitation_email_provider_id=coalesce(invitation_email_provider_id,nullif(trim(p_provider_id),''))
     where id=p_participant_id and invitation_token_hash is not null and invitation_expires_at>clock_timestamp()
     returning id into gemarkeerd;
@@ -166,10 +180,10 @@ grant execute on function public.mark_tavern_media_invitation_sent(uuid,text) to
 
 -- Een link intrekken. Gebeurt bij een mislukte verzending, en als iemand zijn link kwijt is.
 create or replace function public.revoke_tavern_media_invitation(p_participant_id uuid,p_token_hash text)
-returns jsonb language plpgsql security definer set search_path=public as $$
+returns jsonb language plpgsql security definer set search_path='' as $$
 declare ingetrokken uuid;
 begin
-  update tavern_media_participants
+  update public.tavern_media_participants
     set invitation_token_hash=null,invitation_expires_at=null,invitation_sent_at=null,invitation_email_provider_id=null,
         status=case when status='invited' then 'pending' else status end
     where id=p_participant_id and invitation_token_hash=p_token_hash
@@ -183,20 +197,20 @@ grant execute on function public.revoke_tavern_media_invitation(uuid,text) to se
 -- Wat één link mag openen: precies één deelnemer, en alleen zijn eigen gegevens. Er komt
 -- geen naam, geen e-mailadres en geen keuze van een andere gast uit deze functie.
 create or replace function public.get_tavern_media_agreement_state(p_token_hash text,p_agreement_version text)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare deelnemer tavern_media_participants%rowtype; weekend tavern_weekends%rowtype; huidige tavern_media_consents%rowtype;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare deelnemer public.tavern_media_participants%rowtype; weekend public.tavern_weekends%rowtype; huidige public.tavern_media_consents%rowtype;
 begin
   if p_token_hash is null or char_length(p_token_hash)<>64 then return jsonb_build_object('status','invalid_link'); end if;
-  select * into deelnemer from tavern_media_participants where invitation_token_hash=p_token_hash;
+  select * into deelnemer from public.tavern_media_participants where invitation_token_hash=p_token_hash;
   if not found then return jsonb_build_object('status','invalid_link'); end if;
   if deelnemer.invitation_expires_at is null or deelnemer.invitation_expires_at<=clock_timestamp() then
     return jsonb_build_object('status','link_expired');
   end if;
-  select * into weekend from tavern_weekends where id=deelnemer.weekend_id;
+  select * into weekend from public.tavern_weekends where id=deelnemer.weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required'); end if;
   -- Alleen een toestemming voor déze versie telt. Een oudere versie is inhoudelijk een
   -- andere tekst, en daar kan niemand ongevraagd aan gebonden worden.
-  select * into huidige from tavern_media_consents
+  select * into huidige from public.tavern_media_consents
     where participant_id=deelnemer.id and agreement_version=p_agreement_version and withdrawn_at is null;
   return jsonb_build_object(
     'status','ready',
@@ -218,33 +232,33 @@ grant execute on function public.get_tavern_media_agreement_state(text,text) to 
 -- De inzending zelf. Idempotent: een tweede keer versturen levert dezelfde audit-referentie
 -- op in plaats van een tweede rij of een stilzwijgende overschrijving.
 create or replace function public.record_tavern_media_consent(p_token_hash text,p_agreement_version text,p_agreement_hash text,p_standard_use boolean,p_paid_advertising boolean)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare deelnemer tavern_media_participants%rowtype; weekend tavern_weekends%rowtype; overeenkomst tavern_media_agreements%rowtype; bestaande tavern_media_consents%rowtype; nieuwe tavern_media_consents%rowtype;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare deelnemer public.tavern_media_participants%rowtype; weekend public.tavern_weekends%rowtype; overeenkomst public.tavern_media_agreements%rowtype; bestaande public.tavern_media_consents%rowtype; nieuwe public.tavern_media_consents%rowtype;
 begin
   if p_token_hash is null or char_length(p_token_hash)<>64 then return jsonb_build_object('status','invalid_link'); end if;
   -- Een lege keuze is geen keuze. De aanroeper moet expliciet ja of nee doorgeven.
   if p_standard_use is null then raise exception 'consent_choice_required'; end if;
-  select * into overeenkomst from tavern_media_agreements where version=p_agreement_version;
+  select * into overeenkomst from public.tavern_media_agreements where version=p_agreement_version;
   if not found then return jsonb_build_object('status','unknown_agreement_version'); end if;
   -- De tekst die de gast te zien kreeg moet de tekst zijn die is goedgekeurd.
   if overeenkomst.content_hash<>p_agreement_hash then return jsonb_build_object('status','agreement_text_mismatch'); end if;
-  select * into deelnemer from tavern_media_participants where invitation_token_hash=p_token_hash for update;
+  select * into deelnemer from public.tavern_media_participants where invitation_token_hash=p_token_hash for update;
   if not found then return jsonb_build_object('status','invalid_link'); end if;
   if deelnemer.invitation_expires_at is null or deelnemer.invitation_expires_at<=clock_timestamp() then
     return jsonb_build_object('status','link_expired');
   end if;
   if not deelnemer.adult_declared then return jsonb_build_object('status','adult_declaration_required'); end if;
-  select * into weekend from tavern_weekends where id=deelnemer.weekend_id;
+  select * into weekend from public.tavern_weekends where id=deelnemer.weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required'); end if;
-  select * into bestaande from tavern_media_consents
+  select * into bestaande from public.tavern_media_consents
     where participant_id=deelnemer.id and agreement_version=p_agreement_version and withdrawn_at is null;
   if found then
     return jsonb_build_object('status','already_recorded','participantId',deelnemer.id,'auditReference',bestaande.audit_reference,'recordedAt',bestaande.recorded_at,'standardUseConsent',bestaande.standard_use_consent,'paidAdvertisingConsent',bestaande.paid_advertising_consent);
   end if;
-  insert into tavern_media_consents(participant_id,agreement_version,agreement_content_hash,standard_use_consent,paid_advertising_consent)
+  insert into public.tavern_media_consents(participant_id,agreement_version,agreement_content_hash,standard_use_consent,paid_advertising_consent)
     values(deelnemer.id,p_agreement_version,overeenkomst.content_hash,p_standard_use,p_paid_advertising)
     returning * into nieuwe;
-  update tavern_media_participants set status=case when p_standard_use then 'granted' else 'declined' end where id=deelnemer.id;
+  update public.tavern_media_participants set status=case when p_standard_use then 'granted' else 'declined' end where id=deelnemer.id;
   return jsonb_build_object('status','recorded','participantId',deelnemer.id,'auditReference',nieuwe.audit_reference,'recordedAt',nieuwe.recorded_at,'standardUseConsent',nieuwe.standard_use_consent,'paidAdvertisingConsent',nieuwe.paid_advertising_consent);
 end; $$;
 revoke all on function public.record_tavern_media_consent(text,text,text,boolean,boolean) from public, anon, authenticated;
@@ -253,17 +267,17 @@ grant execute on function public.record_tavern_media_consent(text,text,text,bool
 -- Intrekken. De oude rij blijft staan met een tijdstempel; er wordt niets weggegooid,
 -- want juist het bewijs dát er ooit toestemming was moet controleerbaar blijven.
 create or replace function public.withdraw_tavern_media_consent(p_token_hash text,p_agreement_version text)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare deelnemer tavern_media_participants%rowtype; ingetrokken tavern_media_consents%rowtype;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare deelnemer public.tavern_media_participants%rowtype; ingetrokken public.tavern_media_consents%rowtype;
 begin
   if p_token_hash is null or char_length(p_token_hash)<>64 then return jsonb_build_object('status','invalid_link'); end if;
-  select * into deelnemer from tavern_media_participants where invitation_token_hash=p_token_hash for update;
+  select * into deelnemer from public.tavern_media_participants where invitation_token_hash=p_token_hash for update;
   if not found then return jsonb_build_object('status','invalid_link'); end if;
-  update tavern_media_consents set withdrawn_at=now()
+  update public.tavern_media_consents set withdrawn_at=now()
     where participant_id=deelnemer.id and agreement_version=p_agreement_version and withdrawn_at is null
     returning * into ingetrokken;
   if not found then return jsonb_build_object('status','nothing_to_withdraw'); end if;
-  update tavern_media_participants set status='withdrawn' where id=deelnemer.id;
+  update public.tavern_media_participants set status='withdrawn' where id=deelnemer.id;
   return jsonb_build_object('status','withdrawn','participantId',deelnemer.id,'auditReference',ingetrokken.audit_reference,'withdrawnAt',ingetrokken.withdrawn_at);
 end; $$;
 revoke all on function public.withdraw_tavern_media_consent(text,text) from public, anon, authenticated;
@@ -271,23 +285,23 @@ grant execute on function public.withdraw_tavern_media_consent(text,text) to ser
 
 -- Wat de hoofdboeker te zien krijgt: twee getallen. Geen namen, geen adressen, geen keuzes.
 create or replace function public.get_tavern_media_progress(p_progress_token_hash text,p_agreement_version text)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare claim tavern_seat_claims%rowtype; weekend tavern_weekends%rowtype; totaal integer; afgerond integer;
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; totaal integer; afgerond integer;
 begin
   if p_progress_token_hash is null or char_length(p_progress_token_hash)<>64 then return jsonb_build_object('status','invalid_link'); end if;
-  select * into claim from tavern_seat_claims where media_progress_token_hash=p_progress_token_hash;
+  select * into claim from public.tavern_seat_claims where media_progress_token_hash=p_progress_token_hash;
   if not found then return jsonb_build_object('status','invalid_link'); end if;
   if claim.media_progress_expires_at is null or claim.media_progress_expires_at<=clock_timestamp() then
     return jsonb_build_object('status','link_expired');
   end if;
-  select * into weekend from tavern_weekends where id=claim.assigned_weekend_id;
+  select * into weekend from public.tavern_weekends where id=claim.assigned_weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required','weekend',weekend.slug); end if;
-  select count(*) into totaal from tavern_media_participants where claim_id=claim.id;
+  select count(*) into totaal from public.tavern_media_participants where claim_id=claim.id;
   -- Alleen een levende toestemming voor déze versie telt mee. Een nieuwe versie zet de
   -- teller dus terug, en dat is de bedoeling: die tekst heeft nog niemand gezien.
-  select count(*) into afgerond from tavern_media_participants deelnemer
+  select count(*) into afgerond from public.tavern_media_participants deelnemer
     where deelnemer.claim_id=claim.id
-      and exists(select 1 from tavern_media_consents toestemming
+      and exists(select 1 from public.tavern_media_consents toestemming
                  where toestemming.participant_id=deelnemer.id
                    and toestemming.agreement_version=p_agreement_version
                    and toestemming.withdrawn_at is null);
@@ -298,13 +312,13 @@ grant execute on function public.get_tavern_media_progress(text,text) to service
 
 -- Verlopen links vervallen. De toestemming zelf blijft staan: die is het bewijs.
 create or replace function private.cleanup_tavern_media_invitations()
-returns void language plpgsql security definer set search_path=public as $$
+returns void language plpgsql security definer set search_path='' as $$
 begin
-  update tavern_media_participants
+  update public.tavern_media_participants
     set invitation_token_hash=null,invitation_expires_at=null,
         status=case when status='invited' then 'expired' else status end
     where invitation_token_hash is not null and invitation_expires_at<=clock_timestamp();
-  update tavern_seat_claims
+  update public.tavern_seat_claims
     set media_progress_token_hash=null,media_progress_expires_at=null
     where media_progress_token_hash is not null and media_progress_expires_at<=clock_timestamp();
 end; $$;
@@ -314,13 +328,13 @@ revoke all on function private.cleanup_tavern_media_invitations() from public, a
 -- bevestigd en mag niet verzonnen worden. Wie deze functie aanroept geeft hem mee, en dat
 -- is een bewuste handeling die in het draaiboek hoort te staan.
 create or replace function private.purge_tavern_media_records(p_retention interval)
-returns jsonb language plpgsql security definer set search_path=public as $$
+returns jsonb language plpgsql security definer set search_path='' as $$
 declare verwijderd integer;
 begin
   if p_retention is null or p_retention<interval '1 day' then raise exception 'retention_period_required'; end if;
-  delete from tavern_media_participants
-    where created_at<clock_timestamp()-p_retention
-      and not exists(select 1 from tavern_media_consents where participant_id=tavern_media_participants.id and withdrawn_at is null);
+  delete from public.tavern_media_participants as deelnemer
+    where deelnemer.created_at<clock_timestamp()-p_retention
+      and not exists(select 1 from public.tavern_media_consents where participant_id=deelnemer.id and withdrawn_at is null);
   get diagnostics verwijderd=row_count;
   return jsonb_build_object('status','purged','participants',verwijderd);
 end; $$;

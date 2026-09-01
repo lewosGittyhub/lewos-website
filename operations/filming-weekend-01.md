@@ -146,6 +146,38 @@ granted to `service_role` only: `tavern_media_agreement_required`,
 `withdraw_tavern_media_consent`, `get_tavern_media_progress`, plus
 `private.cleanup_tavern_media_invitations` and `private.purge_tavern_media_records`.
 
+### Search path — why every reference carries its schema
+
+Every function in `database/filming-consent.sql` runs with `set search_path=''`, and every
+table, function and `%rowtype` in a function body is written out with its schema
+(`public.tavern_media_participants`, `public.tavern_media_agreement_required(...)`).
+
+This matters because these are `SECURITY DEFINER` functions: they run with the rights of
+their owner, not of the caller. With `set search_path=public` the caller still decides what
+`public` resolves to — put your own schema in front of it and your table or your function
+gets used, with the owner's rights. Supabase's current guidance is an empty search path plus
+fully-qualified names, and that is what this migration does. `pg_catalog` is always searched
+implicitly, so the built-ins (`now()`, `jsonb_build_object()`, `count()`, `gen_random_uuid()`)
+keep working.
+
+One consequence worth remembering: nothing here may depend on an extension. The audit
+reference used to be `encode(gen_random_bytes(12),'hex')`, and `gen_random_bytes` comes from
+pgcrypto, which Supabase installs in the `extensions` schema — unreachable from a function
+with an empty search path. It is now `replace(gen_random_uuid()::text,'-','')`, which is core
+PostgreSQL from version 13 onwards.
+
+`tests/media-database.test.mjs` guards all of this statically, including for functions that
+are added later: an empty search path on every function, a schema on every reference, the
+exact `revoke` per function, `service_role` as the only grantee, no grant at all on the two
+`private.` functions, RLS on and no policy. Those guards were checked against twelve
+deliberate breakages and caught all twelve.
+
+**Still open, and not part of this work:** `database/first-access.sql` has the same pattern —
+fifteen `SECURITY DEFINER` functions on `set search_path=public` with roughly fifty-five
+unqualified references. That is the booking and payment migration and it is already applied,
+so it was left alone here. It deserves the same treatment in its own round, with its own
+integration run.
+
 ### Row level security
 
 RLS is enabled on all three new tables and **no policy is created**, which is the same
