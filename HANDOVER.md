@@ -335,6 +335,81 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · De operator-flow gebouwd; de mediaflow is compleet · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `b8e5ea5`.
+Niets gepusht, gedeployed of gemigreerd.
+
+**Robert heeft gekozen: de operator voert de deelnemers in.** Daarmee zijn de twee gaten uit
+het vorige item gedicht, en is er iets vervallen dat we dachten nodig te hebben.
+
+**Wat er vervallen is, en waarom dat goed nieuws is.** De voortgangstoken op de claim bestaat
+niet meer. In de operator-flow is er niemand aan wie je zo'n link geeft: Robert leest de
+teller zelf met `service_role`. Dus zijn de twee kolommen, de unieke index, de opschoonregels
+én de publieke `?progress=`-route weg. `get_tavern_media_progress` draait nu op een claim-id
+in plaats van een tokenhash. **Eén soort token minder, één publieke route minder.** Dat is
+minder om fout te doen, en het was de hele winst van deze keuze.
+
+**Wat er bij gekomen is.**
+- `scripts/media-participants.mjs` — het operatorgereedschap, met vier opdrachten: `list`,
+  `register`, `revoke` en `progress`. Twee remmen op elke schrijfactie: de mediapoort moet
+  open zijn, én `--commit` moet erbij. Lezen mag altijd; zonder lijst kun je geen link
+  opnieuw uitgeven.
+- `public.revoke_tavern_media_participant_link(uuid)` — intrekken door de operator. De
+  bestaande variant eist de tokenhash en blijft bestaan: die is voor het uitnodigingsscript,
+  dat de hash net zelf heeft aangemaakt, en daar is die eis een veiligheidscontrole tegen het
+  intrekken van de verkeerde link. Een operator die een kwijtgeraakte link intrekt heeft die
+  hash niet en hoeft hem ook niet te hebben.
+- `operations/media-operator-guide.md` — de gebruiksaanwijzing.
+
+**Twee dingen die ik expliciet gescheiden heb gehouden.** Een link intrekken is níét een
+toestemming intrekken: `revoke_tavern_media_participant_link` raakt `tavern_media_consents`
+niet aan, en een test bewaakt dat. En de teller geeft twee getallen terug en verder niets —
+ook de operator krijgt daar geen namen of keuzes uit. Wil hij weten wie er nog moet, dan is
+dat `list`. Wat een functie niet teruggeeft, kan ook niet per ongeluk ergens terechtkomen.
+
+**Registratie zit achter de poort, en dat is bewust.** Zolang de overeenkomst niet is
+goedgekeurd hoort er geen naam of e-mailadres van een gast in die tabellen te staan. Het
+script weigert dus te schrijven, en dat is geen storing maar de bedoeling.
+
+**Tests.** `node --test tests/*.test.mjs` → **159 tests, 0 fouten** (was 155). Vijf nieuwe
+statische tests over de operator-flow: alleen de operator kan een deelnemer invoeren (elke
+publieke route wordt nagelopen op de drie operator-RPC's) · het script schrijft niets zonder
+`--commit` en zonder open poort, en de poortcontrole komt vóór de schrijfactie · een
+deelnemerslink opent één record en kan geen ander bereiken · de operator kan intrekken zonder
+de token, twee keer intrekken is veilig, en de toestemming blijft staan · de teller heeft geen
+token en geeft geen namen. Plus één die de weggehaalde publieke route weghoudt.
+
+Het integratieblok in `tests/database-integration.sql` is meegetrokken naar de nieuwe
+signatuur en dekt nu ook: intrekken door de operator · twee keer intrekken · dat de
+toestemming blijft staan · dat er daarna een nieuwe link uitgegeven kan worden en dat die
+werkt · en dat een onbekende claim geen telling geeft.
+
+**Zeven bewuste breuken aangebracht om te zien of de bewakers echt bijten** — registratie op
+een publieke route, de teller weer publiek, de poort weg bij registreren, de droogloop
+uitgeschakeld, twee keer intrekken onveilig gemaakt, de `revoke` op de nieuwe functie
+weggehaald, en de teller een naamveld laten lekken. **Zeven van de zeven betrapt.**
+
+**Eén test was zelf fout, niet de code.** Mijn assertie zocht `status='no_active_link'` terwijl
+de SQL het als `jsonb_build_object('status','no_active_link',…)` schrijft. Gecorrigeerd.
+
+**SQL-hygiëne na de wijziging:** twaalf functies, twaalf `revoke`s, elke publieke functie
+alleen naar `service_role`, geen enkele grant op de twee `private.`-functies, alle `$$` in
+paren. Alle elf bestaande functies staan nog op `set search_path=''` met gekwalificeerde
+verwijzingen; de twee nieuwe ook.
+
+**Niet gedaan, en niet mogelijk.** De Supabase-proef. Nog steeds geen CLI, geen `psql`, geen
+koppeling. **En het is nu urgenter dan vorige ronde**, want de migratie is opnieuw gewijzigd:
+een functie heeft een andere signatuur gekregen (met een `drop function if exists` ervoor),
+er is een functie bij, en er zijn twee kolommen plus een index geschrapt. Het testplan in
+`operations/supabase-migration-testplan.md` is bijgewerkt met precies die drie punten en met
+de opdracht om beide nieuwe functies minstens één keer echt aan te roepen — een lege
+`search_path` gaat pas stuk bij het aanroepen.
+
+**Wat nu volgt.** Codex: het testplan draaien op een wegwerpbranch. Robert: de datum, de
+uitvraag bij Resend, de zes ANBEN-gegevens, en de Spaanse jurist. Daarna pas gaat de poort
+open, en pas dán mag het operatorscript iets wegschrijven.
+
 ### 2026-09-01 · Claude · Twee gaten in de flow, een testplan voor Codex, en de Resend-uitvraag af · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `77ba4c0` —

@@ -68,22 +68,13 @@ export const handler=async event=>{
     try{input=JSON.parse(event.body||"{}");}catch{return json(400,{error:"invalid_request"});}
   }
 
-  const progressToken=String(query.get("progress")||input.progressToken||"");
+  // Deze route kent maar één soort bezoeker: een deelnemer met zijn eigen link. De
+  // voortgangsteller zat hier eerst ook in, met een aparte token voor de hoofdboeker. Robert
+  // koos op 1 september 2026 voor de operator-flow, en daarmee is er niemand meer om zo'n
+  // link aan te geven: de operator leest de teller met `service_role` via
+  // `scripts/media-participants.mjs`. Een publieke route die aantallen teruggeeft heeft dan
+  // geen doel meer, en wat geen doel heeft hoort niet op het web te staan.
   const token=String(query.get("token")||input.token||"");
-
-  // De voortgangslink van de hoofdboeker is een ándere link dan die van een deelnemer, en
-  // geeft ook iets anders terug: twee getallen, nooit een naam of een keuze.
-  if(progressToken){
-    if(!tokenLooksValid(progressToken))return json(400,{error:"invalid_link"});
-    const limited=await limitOrNull(event,`progress|${tokenHash(progressToken).slice(0,32)}`);
-    if(limited)return limited;
-    try{
-      const progress=await rpc("get_tavern_media_progress",{p_progress_token_hash:tokenHash(progressToken),p_agreement_version:agreement.version});
-      if(progress.status!=="ready")return json(progress.status==="link_expired"?410:404,{error:progress.status});
-      return json(200,{status:"ready",completed:progress.completed,total:progress.total,expected:progress.expected,agreementVersion:progress.agreementVersion});
-    }catch(error){console.error("Media progress error",error);return json(503,{error:"media_consent_unavailable"});}
-  }
-
   if(!tokenLooksValid(token))return json(400,{error:"invalid_link"});
   const limited=await limitOrNull(event,`participant|${tokenHash(token).slice(0,32)}`);
   if(limited)return limited;

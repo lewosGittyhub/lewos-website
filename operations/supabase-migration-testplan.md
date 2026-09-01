@@ -154,13 +154,22 @@ op de nieuwe tabellen. Meldt de advisor ze tóch, dan is dat een echte bevinding
 **Verwijder de tijdelijke branch of database meteen.** Die kost geld zolang hij bestaat, en
 er staan testgegevens in die nergens toe dienen.
 
-## Wat dit plan níét dekt
+## Wat er sinds het schrijven van dit plan is bijgekomen
 
-Twee stukken van de flow bestaan nog niet, en die kunnen dus ook niet getest worden. Ze staan
-uitgeschreven in `operations/filming-weekend-01.md`:
+Robert koos op 1 september 2026 de operator-flow. Daardoor is de migratie op drie punten
+gewijzigd, en die horen bij deze proef:
 
-- niets roept `register_tavern_media_participants` aan vanuit de applicatie;
-- niets geeft een voortgangstoken uit aan de hoofdboeker.
+- **`get_tavern_media_progress` heeft een nieuwe signatuur**: `(p_claim_id uuid,
+  p_agreement_version text)` in plaats van een tokenhash. De oude versie wordt met een
+  `drop function if exists` opgeruimd — controleer dat die drop ook echt draait op een
+  database waar de oude versie al stond.
+- **`revoke_tavern_media_participant_link(uuid)` is nieuw**: intrekken door de operator, zonder
+  de tokenhash. Het integratieblok test intrekken, twee keer intrekken, dat de toestemming
+  blijft staan, en dat er daarna een nieuwe link uitgegeven kan worden.
+- **De kolommen `media_progress_token_hash` en `media_progress_expires_at` zijn geschrapt**,
+  met hun index. Ze zijn nooit ergens toegepast, dus er is niets te migreren — maar
+  controleer op een database waar een eerdere versie al stond of ze er nog liggen.
 
-Het integratieblok roept de eerste rechtstreeks aan en zet de tweede met een `update`, dus de
-**database**-kant is wél gedekt. Wat ontbreekt is de weg ernaartoe.
+Het integratieblok dekt deze drie. Roep in stap 2 dus ook
+`public.revoke_tavern_media_participant_link` en de nieuwe
+`public.get_tavern_media_progress` minstens één keer aan.

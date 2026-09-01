@@ -9,7 +9,7 @@ import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 const root=path.resolve(import.meta.dirname,"..");
 const read=file=>readFile(path.join(root,file),"utf8");
 
-let calls=[];let stateResult;let recordResult;let progressResult;let withdrawResult;let emailRequests=0;let server;
+let calls=[];let stateResult;let recordResult;let withdrawResult;let emailRequests=0;let server;
 let limiterFails=false;
 let limiterAllows=true;
 const nativeFetch=globalThis.fetch;
@@ -44,7 +44,6 @@ before(async()=>{
       }
       if(request.url==="/rest/v1/rpc/get_tavern_media_agreement_state")return response.end(JSON.stringify(stateResult));
       if(request.url==="/rest/v1/rpc/record_tavern_media_consent")return response.end(JSON.stringify(recordResult));
-      if(request.url==="/rest/v1/rpc/get_tavern_media_progress")return response.end(JSON.stringify(progressResult));
       if(request.url==="/rest/v1/rpc/withdraw_tavern_media_consent")return response.end(JSON.stringify(withdrawResult));
       if(request.url==="/emails"){emailRequests+=1;return response.end(JSON.stringify({id:"email-1"}));}
       response.statusCode=404;response.end("{}");
@@ -69,7 +68,6 @@ beforeEach(()=>{
   openTheGate();
   stateResult={status:"ready",participantId:"participant-1",fullName:"Test Guest",weekend:"weekend-01",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",agreementVersion:"media-test-v1",alreadyRecorded:false};
   recordResult={status:"recorded",participantId:"participant-1",auditReference:"abc123",recordedAt:"2026-10-01T10:00:00Z",standardUseConsent:true,paidAdvertisingConsent:false};
-  progressResult={status:"ready",expected:6,total:6,completed:4,agreementVersion:"media-test-v1"};
   withdrawResult={status:"withdrawn",participantId:"participant-1",auditReference:"abc123",withdrawnAt:"2026-10-02T10:00:00Z"};
 });
 after(async()=>{
@@ -222,8 +220,7 @@ test("a failing rate limiter answers 503 instead of throwing",async()=>{
   const run=await handler();
   for(const event of [
     {httpMethod:"GET",queryStringParameters:{token}},
-    {httpMethod:"POST",body:JSON.stringify({token,standardUse:true})},
-    {httpMethod:"GET",queryStringParameters:{progress:token}}
+    {httpMethod:"POST",body:JSON.stringify({token,standardUse:true})}
   ]){
     const response=await run(event);
     assert.equal(response.statusCode,503);
@@ -361,33 +358,6 @@ test("a withdrawal on an unknown link is refused",async()=>{
   assert.equal(JSON.parse(leeg.body).error,"nothing_to_withdraw");
 });
 
-test("an expired organiser link stops showing the counts",async()=>{
-  const run=await handler();
-  progressResult={status:"link_expired"};
-  const verlopen=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
-  assert.equal(verlopen.statusCode,410);
-  progressResult={status:"invalid_link"};
-  const onbekend=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
-  assert.equal(onbekend.statusCode,404);
-  // Ook een weekend zonder verplichte overeenkomst geeft hier geen tellingen terug.
-  progressResult={status:"not_required",weekend:"weekend-02"};
-  const nietNodig=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
-  assert.equal(nietNodig.statusCode,404);
-});
-
-test("the organiser sees counts and never another guest's details",async()=>{
-  const run=await handler();
-  const response=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
-  const body=JSON.parse(response.body);
-  assert.equal(response.statusCode,200);
-  assert.deepEqual(Object.keys(body).sort(),["agreementVersion","completed","expected","status","total"]);
-  for(const leak of ["fullName","email","name","standardUseConsent","paidAdvertisingConsent","participantId"]){
-    assert.equal(body[leak],undefined,`the progress view may not expose ${leak}`);
-  }
-  const migration=await read("database/filming-consent.sql");
-  assert.match(migration,/'expected',claim\.party_size,'total',totaal,'completed',afgerond/);
-});
-
 test("a participant link returns only that participant",async()=>{
   const run=await handler();
   const body=JSON.parse((await run({httpMethod:"GET",queryStringParameters:{token}})).body);
@@ -443,4 +413,20 @@ test("every environment variable the media flow needs is written down for the op
   const needed=[...new Set([...`${handlerSource}\n${config}\n${script}`.matchAll(/process\.env\.([A-Z_]+)/g)].map(match=>match[1]))];
   const missing=needed.filter(name=>!runbook.includes(name));
   assert.deepEqual(missing,[],`not documented anywhere for the operator: ${missing.join(", ")}`);
+});
+
+test("the public route serves participants only, never a progress counter",async()=>{
+  // De teller zat hier eerst ook in, met een eigen token voor de hoofdboeker. In de
+  // operator-flow is er niemand om die link aan te geven, dus de route is weg. Een publieke
+  // route die aantallen teruggeeft heeft geen doel meer, en wat geen doel heeft hoort niet
+  // op het web te staan.
+  const handlerSource=await read("netlify/functions/media-consent.mjs");
+  assert.ok(!handlerSource.includes("get_tavern_media_progress"),"the counter is an operator call, not a public route");
+  assert.ok(!handlerSource.includes("progressToken"),"there is no second kind of token on this route");
+  const run=await handler();
+  // Een oude link met ?progress= valt nu gewoon in de deelnemersroute en wordt afgewezen.
+  const response=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
+  assert.equal(response.statusCode,400);
+  assert.equal(JSON.parse(response.body).error,"invalid_link");
+  assert.equal(calls.length,0,"a stale progress link may not reach the database");
 });

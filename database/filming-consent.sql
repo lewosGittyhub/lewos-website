@@ -76,11 +76,6 @@ create table if not exists public.tavern_media_consents (
   withdrawn_at timestamptz
 );
 
--- De hoofdboeker mag de voortgang zien, maar niet de antwoorden van anderen. Daarvoor
--- krijgt hij een eigen token, los van de deelnemerslinks.
-alter table public.tavern_seat_claims add column if not exists media_progress_token_hash text;
-alter table public.tavern_seat_claims add column if not exists media_progress_expires_at timestamptz;
-
 -- Een tokenhash hoort bij precies één deelnemer. Het unieke index maakt dat een regel in
 -- plaats van een belofte.
 create unique index if not exists tavern_media_participants_token_idx on public.tavern_media_participants (invitation_token_hash) where invitation_token_hash is not null;
@@ -90,7 +85,6 @@ create index if not exists tavern_media_participants_expiry_idx on public.tavern
 -- plaats van er een dubbele rij naast te zetten.
 create unique index if not exists tavern_media_consents_live_idx on public.tavern_media_consents (participant_id, agreement_version) where withdrawn_at is null;
 create index if not exists tavern_media_consents_participant_idx on public.tavern_media_consents (participant_id);
-create unique index if not exists tavern_seat_claims_media_progress_idx on public.tavern_seat_claims (media_progress_token_hash) where media_progress_token_hash is not null;
 
 -- Geen enkele rol komt hier rechtstreeks bij. Alles loopt via de functies hieronder, en
 -- die draaien als `security definer` met alleen `service_role` als aanroeper.
@@ -218,6 +212,32 @@ end; $$;
 revoke all on function public.revoke_tavern_media_invitation(uuid,text) from public, anon, authenticated;
 grant execute on function public.revoke_tavern_media_invitation(uuid,text) to service_role;
 
+-- Intrekken door de operator. De variant hierboven eist de tokenhash en is bedoeld voor het
+-- script, dat hem net zelf heeft aangemaakt: dat is een veiligheidscontrole tegen het
+-- intrekken van de verkeerde link. Een operator die een kwijtgeraakte link intrekt heeft die
+-- hash niet, en hoeft hem ook niet te hebben — hij werkt met service_role en met een
+-- deelnemer-id dat hij uit zijn eigen lijst haalt.
+--
+-- De toestemming zelf blijft staan. Een link intrekken is niet hetzelfde als een keuze
+-- intrekken; daar is `withdraw_tavern_media_consent` voor.
+create or replace function public.revoke_tavern_media_participant_link(p_participant_id uuid)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare deelnemer public.tavern_media_participants%rowtype;
+begin
+  select * into deelnemer from public.tavern_media_participants where id=p_participant_id for update;
+  if not found then return jsonb_build_object('status','unknown_participant'); end if;
+  if deelnemer.invitation_token_hash is null then
+    return jsonb_build_object('status','no_active_link','participantId',deelnemer.id);
+  end if;
+  update public.tavern_media_participants
+    set invitation_token_hash=null,invitation_expires_at=null,invitation_sent_at=null,invitation_email_provider_id=null,
+        status=case when status='invited' then 'pending' else status end
+    where id=deelnemer.id;
+  return jsonb_build_object('status','revoked','participantId',deelnemer.id,'fullName',deelnemer.full_name);
+end; $$;
+revoke all on function public.revoke_tavern_media_participant_link(uuid) from public, anon, authenticated;
+grant execute on function public.revoke_tavern_media_participant_link(uuid) to service_role;
+
 -- Wat één link mag openen: precies één deelnemer, en alleen zijn eigen gegevens. Er komt
 -- geen naam, geen e-mailadres en geen keuze van een andere gast uit deze functie.
 create or replace function public.get_tavern_media_agreement_state(p_token_hash text,p_agreement_version text)
@@ -307,17 +327,21 @@ end; $$;
 revoke all on function public.withdraw_tavern_media_consent(text,text) from public, anon, authenticated;
 grant execute on function public.withdraw_tavern_media_consent(text,text) to service_role;
 
--- Wat de hoofdboeker te zien krijgt: twee getallen. Geen namen, geen adressen, geen keuzes.
-create or replace function public.get_tavern_media_progress(p_progress_token_hash text,p_agreement_version text)
+-- De voortgang, voor de operator. Twee getallen: hoeveel deelnemers er geregistreerd staan
+-- en hoeveel daarvan een levende toestemming voor déze versie hebben. Geen namen, geen
+-- adressen, geen keuzes — ook de operator heeft die hier niet nodig, en wat een functie niet
+-- teruggeeft kan ook niet per ongeluk ergens terechtkomen.
+--
+-- Er hoort geen token bij. In de operator-flow is er niemand aan wie een voortgangslink
+-- gegeven wordt: alleen `service_role` mag deze functie aanroepen, en die sleutel zit in de
+-- Netlify-omgeving en in het operatorscript.
+drop function if exists public.get_tavern_media_progress(text,text);
+create or replace function public.get_tavern_media_progress(p_claim_id uuid,p_agreement_version text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; totaal integer; afgerond integer;
 begin
-  if p_progress_token_hash is null or char_length(p_progress_token_hash)<>64 then return jsonb_build_object('status','invalid_link'); end if;
-  select * into claim from public.tavern_seat_claims where media_progress_token_hash=p_progress_token_hash;
-  if not found then return jsonb_build_object('status','invalid_link'); end if;
-  if claim.media_progress_expires_at is null or claim.media_progress_expires_at<=clock_timestamp() then
-    return jsonb_build_object('status','link_expired');
-  end if;
+  select * into claim from public.tavern_seat_claims where id=p_claim_id;
+  if not found then return jsonb_build_object('status','unknown_claim'); end if;
   select * into weekend from public.tavern_weekends where id=claim.assigned_weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required','weekend',weekend.slug); end if;
   select count(*) into totaal from public.tavern_media_participants where claim_id=claim.id;
@@ -331,8 +355,8 @@ begin
                    and toestemming.withdrawn_at is null);
   return jsonb_build_object('status','ready','expected',claim.party_size,'total',totaal,'completed',afgerond,'agreementVersion',p_agreement_version);
 end; $$;
-revoke all on function public.get_tavern_media_progress(text,text) from public, anon, authenticated;
-grant execute on function public.get_tavern_media_progress(text,text) to service_role;
+revoke all on function public.get_tavern_media_progress(uuid,text) from public, anon, authenticated;
+grant execute on function public.get_tavern_media_progress(uuid,text) to service_role;
 
 -- Verlopen links vervallen. De toestemming zelf blijft staan: die is het bewijs.
 create or replace function private.cleanup_tavern_media_invitations()
@@ -342,9 +366,6 @@ begin
     set invitation_token_hash=null,invitation_expires_at=null,
         status=case when status='invited' then 'expired' else status end
     where invitation_token_hash is not null and invitation_expires_at<=clock_timestamp();
-  update public.tavern_seat_claims
-    set media_progress_token_hash=null,media_progress_expires_at=null
-    where media_progress_token_hash is not null and media_progress_expires_at<=clock_timestamp();
 end; $$;
 revoke all on function private.cleanup_tavern_media_invitations() from public, anon, authenticated;
 

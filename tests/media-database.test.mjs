@@ -178,3 +178,77 @@ test("this migration leaves the payment gate and the media switch alone",()=>{
   }
   assert.doesNotMatch(migration,/stripe/i);
 });
+
+// ---------------------------------------------------------------- de operator-flow
+
+test("only the operator can put a participant into the system",async()=>{
+  // Robert koos op 1 september 2026 de operator-flow: geen publieke route waarlangs iemand
+  // de naam en het e-mailadres van een ander kan invoeren. Dat is hier de hoofdregel.
+  const publicRoutes=await readFile(path.join(root,"_redirects"),"utf8");
+  const apiRoutes=[...publicRoutes.matchAll(/^\/api\/(\S+)\s+\/\.netlify\/functions\/(\S+)/gm)].map(match=>match[2]);
+  for(const name of apiRoutes){
+    const source=await readFile(path.join(root,"netlify/functions",`${name}.mjs`),"utf8");
+    assert.ok(!source.includes("register_tavern_media_participants"),`${name} exposes participant registration to the web`);
+    assert.ok(!source.includes("revoke_tavern_media_participant_link"),`${name} exposes link revocation to the web`);
+    assert.ok(!source.includes("get_tavern_media_progress"),`${name} exposes the progress counter to the web`);
+  }
+  // Ze bestaan wél, en alleen het operatorscript roept ze aan.
+  const operator=await readFile(path.join(root,"scripts/media-participants.mjs"),"utf8");
+  for(const call of ["register_tavern_media_participants","revoke_tavern_media_participant_link","get_tavern_media_progress"]){
+    assert.ok(operator.includes(call),`the operator script must be able to call ${call}`);
+  }
+});
+
+test("the operator script writes nothing without --commit and an open gate",async()=>{
+  const operator=await readFile(path.join(root,"scripts/media-participants.mjs"),"utf8");
+  // Twee remmen op elke schrijfactie. Lezen mag wel: zonder lijst kan de operator geen link
+  // opnieuw uitgeven.
+  assert.match(operator,/const commit=args\.includes\("--commit"\)/);
+  assert.match(operator,/gateOrExit\("register participants"\)/);
+  assert.match(operator,/gateOrExit\("revoke a link"\)/);
+  const registerBlock=operator.slice(operator.indexOf('if(command==="register")'),operator.indexOf('if(command==="revoke")'));
+  assert.ok(registerBlock.indexOf("gateOrExit")<registerBlock.indexOf("rpc("),"the gate must come before the write");
+  assert.match(registerBlock,/if\(!commit\)\{[\s\S]*?Nothing was written/);
+});
+
+test("a participant link opens one record and cannot reach another",async()=>{
+  const migration=await readFile(path.join(root,"database/filming-consent.sql"),"utf8");
+  // Elke deelnemersfunctie zoekt op de tokenhash, niet op iets wat de bezoeker kan kiezen.
+  for(const fn of ["get_tavern_media_agreement_state","record_tavern_media_consent","withdraw_tavern_media_consent"]){
+    const body=migration.slice(migration.indexOf(`function public.${fn}`),migration.indexOf(`revoke all on function public.${fn}`));
+    assert.match(body,/where invitation_token_hash=p_token_hash/,`${fn} must look the participant up by token hash`);
+    assert.ok(!/p_participant_id/.test(body),`${fn} may not accept a participant id from the caller`);
+  }
+  // En er is geen functie die een deelnemer een lijst van anderen teruggeeft.
+  const state=migration.slice(migration.indexOf("function public.get_tavern_media_agreement_state"),migration.indexOf("revoke all on function public.get_tavern_media_agreement_state"));
+  for(const leak of ["claim_id=claim.id","from public.tavern_media_participants where claim_id"]){
+    assert.ok(!state.includes(leak),`the participant view may not select by claim: ${leak}`);
+  }
+});
+
+test("the operator can revoke a link without holding the token",async()=>{
+  const migration=await readFile(path.join(root,"database/filming-consent.sql"),"utf8");
+  // De scriptvariant eist de hash als veiligheidscontrole. Een operator die een kwijtgeraakte
+  // link intrekt heeft die niet, en hoeft hem ook niet te hebben.
+  assert.match(migration,/create or replace function public\.revoke_tavern_media_participant_link\(p_participant_id uuid\)/);
+  assert.match(migration,/revoke all on function public\.revoke_tavern_media_participant_link\(uuid\) from public, anon, authenticated;/);
+  assert.match(migration,/grant execute on function public\.revoke_tavern_media_participant_link\(uuid\) to service_role;/);
+  const body=migration.slice(migration.indexOf("function public.revoke_tavern_media_participant_link"),migration.indexOf("revoke all on function public.revoke_tavern_media_participant_link"));
+  // Intrekken van een link is niet hetzelfde als intrekken van een keuze.
+  assert.ok(!body.includes("tavern_media_consents"),"revoking a link may not touch the recorded consent");
+  assert.match(body,/'status','no_active_link'/,"revoking twice must be safe");
+  // En daarna kan er opnieuw uitgegeven worden: de hash wordt leeggemaakt, niet vastgezet.
+  assert.match(body,/set invitation_token_hash=null/);
+});
+
+test("the progress counter is an operator call with no token and no names",async()=>{
+  const migration=await readFile(path.join(root,"database/filming-consent.sql"),"utf8");
+  assert.match(migration,/create or replace function public\.get_tavern_media_progress\(p_claim_id uuid,p_agreement_version text\)/);
+  const body=migration.slice(migration.indexOf("function public.get_tavern_media_progress(p_claim_id"),migration.indexOf("revoke all on function public.get_tavern_media_progress"));
+  assert.ok(!body.includes("token"),"the counter needs no token in the operator flow");
+  for(const leak of ["full_name","email"])assert.ok(!body.includes(leak),`the counter may not return ${leak}`);
+  assert.match(body,/'expected',claim\.party_size,'total',totaal,'completed',afgerond/);
+  // De weggevallen kolommen zijn echt weg, niet alleen ongebruikt.
+  assert.ok(!migration.includes("media_progress_token_hash"),"the unused progress column must be gone");
+  assert.ok(!migration.includes("media_progress_expires_at"),"the unused progress expiry must be gone");
+});

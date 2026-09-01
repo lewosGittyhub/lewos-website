@@ -139,7 +139,6 @@ declare
   tweede uuid;
   hash_een text:=repeat('1',64);
   hash_twee text:=repeat('2',64);
-  voortgang_hash text:=repeat('3',64);
   uitnodiging jsonb;
   eerste jsonb;
   herhaling jsonb;
@@ -274,14 +273,14 @@ begin
   if (status_v1->>'alreadyRecorded')::boolean is not true then raise exception 'de_bestaande_versie_werd_niet_herkend'; end if;
   if (status_v2->>'alreadyRecorded')::boolean is not false then raise exception 'oude_toestemming_gold_ook_voor_een_nieuwe_versie'; end if;
 
-  -- De hoofdboeker ziet aantallen, en die aantallen horen bij één versie.
-  update public.tavern_seat_claims set media_progress_token_hash=voortgang_hash,media_progress_expires_at=clock_timestamp()+interval '7 days' where id=film_claim;
-  telling:=public.get_tavern_media_progress(voortgang_hash,'codex-test-v1');
+  -- De operator ziet aantallen, en die aantallen horen bij één versie. Geen token: in de
+  -- operator-flow roept alleen service_role deze functie aan, met het claim-id.
+  telling:=public.get_tavern_media_progress(film_claim,'codex-test-v1');
   if (telling->>'completed')::integer<>1 or (telling->>'total')::integer<>2 then raise exception 'de_voortgangsteller_klopt_niet'; end if;
   if telling ? 'fullName' or telling ? 'email' or telling ? 'standardUseConsent' then
     raise exception 'de_voortgang_lekte_gegevens_van_deelnemers';
   end if;
-  if (public.get_tavern_media_progress(voortgang_hash,'codex-test-v2')->>'completed')::integer<>0 then
+  if (public.get_tavern_media_progress(film_claim,'codex-test-v2')->>'completed')::integer<>0 then
     raise exception 'een_nieuwe_versie_telde_oude_toestemming_mee';
   end if;
 
@@ -291,8 +290,35 @@ begin
   if (select withdrawn_at from public.tavern_media_consents where audit_reference=eerste->>'auditReference') is null then
     raise exception 'de_intrekking_werd_niet_vastgelegd';
   end if;
-  if (public.get_tavern_media_progress(voortgang_hash,'codex-test-v1')->>'completed')::integer<>0 then
+  if (public.get_tavern_media_progress(film_claim,'codex-test-v1')->>'completed')::integer<>0 then
     raise exception 'een_ingetrokken_toestemming_telde_nog_mee';
+  end if;
+  -- Een onbekende claim geeft geen tellingen terug.
+  if public.get_tavern_media_progress('00000000-0000-4000-8000-000000000000'::uuid,'codex-test-v1')->>'status'<>'unknown_claim' then
+    raise exception 'een_onbekende_claim_gaf_toch_een_telling';
+  end if;
+
+  -- Intrekken door de operator, zónder de tokenhash: dat is de weg die Robert bewandelt als
+  -- iemand zijn link kwijt is. De vastgelegde keuze mag daar niet door veranderen.
+  if public.revoke_tavern_media_participant_link(deelnemer)->>'status'<>'revoked' then
+    raise exception 'de_operator_kon_een_link_niet_intrekken';
+  end if;
+  if public.get_tavern_media_agreement_state(hash_een,'codex-test-v1')->>'status'<>'invalid_link' then
+    raise exception 'een_door_de_operator_ingetrokken_link_werkte_nog';
+  end if;
+  -- Nog een keer intrekken is geen fout, en het raakt de toestemming niet aan.
+  if public.revoke_tavern_media_participant_link(deelnemer)->>'status'<>'no_active_link' then
+    raise exception 'twee_keer_intrekken_was_niet_veilig';
+  end if;
+  if (select count(*) from public.tavern_media_consents where participant_id=deelnemer)<>1 then
+    raise exception 'het_intrekken_van_een_link_wiste_de_toestemming';
+  end if;
+  -- En daarna kan er gewoon een nieuwe link uit.
+  if public.issue_tavern_media_invitation(deelnemer,repeat('4',64),21)->>'status'<>'invited' then
+    raise exception 'na_intrekken_kon_er_geen_nieuwe_link_worden_uitgegeven';
+  end if;
+  if public.get_tavern_media_agreement_state(repeat('4',64),'codex-test-v1')->>'status'<>'ready' then
+    raise exception 'de_opnieuw_uitgegeven_link_werkte_niet';
   end if;
 
   -- Een ingetrokken link bestaat niet meer, en een verlopen link doet niets.
