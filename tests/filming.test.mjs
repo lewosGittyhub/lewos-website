@@ -174,21 +174,54 @@ test("no page a guest reads carries a word from our own preparation",async()=>{
   }
 });
 
-test("the unfinished sales documents stay inside the closed sales path",async()=>{
-  // Ze zijn uitgezonderd van de test hierboven, en die uitzondering mag alleen gelden zolang
-  // niemand er vanuit de open route naartoe kan lopen. Zodra dat wel kan, faalt dit.
-  const openRoute=htmlFiles.filter(file=>!inSalesPath(file));
-  for(const file of openRoute){
+test("the unfinished sales documents are not served at all",async()=>{
+  // Robert, 1 september 2026: deze drie mogen voorlopig helemaal niet online leesbaar zijn.
+  // Ze missen de ANBEN-gegevens en zeggen op hun gezicht dat ze niet gelden. De inhoud
+  // blijft in de repo bewaard; alleen de route is dicht.
+  const redirects=await read(path.join(root,"_redirects"));
+  const robots=await read(path.join(root,"robots.txt"));
+  const sitemap=await read(path.join(root,"sitemap.xml"));
+  // Netlify serveert een bestaand bestand vóór een gewone redirect. Zonder het uitroepteken
+  // krijgt de bezoeker de pagina alsnog te zien; dat ging op 29 augustus 2026 al een keer mis.
+  const forced=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404!").map(parts=>parts[0]);
+  for(const name of salesDocuments){
+    assert.ok(forced.includes(`/${name}`),`/${name} needs a forced 404 rule (404!) in _redirects`);
+    assert.ok(forced.includes(`/${name}/*`),`/${name}/* needs a forced 404 rule (404!) in _redirects`);
+    assert.ok(robots.includes(`Disallow: /${name}/`),`robots.txt must disallow /${name}/`);
+    assert.ok(!sitemap.includes(`/${name}`),`/${name} may not appear in the sitemap`);
+  }
+});
+
+test("nothing on the site links to a blocked sales document",async()=>{
+  // Een link naar een route die 404 geeft is erger dan geen link. De drie documenten mogen
+  // onderling naar elkaar verwijzen — die bestanden worden immers niet uitgeleverd — maar
+  // geen enkele pagina die wél online staat mag ernaartoe wijzen.
+  const served=htmlFiles.filter(file=>!salesDocuments.some(name=>where(file).startsWith(`${name}${path.sep}`)));
+  for(const file of served){
     const html=await read(file);
     for(const name of salesDocuments){
       assert.ok(!html.includes(`href="/${name}/"`)&&!html.includes(`href="../${name}/"`),
-        `${where(file)} links to /${name}/, which is not finished and must stay behind the closed sales path`);
+        `${where(file)} links to /${name}/, which is not served while it is unfinished`);
     }
   }
-  // En ze blijven zeggen dat ze niet gelden, zolang de ontbrekende gegevens ontbreken.
+});
+
+test("a guest is never asked to confirm they read a document we do not serve",async()=>{
+  // De twee vinkjes verwezen naar /terms/. Zolang die route dicht is, kan die bevestiging
+  // niet waargemaakt worden en hoort ze er niet te staan.
+  for(const page of ["tavern/book/index.html","tavern/checkout/index.html"]){
+    const html=await read(path.join(root,page));
+    assert.doesNotMatch(html,/booking terms<\/a>/,`${page} still points a confirmation at the closed booking terms`);
+    assert.match(html,/full booking terms are provided before any payment is requested/,`${page} must say when the terms do arrive`);
+  }
+});
+
+test("the blocked documents are kept in the repository for later",async()=>{
+  // Blokkeren is niet weggooien. De teksten moeten er nog staan als de gegevens er zijn.
   for(const name of salesDocuments){
     const html=await read(path.join(root,name,"index.html"));
-    assert.match(html,/noindex/,`/${name}/ must stay out of search results while it is unfinished`);
+    assert.ok(html.length>1000,`${name}/index.html must still hold its content`);
+    assert.match(html,/noindex/,`/${name}/ keeps its noindex as well`);
   }
 });
 

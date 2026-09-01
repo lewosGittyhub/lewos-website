@@ -5,5 +5,8 @@ Disallow: /AGENTS.md
 Disallow: /CLAUDE.md
 Disallow: /operations/
 Disallow: /.internal/
+Disallow: /terms/
+Disallow: /travel-information/
+Disallow: /standard-information/
 
 Sitemap: https://lewos.co/sitemap.xml

@@ -65,16 +65,16 @@ configuration gate, and nowhere else.
    it may be invented. The consent page works without it — it names the controller,
    where Lewos is established, and a working contact address — but the **official sales
    documents and the payment gate stay closed** until those details land.
-3. **The three statutory sales documents are still unfinished**: `/standard-information/`,
-   `/terms/` and `/travel-information/`. They still say on their face that they are not
-   in force, which is the honest thing for them to say and the opposite of what the
-   consent page needed. They sit inside the closed sales path: nothing in the open
-   customer route links to them, only `/tavern/book/` and `/tavern/checkout/` do, and
-   both of those are behind the shut payment gate. A test enforces exactly that, so the
-   day something in the open route links to one of them, the suite fails.
-   **Robert: if you would rather they were unreachable altogether, say so** — that is a
-   one-line change in `_redirects`, but it takes documents off the site that are linked
-   from the checkout, so it is your call and not mine.
+3. **The three statutory sales documents are blocked**: `/standard-information/`,
+   `/terms/` and `/travel-information/`. Robert decided on 1 September 2026 that they may
+   not be readable online at all while they still say they are not in force and still miss
+   the ANBEN details. Six forced `404!` rules in `_redirects`, three `Disallow` lines in
+   `robots.txt`, no sitemap entry, and no link to them from any page that is served. The
+   files themselves are kept in the repository, unchanged, for the day they are finished.
+   The two confirmation checkboxes in `/tavern/book/` and `/tavern/checkout/` no longer
+   point at `/terms/`; they now say the full booking terms are provided before any payment
+   is requested. **When these documents go live again, remove those six lines and put the
+   `/terms/` link back in both checkboxes** — the reminder is in `_redirects` as well.
 4. **The operational rules above became public promises.** They were "to be confirmed"
    before; they are now printed. If one of them is wrong it has to come off the page.
 

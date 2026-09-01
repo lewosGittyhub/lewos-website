@@ -335,6 +335,67 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · De drie onafgemaakte verkoopdocumenten staan niet meer online · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `b60b50d`.
+
+**Wat.** `/terms/`, `/travel-information/` en `/standard-information/` zijn dicht. Zes regels
+in `_redirects` met een geforceerde 404, drie `Disallow`-regels in `robots.txt`, en de twee
+laatste publieke links ernaartoe zijn weg. De bestanden blijven gewoon in de repo staan.
+
+**Waarom het uitroepteken ertoe doet.** Netlify serveert een bestaand bestand vóór een
+gewone redirect-regel. Zonder de `!` krijgt de bezoeker de pagina alsnog te zien. Dat ging op
+29 augustus 2026 al een keer mis met `HANDOVER.md`, dus alle zes de regels staan als `404!`.
+Er staan twee regels per document, `/terms` en `/terms/*`, zodat ook de vorm zonder slash en
+`/terms/index.html` eronder vallen.
+
+**Twee vinkjes moesten mee.** `/tavern/book/` en `/tavern/checkout/` lieten de gast
+bevestigen: *"I have read the privacy information, legal notice and booking terms"* — met een
+link naar `/terms/`. Die route geeft nu 404, en dan kan die bevestiging niet waargemaakt
+worden. De tekst is nu: *"I have read the privacy information and the legal notice. I
+understand that the full booking terms are provided before any payment is requested."* Dat
+klopt met de werkelijkheid: de definitieve voorwaarden gaan mee vóór er betaald wordt.
+**Zet die link terug zodra de documenten definitief zijn** — het staat ook als aantekening in
+`_redirects` zelf, bij de regels die je dan weghaalt.
+
+**Wat er niét veranderd is.** De betaalpoort en de mediapoort. `paymentsAreEnabled()` hangt
+aan `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en `PUBLISHED_TRAVEL_DOCUMENT` in
+`netlify/functions/_booking-config.mjs`, en die drie staan nog steeds leeg. Het blokkeren van
+de routes staat daar helemaal los van: de verkoop was al dicht en is dat nog steeds. Een test
+bewaakt allebei.
+
+**De inhoud is bewaard.** Blokkeren is niet weggooien. De drie `index.html`-bestanden staan
+er ongewijzigd, inclusief de Spaanse vertaling in `/travel-information/`, en een test
+controleert dat ze niet leeg raken. De onderlinge links tússen de drie blijven ook staan —
+die wijzen naar bestanden die niemand krijgt uitgeleverd, dus dat kan geen kwaad, en het
+scheelt straks werk als ze weer opengaan.
+
+**Vier nieuwe tests.** Dat elk van de drie een geforceerde `404!` heeft voor zowel `/naam` als
+`/naam/*`, in `robots.txt` staat en niet in de sitemap voorkomt · dat geen enkele pagina die
+wél wordt uitgeleverd ernaartoe linkt · dat de twee vinkjes niet meer beloven dat de gast iets
+gelezen heeft wat 404 geeft · en dat de inhoud van de drie bestanden bewaard blijft.
+
+**Getest tegen zeven bewuste breuken:** een regel weggehaald, het uitroepteken weggehaald,
+de robots-regel weggehaald, een geblokkeerde route in de sitemap gezet, een levende pagina
+laten linken naar `/terms/`, het vinkje weer laten verwijzen naar de dichte route, en de
+inhoud van een geblokkeerd document uitgehold. **Zeven van de zeven betrapt**, daarna alles
+teruggezet en gecontroleerd met `git status`.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **148 tests, 0 fouten** (was 145).
+
+**Niet geverifieerd, en dit is de enige echte onzekerheid.** Ik kan de 404 hier niet aantonen.
+`python3 -m http.server` kent `_redirects` niet en serveert de bestanden gewoon; alleen
+Netlify voert die regels uit. Wat ik wél heb: dezelfde regelvorm werkt aantoonbaar live voor
+`/operations/*`, `HANDOVER.md`, `AGENTS.md` en `CLAUDE.md` — dat is op 29 augustus met `curl`
+op de echte site nagemeten en staat verderop in dit logboek. **Robert of Codex: controleer na
+de eerstvolgende deploy met `curl -I https://lewos.co/terms/` dat er een 404 terugkomt, en
+kijk in het Netlify-deploylog of er geen waarschuwing over `_redirects` staat.** Ik heb daar
+namelijk ook commentaarregels met `#` toegevoegd; Netlify ondersteunt die, maar dat heb ik
+niet zelf kunnen zien.
+
+**Wat nu volgt.** Onveranderd: de ANBEN-gegevens, de Spaanse jurist, en daarna pas deze zes
+regels uit `_redirects` halen én de link naar `/terms/` terugzetten in de twee vinkjes.
+
 ### 2026-09-01 · Claude · De overeenkomst is een afgemaakt document geworden · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `fb0c685`.
