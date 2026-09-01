@@ -335,6 +335,95 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · Controleronde, Resend-dossier en checklist voor livegang · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `069d515`,
+niets nieuws sinds die commit. `origin/main` staat nog op `9013051` en de branch heeft geen
+upstream: er is niets gepusht, niets gedeployed en niets naar productie gemigreerd.
+
+Deze ronde is vooral controle. Twee nieuwe documenten, geen wijziging aan de site zelf.
+
+**Wat ik heb nagelopen, met de uitkomst.**
+- *Juridische routes.* Zes `404!`-regels in `_redirects` (twee per document), drie
+  `Disallow` in `robots.txt`, nul vermeldingen in `sitemap.xml`, en geen enkele link ernaartoe
+  vanaf een pagina die wél wordt uitgeleverd. De links tússen de drie onderling staan er nog;
+  dat mag, want die bestanden gaan de deur niet uit.
+- *Betaalpoort.* De drie constanten in `_booking-config.mjs` staan leeg, dus
+  `paymentsAreEnabled()` is onwaar ongeacht welke Netlify-variabele erbij staat. Openen vraagt
+  twee bewuste handelingen: een codewijziging én `TAVERN_PAYMENTS_ENABLED=true`.
+- *Mediaflow.* Alle elf invarianten die Robert opsomde zijn gedekt door een draaiende test —
+  unieke link, cryptografische tokens, alleen de hash in de database, geen inzage in andere
+  deelnemers, ontdubbelen vóór tellen, al geregistreerde deelnemers meegeteld, niets
+  gedeeltelijk opgeslagen bij overschrijding, Weekend 02 buiten de flow, advertentietoestemming
+  apart, intrekking met spoor, en een nieuwe versie die opnieuw akkoord vraagt.
+- *Geen verzonnen bedrijfsgegevens.* Met een patroonzoeker over alle uitgeleverde pagina's
+  gecontroleerd op NIF-vormen, Spaanse telefoonnummers, straatadressen, postcodes,
+  registratiecodes en polisnummers. Niets gevonden. Wat er wél staat als identiteit is
+  handelsnaam, persoon, gemeente en provincie — allemaal bevestigd.
+- *Tests.* `node --test tests/*.test.mjs` → **148 tests, 0 fouten.** `node --check` op alle
+  JS schoon.
+
+**`PUBLIC_BOOKING_OPENS_AT` — en hier zit een addertje.** De variabele wordt op vier plaatsen
+gebruikt. Op de vraag of een eerdere datum de verkoop technisch zou kunnen openen: **nee.**
+`publicBookingIsOpen()` valt als eerste over `paymentsAreEnabled()`, en die hangt aan de drie
+lege constanten. Geen enkele datum komt daar langs.
+
+Maar dezelfde variabele doet nog iets anders, en dat is wél live: in
+`netlify/functions/first-access.mjs` bepaalt hij wannéér het aanmeldformulier **sluit**. Staat
+de datum in het verleden, dan geeft het formulier `409 first_access_closed`. Hij staat op
+2026-09-09T09:00:00Z; dat is over zeven dagen, en vijftig dagen vóór Weekend 01. **Vanaf dan
+kan niemand zich meer aanmelden, terwijl er ook nog niet betaald kan worden** — dan staat er
+dus een Tavern-pagina zonder enige manier om mee te doen. Robert moet die datum vóór
+9 september vooruitzetten of bewust accepteren dat het formulier dichtgaat. Ik heb niets
+gewijzigd; dit is een beslissing, geen bug. Ontbreekt de variabele helemaal, dan antwoordt het
+formulier 503 — die val stond al in het dossier en geldt nog steeds.
+
+**Nieuw: `operations/resend-processor-agreement.md`.** Vier e-mailstromen lopen via Resend, en
+ik heb per stroom uit de code opgeschreven welke persoonsgegevens meegaan. De bevinding die
+eruit springt: **stroom 1 — de ontvangstbevestiging van First Access — draait nu al live** en
+stuurt naam en e-mailadres van een echte gast naar een verwerker in de Verenigde Staten. De
+verwerkersovereenkomst is dus geen toekomstig punt voor de mediaflow alleen; hij hoort er nu
+al te zijn voor het formulier dat op de site staat. De andere drie stromen zitten achter een
+gesloten poort. Twee van de vier zetten bovendien een ruw token in de link, dus wat Resend aan
+berichtinhoud en logging bewaart doet er extra toe.
+
+In dat document staat een uitvraag van negen punten en een conceptbericht aan Resend. **Ik heb
+Resend niet benaderd en beweer niets namens hen** — wat zij bieden moet uit hun eigen
+verwerkersovereenkomst komen. De privacyverklaring zegt bij Resend bewust géén
+waarborgmechanisme, anders dan bij de andere drie verwerkers; dat is de eerlijke formulering
+en die moet zo blijven tot het tegendeel op papier staat.
+
+Als het niet snel rond komt, is er een nette tussenoplossing die ik heb nagerekend in de code:
+`RESEND_API_KEY` in Netlify leegmaken. `sendGuestEmail` slaat het versturen dan over en de
+aanmelding blijft gewoon werken.
+
+**Nieuw: `operations/go-live-checklist.md`.** Alle elf punten die Robert noemde, gesplitst in
+**[lokaal]** — nu al nagegaan, met de test die het vasthoudt — en **[na deploy]** — pas op de
+echte site met `curl` te controleren. Dat onderscheid staat er expliciet in, want de
+belangrijkste controle van allemaal is niet lokaal te doen: of Netlify de `404!`-regels ook
+echt uitvoert. Op 29 augustus stond `HANDOVER.md` live leesbaar terwijl de regel er netjes in
+stond, omdat Netlify een bestaand bestand vóór een gewone redirect serveert.
+
+**Wat ik niet heb gedaan, en niet kan.** De Supabase-testbranch. Er is op deze machine geen
+`supabase`-CLI, geen `psql`, geen Supabase-omgevingsvariabele en geen Supabase-koppeling in
+mijn gereedschap; dat heb ik alle vier nagegaan. Dat klopt met *Wie kan wat* bovenaan dit
+dossier. **De migratie is sinds de vorige proef van Codex gewijzigd** — lege `search_path`,
+gekwalificeerde verwijzingen, en de herstelde telling van deelnemers — dus die moet opnieuw
+langs een echte database vóórdat er iets naar productie gaat. De vijf gevallen liggen klaar
+onderaan `tests/database-integration.sql`, met verzonnen `.invalid`-adressen en een `rollback`
+eromheen. Ik verzin daar geen uitkomst van.
+
+**Nog een onderbreking om te weten.** Halverwege deze sessie raakte de toegang tot
+`~/Documents` kwijt: macOS weigerde `Desktop`, `Documents` én `Downloads` voor dit proces,
+terwijl `~/.local` en `/tmp` gewoon werkten. Dat is de TCC-instelling *Bestanden en mappen*.
+Twee beurten lang kon ik de repo niet lezen; er is in die tijd niets gewijzigd. Na Roberts
+ingreep werkte het weer, zonder herstart. Het staat hier omdat het opnieuw kan gebeuren en
+omdat het dezelfde oorzaak heeft als de bekende `http.server`-val in `~/Documents`.
+
+**Wat nu volgt.** Robert: de datum van `PUBLIC_BOOKING_OPENS_AT`, de uitvraag bij Resend, en
+de zes ANBEN-gegevens. Codex: de integratieproef opnieuw draaien op een wegwerpbranch, want de
+migratie is veranderd sinds jouw laatste run.
+
 ### 2026-09-01 · Claude · De drie onafgemaakte verkoopdocumenten staan niet meer online · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `b60b50d`.
