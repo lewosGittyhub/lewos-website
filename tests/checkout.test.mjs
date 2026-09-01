@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {after,before,beforeEach,test} from "node:test";
 import {createHmac} from "node:crypto";
 import http from "node:http";
+import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let attachFails=false;let attachResult;let emailFails=false;let markFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
 before(async()=>{
@@ -18,7 +19,7 @@ before(async()=>{
     if(request.url==="/documents/terms.pdf"||request.url==="/documents/travel.pdf"){response.setHeader("content-type","application/pdf");return response.end(`%PDF-1.4\n${"test-document".repeat(20)}\n%%EOF`);}
     if(request.url==="/emails"){emailRequests+=1;if(emailFails){response.statusCode=500;return response.end(JSON.stringify({message:"email_failed"}));}return response.end(JSON.stringify({id:"email-1"}));}
     response.statusCode=404;response.end("{}");});});
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  await listenOnTestPort(server);
   const base=`http://127.0.0.1:${server.address().port}`;
   // Een test mag nooit het echte netwerk op. Alles wat we niet zelf omleiden faalt hier
   // hard: in een afgeschermde omgeving zou zo'n verzoek anders blijven hangen tot een
@@ -43,7 +44,7 @@ beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;ma
 beforeEach(()=>{attachResult={status:"attached"};});
 // Sluit de mockserver echt af. Zonder de open verbindingen te verbreken blijft het
 // proces na de laatste test wachten en lijkt de suite te hangen.
-after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
+after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);server=null;});
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");

@@ -4,12 +4,15 @@ import {createHash,randomBytes} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
+import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 const root=path.resolve(import.meta.dirname,"..");
 const read=file=>readFile(path.join(root,file),"utf8");
 
 let calls=[];let stateResult;let recordResult;let progressResult;let withdrawResult;let emailRequests=0;let server;
+let limiterFails=false;
 const nativeFetch=globalThis.fetch;
+const originalEnv={...process.env};
 
 // De zes instellingen die de mediapoort openzetten. Alleen geldig op een lokale testserver:
 // `_media-config.mjs` weigert deze overrides zodra `URL` geen localhost is.
@@ -34,7 +37,10 @@ before(async()=>{
     request.on("end",()=>{
       calls.push({url:request.url,body});
       response.setHeader("content-type","application/json");
-      if(request.url==="/rest/v1/rpc/check_tavern_request_limit")return response.end("true");
+      if(request.url==="/rest/v1/rpc/check_tavern_request_limit"){
+        if(limiterFails){response.statusCode=500;return response.end('{"message":"limiter_down"}');}
+        return response.end("true");
+      }
       if(request.url==="/rest/v1/rpc/get_tavern_media_agreement_state")return response.end(JSON.stringify(stateResult));
       if(request.url==="/rest/v1/rpc/record_tavern_media_consent")return response.end(JSON.stringify(recordResult));
       if(request.url==="/rest/v1/rpc/get_tavern_media_progress")return response.end(JSON.stringify(progressResult));
@@ -43,7 +49,7 @@ before(async()=>{
       response.statusCode=404;response.end("{}");
     });
   });
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  await listenOnTestPort(server);
   const base=`http://127.0.0.1:${server.address().port}`;
   globalThis.fetch=(input,options)=>{
     const url=String(input);
@@ -58,14 +64,22 @@ before(async()=>{
   process.env.NODE_ENV="test";
 });
 beforeEach(()=>{
-  calls=[];emailRequests=0;
+  calls=[];emailRequests=0;limiterFails=false;
   openTheGate();
   stateResult={status:"ready",participantId:"participant-1",fullName:"Test Guest",weekend:"weekend-01",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",agreementVersion:"media-test-v1",alreadyRecorded:false};
   recordResult={status:"recorded",participantId:"participant-1",auditReference:"abc123",recordedAt:"2026-10-01T10:00:00Z",standardUseConsent:true,paidAdvertisingConsent:false};
   progressResult={status:"ready",expected:6,total:6,completed:4,agreementVersion:"media-test-v1"};
   withdrawResult={status:"withdrawn",participantId:"participant-1",auditReference:"abc123",withdrawnAt:"2026-10-02T10:00:00Z"};
 });
-after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
+after(async()=>{
+  globalThis.fetch=nativeFetch;
+  // Dit bestand zet een stuk of tien omgevingsvariabelen. Laat het er geen achter: een
+  // volgend testbestand in hetzelfde proces zou anders op onze Supabase-URL uitkomen.
+  for(const key of Object.keys(process.env))if(!(key in originalEnv))delete process.env[key];
+  Object.assign(process.env,originalEnv);
+  await stopTestServer(server);
+  server=null;
+});
 
 // ---------------------------------------------------------------- de poort
 
@@ -178,6 +192,34 @@ test("expired and unknown links are refused",async()=>{
   recordResult={status:"link_expired"};
   const late=await run({httpMethod:"POST",body:JSON.stringify({token,standardUse:true})});
   assert.equal(late.statusCode,410);
+});
+
+test("a failing rate limiter answers 503 instead of throwing",async()=>{
+  // Dit ging eerder mis: de twee limietaanroepen zaten niet in een try/catch, dus een
+  // storing bij Supabase liet de handler gooien in plaats van antwoorden. In productie een
+  // 500 zonder uitleg; in een test een afgewezen belofte in plaats van een antwoord.
+  limiterFails=true;
+  const run=await handler();
+  for(const event of [
+    {httpMethod:"GET",queryStringParameters:{token}},
+    {httpMethod:"POST",body:JSON.stringify({token,standardUse:true})},
+    {httpMethod:"GET",queryStringParameters:{progress:token}}
+  ]){
+    const response=await run(event);
+    assert.equal(response.statusCode,503);
+    assert.equal(JSON.parse(response.body).error,"media_consent_unavailable");
+  }
+  // En een storing mag nooit een vrijbrief zijn: er is niets vastgelegd.
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/record_tavern_media_consent"),false);
+});
+
+test("both limiter calls are awaited, so no request outlives the response",async()=>{
+  const source=await read("netlify/functions/media-consent.mjs");
+  // Promise.all keert terug zodra de eerste aanroep afketst en laat de tweede doorlopen.
+  // Dat verzoek loopt dan door nadat de test al klaar is, met een socket die nog openstaat
+  // terwijl de mockserver afsluit.
+  assert.match(source,/Promise\.allSettled\(\[/);
+  assert.doesNotMatch(source,/await Promise\.all\(\[/);
 });
 
 test("a malformed link never reaches the database",async()=>{

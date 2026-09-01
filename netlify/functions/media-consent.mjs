@@ -25,15 +25,30 @@ const closedResponse=()=>{
   });
 };
 
+// Geeft `null` terug als het verzoek door mag, en anders het antwoord dat de bezoeker krijgt.
+// Twee dingen die hier eerder misgingen, en waarom het nu zo staat:
+//
+// 1. De aanroepen zaten niet in een try/catch, anders dan bij de betaalfunctie. Viel
+//    Supabase weg, dan gooide deze functie en gaf de handler helemaal geen antwoord meer:
+//    in productie een 500 zonder uitleg. Een storing bij de begrenzer doet de deur nu dicht.
+// 2. Met `Promise.all` keert de functie terug zodra de eerste aanroep afketst, terwijl de
+//    tweede nog onderweg is. Dat verzoek loopt dan door nadat het antwoord al verstuurd is —
+//    en in een test nadat de test al klaar is, met een socket die nog openstaat terwijl de
+//    mockserver afsluit. `allSettled` wacht ze allebei af, dus er loopt niets meer na.
 const limitOrNull=async(event,identity)=>{
   if(!process.env.RATE_LIMIT_SECRET)return json(503,{error:"media_consent_unavailable"});
   const ipKey=createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET}|media|ip|${clientAddress(event)}`).digest("hex");
   const identityKey=createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET}|media|identity|${identity}`).digest("hex");
-  const [ipAllowed,identityAllowed]=await Promise.all([
+  const results=await Promise.allSettled([
     rpc("check_tavern_request_limit",{p_key_hash:ipKey,p_limit:20,p_window_minutes:15}),
     rpc("check_tavern_request_limit",{p_key_hash:identityKey,p_limit:10,p_window_minutes:15})
   ]);
-  return ipAllowed&&identityAllowed?null:json(429,{error:"too_many_requests"});
+  const failed=results.filter(result=>result.status==="rejected");
+  if(failed.length){
+    console.error("Media rate limit error",failed.map(result=>result.reason));
+    return json(503,{error:"media_consent_unavailable"});
+  }
+  return results.every(result=>result.value===true)?null:json(429,{error:"too_many_requests"});
 };
 
 export const handler=async event=>{

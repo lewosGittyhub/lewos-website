@@ -10,6 +10,7 @@
 import assert from "node:assert/strict";
 import {after,before,beforeEach,test} from "node:test";
 import http from "node:http";
+import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 const CAPACITEIT=6;
 const WEEKENDS=["weekend-01","weekend-02"];
@@ -75,7 +76,7 @@ before(async()=>{
       response.statusCode=404;response.end("{}");
     });
   });
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  await listenOnTestPort(server);
   basis=`http://127.0.0.1:${server.address().port}`;
   globalThis.fetch=(input,options)=>{
     const url=String(input);
@@ -89,7 +90,7 @@ before(async()=>{
   delete process.env.RESEND_API_KEY;
 });
 beforeEach(()=>{db=nieuweDatabase();databaseDown=false;});
-after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
+after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);server=null;});
 
 const aanvraag=({email,ip,weekend="weekend-01",mensen=1})=>({
   httpMethod:"POST",

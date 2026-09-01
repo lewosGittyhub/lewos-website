@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {after, before, beforeEach, test} from "node:test";
 import http from "node:http";
+import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 let registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};
 let emailRequests=0;
@@ -32,7 +33,7 @@ before(async()=>{
       response.statusCode=404;response.end("{}");
     });
   });
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  await listenOnTestPort(server);
   base=`http://127.0.0.1:${server.address().port}`;
   globalThis.fetch=(input,options)=>{
     const url=String(input);
@@ -50,7 +51,7 @@ before(async()=>{
 beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",claimId:"00000000-0000-4000-8000-000000000001",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
 beforeEach(()=>{markRequests=0;markStatus="marked";publicReady=true;process.env.PUBLIC_BOOKING_OPENS_AT="2099-01-01T00:00:00Z";});
 beforeEach(()=>{process.env.URL=base;});
-after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));});
+after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);server=null;});
 
 const post=(body,headers={"content-type":"application/json",accept:"application/json"})=>({httpMethod:"POST",headers,body:JSON.stringify(body)});
 const valid={name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,consent:"agreed","bot-field":""};

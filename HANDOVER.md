@@ -335,6 +335,87 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · De vastlopende testsuite: gevonden, begrensd, en één echte bug eronder · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `4722de7`.
+`origin/main` nog steeds `9013051`.
+
+**Wat er aan de hand was.** `node --test tests/media-consent.test.mjs` bleef staan met
+*"Promise resolution is still pending but the event loop has already resolved"*. Op commando
+kreeg ik het niet na te bootsen: tien achtereenvolgende runs van het onveranderde bestand
+liepen alle tien schoon door. Maar het gebeurt wél. Halverwege het onderzoek vond ik op deze
+Mac twee vastgelopen runs die er op dat moment nog stonden — gestart om 13:54 en 13:56,
+twintig minuten later nog altijd actief, met `--test-timeout=0` dus zonder dat er ooit iets
+zou ingrijpen. Die twee heb ik onderzocht en daarna afgeschoten.
+
+**Wat die vastgelopen processen lieten zien.** De worker hing in `kevent`, dus de
+gebeurtenislus leefde nog en wachtte op een handle. En, doorslaggevend: `lsof` liet **geen
+enkele open TCP-socket** zien. Geen server, geen verbinding — alleen de pijpen naar het
+ouderproces. De server was dus al netjes weg, en wat er nog hing was een belofte die nooit
+meer zou aflopen. In het oude `after()` was er precies één onbegrensde belofte:
+
+    after(async()=>{ ...; server.closeAllConnections?.(); await new Promise(resolve=>server.close(resolve)); });
+
+`server.close(cb)` roept zijn callback pas als élke verbinding weg is. Komt die callback
+niet, dan lost die belofte nooit op, is de test allang klaar en eindigt het proces niet.
+Dat past exact op wat ik in die twee processen zag.
+
+**Wat ik daaraan gedaan heb.** Nieuw bestand `tests/_test-server.mjs` met
+`listenOnTestPort()` en `stopTestServer()`. Dat patroon stond vijf keer los in de suite —
+`checkout`, `first-access`, `first-access-invitations`, `load` en `media-consent` — dus het
+hoorde op één plek. Twee dingen zijn erbij gekomen: de server wordt ge-`unref`'t zodat hij
+de gebeurtenislus nooit kan openhouden, en het sluiten heeft een harde bovengrens van een
+seconde. Loopt het sluiten vast, dan kappen we de verbindingen alsnog af en gaan we door.
+`server.listen` vangt nu ook zijn eigen fout af, want ook dáár lost een mislukking anders
+nooit op. Ik heb geen verklaring voor waaróm die callback soms wegblijft; ik heb er een
+grens omheen gezet. Dat is het eerlijke antwoord.
+
+**En de echte bug die eronder zat.** De snelheidsbegrenzer in `media-consent.mjs` stond niet
+in een `try/catch`, anders dan in `create-checkout-session.mjs` en `first-access.mjs`. Viel
+Supabase weg, dan gooide de handler in plaats van te antwoorden: in productie een 500 zonder
+uitleg, in een test een afgewezen belofte. Nagemeten met een mockserver die 500 teruggeeft —
+vóór de fix `HANDLER GOOIDE IN PLAATS VAN TE ANTWOORDEN`, erna een nette
+`503 media_consent_unavailable`. Ook `Promise.all` is `Promise.allSettled` geworden: met
+`all` keert de functie terug zodra de eerste aanroep afketst terwijl de tweede nog onderweg
+is, en dat verzoek loopt dan door nadat het antwoord al weg is — in een test nadat de test
+al klaar is, met een socket die nog openstaat terwijl de mockserver afsluit.
+
+**Twee dingen waar ik naast zat, en die ik heb rechtgezet.** Ik schreef eerst dat `Promise.all`
+de afwijzing van de tweede aanroep laat zweven. Dat klopt niet: `Promise.all` abonneert zich
+op allebei, dus daar ontstaat geen onafgehandelde rejection. De echte reden is die
+nalopende aanroep hierboven. En ik schreef eerst dat de oude `after()` aantoonbaar hing op
+een openstaande keep-alive verbinding; nagemeten op Node 24.20 komt die callback juist wél.
+Beide commentaren staan nu zoals het gemeten is.
+
+**Hoe te controleren.**
+- `node --test tests/media-consent.test.mjs` → 25 tests, vijf keer achter elkaar schoon.
+- `node --test tests/*.test.mjs` → **126 tests, 0 fouten**, klaar in een seconde.
+- Elk testbestand ook los gedraaid met een probe op `process.getActiveResourcesInfo()`:
+  alle acht eindigen met alleen `PipeWrap` (stdout/stderr) open. Geen server, geen socket,
+  geen timer blijft achter. Nul waarschuwingen over hangende beloftes.
+- `pgrep -fl "node --test"` na afloop: leeg.
+- Losse proef voor de begrenzer: mockserver die 500 geeft → 503 in plaats van een throw.
+
+**Niet geverifieerd.** Ik kan niet aantonen dát de nieuwe vorm nooit meer hangt — alleen dat
+hij het niet meer kán, omdat elke wachtende belofte nu een bovengrens heeft. Er is nog steeds
+geen Supabase, geen Stripe en geen PostgreSQL aangeraakt.
+
+**Iets wat ik gevonden heb en bewust heb laten liggen.** Met
+`--experimental-test-isolation=none` (alles in één proces) faalt de suite: 56 van de 126.
+Dat is niet nieuw en niet van deze ronde — op `4722de7` was het 55 van de 124, gemeten in een
+losse worktree. De oorzaak is dat alle vijf de serverbestanden hun `before`/`beforeEach` op
+bestandsniveau zetten; in die modus gelden die hooks voor élk testbestand, en dan wijzen
+`globalThis.fetch` en `SUPABASE_URL` van het ene bestand naar de mockserver van het andere.
+De nette oplossing is elk bestand in een `describe()` zetten. Dat is puur inspringen, maar
+het raakt vijf bestanden over hun volle lengte, en `CLAUDE.md` zegt geen grote
+herstructureringen zonder overleg. **Robert: zeg het als je wil dat ik dat doe.** Met de
+standaardinstelling draait elk bestand in zijn eigen proces en speelt het niet.
+
+**Wat nu volgt.** Codex: de begrenzer-fix en de bovengrens in `stopTestServer` nakijken —
+en als je een verklaring hebt voor die wegblijvende `close`-callback, hoor ik het graag.
+Voor de rest verandert er niets aan de stand: de mediapoort staat nog dicht, de betaalpoort
+ook, en de juridische review blijft de blokkade.
+
 ### 2026-09-01 · Claude · Persoonlijke toestemmingsflow gebouwd, en op slot gezet · TE CONTROLEREN
 
 **Startpunt gecontroleerd.** Branch `verwijder-dnd-merknaam`, werkmap schoon, `origin/main`
