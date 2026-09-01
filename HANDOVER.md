@@ -28,14 +28,6 @@ toegevoegd omdat ik het eerste lees. Te ruim gelezen? Zeg het.
 en sluit het aanmeldformulier over elf dagen, zeven weken vóór het weekend van 30 oktober.
 En of `/tavern/book/` dicht moet tot de verkoop open mag.
 
-**Van Claude aan Robert, 1 september 2026 — wordt Weekend 02 wél of niet gefilmd?**
-Het juridisch advies zegt dat een écht niet-gefilmd alternatief de toestemming voor
-Weekend 01 veel beter verdedigbaar maakt — maar alleen als het waar is. Nergens in deze
-repo, in `CLAUDE.md` of in het dossier staat iets over Weekend 02 en filmen. Ik heb er
-daarom niets over op de site gezet, en een test in `tests/filming.test.mjs` weigert elke
-bewering erover tot jij antwoord geeft. Zeg je "Weekend 02 wordt niet professioneel
-gefilmd", dan komt die zin erbij en gaat die test mee om.
-
 **Bevestiging van Robert, 1 september 2026:** Weekend 02 wordt niet professioneel gefilmd.
 Lewos kan vooraf incidenteel vragen of een gast vrijwillig in een specifieke foto of korte
 video wil verschijnen; weigeren heeft geen gevolgen voor deelname. Herkenbare promotionele
@@ -193,10 +185,18 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
   naar een gast toe. Let vooral op de intrekkingsclausule: Spaans portretrecht laat
   toestemming intrekken, dus er staat nergens *irrevocable* of *in perpetuity*, en een test
   houdt dat zo.
-- **[Wie het eerst kan, na die twee] Bouw de per-deelnemer-flow.** Unieke, moeilijk te
-  raden links, één deelnemer per link, dubbele inzendingen veilig, advertentietoestemming
-  als eigen boolean, organisator ziet alleen aantallen. Eisen en schemavereisten staan in
-  `operations/filming-weekend-01.md`; de migratie is bewust nog niet geschreven.
+- ~~**[Wie het eerst kan, na die twee] Bouw de per-deelnemer-flow.**~~ **Gebouwd op
+  1 september 2026 en dicht.** Migratie, functies, poort, e-mailsjabloon en tests staan er;
+  de mediapoort in `netlify/functions/_media-config.mjs` houdt alles gesloten tot de zes
+  instellingen bewust gevuld zijn. Zie het bovenste logboekitem en
+  `operations/filming-weekend-01.md`. Wat er nu nog moet gebeuren staat hieronder.
+- **[Robert, na de juridische review] Zet de mediaflow aan.** Zeven Netlify-variabelen én
+  zes constanten in `_media-config.mjs`; allebei bewust, allebei nodig. Draai daarna
+  `database/filming-consent.sql` in Supabase. De volledige lijst met handelingen staat in
+  `operations/filming-weekend-01.md` onder *Steps that still have to be done by hand*.
+- **[Blijft blokkeren] Verwerkersovereenkomst met Resend.** Punt 6 hieronder. Geen enkele
+  uitnodiging mag de deur uit voordat die getekend en bewaard is. Het script weigert nu al
+  te versturen zolang de poort dicht is, maar dit is een aparte, menselijke blokkade.
 
 
 1. **[Robert, vóór of bij de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** **Niet
@@ -334,6 +334,99 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
+### 2026-09-01 · Claude · Persoonlijke toestemmingsflow gebouwd, en op slot gezet · TE CONTROLEREN
+
+**Startpunt gecontroleerd.** Branch `verwijder-dnd-merknaam`, werkmap schoon, `origin/main`
+nog steeds `9013051`. Bovenste commits: `49310f0` (Robert, Weekend 02-beleid) en `b48669b`
+(de gefilmde editie). Robert heeft de Weekend 02-vraag beantwoord en mijn test omgedraaid;
+die vraag is uit het postvak bovenaan gehaald.
+
+**Wat.** De flow uit het draaiboek is nu echt gebouwd, en staat op slot.
+Nieuw: `netlify/functions/_media-config.mjs`, `netlify/functions/media-consent.mjs`,
+`database/filming-consent.sql`, `scripts/issue-media-agreements.mjs`,
+`tavern/filming-agreement/media-agreement.js`, `tests/media-consent.test.mjs`.
+Gewijzigd: `tavern/filming-agreement/index.html`, `_redirects`, `tests/filming.test.mjs`,
+`tests/database-integration.sql`, `operations/filming-weekend-01.md`.
+
+**De poort, en waarom er twee sloten zijn.** `_media-config.mjs` heeft zes constanten die
+leeg de deur uit gaan, en zeven Netlify-instellingen ernaast. De code vullen doet niets
+zonder de instellingen, en de instellingen zetten doet niets zonder de code. Ontbreekt er
+één, dan is `mediaConsentIsEnabled()` onwaar en zegt `mediaConsentBlockers()` precies wélke.
+Er is geen pad dat er stilzwijgend langs gaat. En zoals bij de betaalpoort: `NODE_ENV=test`
+is waardeloos zodra `URL` geen localhost is, dus testfixtures kunnen dit op een publieke
+deploy niet opengooien.
+
+**Deze poort staat los van de betaalpoort.** Geen gedeelde code, geen gedeelde variabele.
+`media-consent.mjs` noemt Stripe niet en `create-checkout-session.mjs` kent
+`_media-config.mjs` niet; een test bewaakt dat allebei. De drie betaalconstanten staan nog
+even leeg als gisteren.
+
+**Wat er in de database bij komt.** Drie tabellen — `tavern_media_agreements` (versie,
+documentreferentie, hash van de exacte tekst, review-referentie),
+`tavern_media_participants` (naam, e-mail, tokenhash, vervaldatum, status) en
+`tavern_media_consents` (versie, teksthash, kern-toestemming, aparte advertentiekeuze,
+audit-referentie, intrekkingstijd) — plus twee kolommen op `tavern_seat_claims` voor de
+voortgangslink van de hoofdboeker. RLS aan, geen policy, alles `revoke`d en alleen
+`service_role` mag de functies aanroepen. Dat is dezelfde vorm als de bestaande tabellen.
+
+**De keuzes die ik gemaakt heb en die je moet nakijken.**
+- *Weekend 02 kan hier niet in terechtkomen.* `tavern_media_agreement_required()` geeft
+  alleen bij `weekend-01` waar terug, en élke ingang controleert dat opnieuw. Dat staat in
+  de database en niet alleen in het formulier, want een formulier is te omzeilen.
+- *De eenmalige Weekend 02-toestemming voor één foto heb ik bewust niet gebouwd.* Dat is
+  iets anders: specifiek, in het moment, over één beeld. Dat in een versie-gebonden
+  blanket-flow persen laat het lijken op dezelfde toestemming. Verdient een eigen klein
+  formulier wanneer je het wil.
+- *Beeld en stem zijn één vinkje geworden* in plaats van twee. Ze zijn in de praktijk niet
+  te scheiden en de database legt er één beslissing over vast. Het vakje leeg laten is een
+  echte, vastgelegde weigering — geen ontbrekend antwoord.
+- *Advertentietoestemming is nullable.* `null` betekent "niet beantwoord", `false` betekent
+  "gevraagd en geweigerd". Allebei geven geen toestemming; publiceren mag alleen bij
+  `is true`. Zo blijft het verschil zichtbaar zonder dat een leeg vakje ooit als ja telt.
+- *Versie en teksthash komen van de server, nooit uit het verzoek.* Een client kan dus niet
+  beweren dat hij een oudere of andere tekst tekende.
+
+**De conceptpagina is een concept gebleven.** `noindex, nofollow`, conceptmelding, niet in
+de navigatie, `<form>` zonder `action` en zonder `method`, alle velden `disabled` in de HTML
+zelf en de verstuurknop `hidden`. Er staat nu wel een script op, maar dat zet niets aan
+zolang de server geen 200 geeft — en dat doet hij pas als de poort open is. In de browser
+nagelopen: klikken op een vinkje verandert het niet, en met een `?token=` erachter blijft
+alles uit met de melding dat er niets is vastgelegd.
+
+**Hoe te controleren.**
+- `node --test tests/*.test.mjs` → 124 tests, 0 fouten (was 101; 23 nieuw in
+  `tests/media-consent.test.mjs`, plus de aangescherpte conceptpagina-test).
+- `node --check` op alle nieuwe JS-bestanden.
+- `node scripts/issue-media-agreements.mjs` → weigert, somt de zeven blokkades op, exit 1.
+- Statische controle op de SQL: alle `$$` in paren, elf functies, elf `revoke`s, negen
+  `grant`s naar `service_role` (de twee `private.`-functies krijgen er terecht geen).
+- Lokale preview vanuit `/private/tmp`: zes invoervelden, alle zes `:disabled`, geen enkel
+  vinkje aan, geen horizontale scroll op 390px, één script, één formulier.
+- Met een gestubde API in de browser: de velden gaan aan, de naam wordt ingevuld, en het
+  verzoek dat eruit gaat bevat alleen `{token, standardUse, paidAdvertising}` — geen versie,
+  geen hash, geen gegevens van anderen.
+
+**Niet geverifieerd — en dit is de belangrijkste regel van dit item.** Er staat geen
+PostgreSQL op deze Mac (`psql` ontbreekt), dus `database/filming-consent.sql` is **niet
+gedraaid**. Niet lokaal, en zeker niet tegen productie. Alles wat ik over het gedrag van de
+SQL zeg volgt uit het lezen van de code en uit statische controles, niet uit een proef.
+De integratieproeven die dat wél kunnen aantonen staan klaar onderaan
+`tests/database-integration.sql`, met verzonnen gegevens en een `rollback` eromheen:
+Weekend 02 komt er niet in · dezelfde deelnemer twee keer levert één rij · dezelfde tokenhash
+past niet bij twee deelnemers · een lege keuze wordt geweigerd · een afwijkende teksthash
+wordt geweigerd · een tweede inzending geeft dezelfde audit-referentie · een nieuwe versie
+vraagt opnieuw akkoord · de teller lekt geen gegevens · intrekken wist niets · een verlopen
+of ingetrokken link doet niets meer. **Codex: dit is precies het stuk dat ik niet kan doen
+en jij wel.** Draai het in een testproject, nooit in productie.
+Ook niet gedaan: geen Supabase-aanroep, geen Resend-verzending, geen migratie, geen
+Netlify-variabele aangeraakt, niets gepusht.
+
+**Wat nu volgt.** Robert: de juridische review en de ontbrekende gegevens blijven de
+blokkade; daarna de handelingen in `operations/filming-weekend-01.md` onder *Steps that
+still have to be done by hand*. De verwerkersovereenkomst met Resend blijft een aparte,
+menselijke blokkade vóór de eerste uitnodiging. Codex: de SQL-integratieproef, en een blik
+op de vijf keuzes hierboven — die zijn van mij en ik kan ze niet zelf goedkeuren.
 
 ### 2026-09-01 · Claude · Weekend 01 als gefilmde First Edition, en toestemming weg bij de kassa · TE CONTROLEREN
 

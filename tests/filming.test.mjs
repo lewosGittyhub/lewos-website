@@ -71,11 +71,19 @@ test("the Filming & Media Agreement is a draft that cannot collect anything yet"
   assert.match(page,/paid digital advertising for The Lewos Tavern, including advertising on platforms such as Meta, Google and TikTok/);
   // Versie en bewijs horen bij elke ingevulde overeenkomst.
   assert.match(page,/filming-media-agreement-draft-2026-09-01/);
-  // Niets mag verstuurd worden: geen formulier, geen endpoint, geen script.
-  assert.doesNotMatch(page,/<form\b/,"a draft agreement may not be submittable");
-  assert.doesNotMatch(page,/\baction=/,"a draft agreement may not post anywhere");
-  assert.doesNotMatch(page,/<script\b/,"a draft agreement needs no script");
-  assert.match(page,/<fieldset disabled>/,"the preview fields must be switched off");
+  // De pagina mag uit zichzelf nergens naartoe posten. Er staat nu wel een script op dat
+  // de velden kan aanzetten, maar alleen nadat de server heeft gezegd dat de poort open is.
+  assert.doesNotMatch(page,/<form[^>]*\baction=/,"a draft agreement may not post anywhere by itself");
+  assert.doesNotMatch(page,/<form[^>]*\bmethod=/,"a draft agreement may not carry a submit method");
+  const fieldsets=[...page.matchAll(/<fieldset\b[^>]*>/g)].map(match=>match[0]);
+  assert.ok(fieldsets.length>=2,"the choices must sit inside fieldsets that can be switched off");
+  for(const fieldset of fieldsets)assert.match(fieldset,/\bdisabled\b/,`a fieldset ships enabled: ${fieldset}`);
+  assert.match(page,/<button type="submit" hidden/,"the submit button must start hidden");
+  // Het script zet niets aan zolang de server 503 antwoordt.
+  const script=await read(path.join(root,"tavern/filming-agreement/media-agreement.js"));
+  assert.match(script,/response\.status===503/,"the page must handle a closed gate explicitly");
+  assert.match(script,/keepClosed/,"a closed gate must leave every field switched off");
+  assert.match(script,/event\.preventDefault\(\)/,"the form may never submit itself");
   // De ontbrekende juridische gegevens moeten zichtbaar ontbreken, niet ingevuld zijn.
   for(const missing of ["Tax identification number","Full postal address","retention period","supervisory authority"]){
     assert.ok(page.includes(missing),`the agreement must show ${missing} as still missing`);

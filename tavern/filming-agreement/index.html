@@ -118,24 +118,30 @@
     <h2>Your agreement</h2>
     <p>Each adult attending completes this personally. The person who booked and paid for the party cannot give these permissions for anyone else, and no guest's place, price, room or seat depends on what is chosen here.</p>
 
-    <div class="preview">
-      <p class="eyebrow">Preview &middot; not active</p>
-      <fieldset disabled>
-        <legend>Part A &middot; Permission to record and publish</legend>
-        <div class="field"><label for="fa-name">Full name</label><input id="fa-name" type="text" autocomplete="name"></div>
-        <div class="field"><label for="fa-email">Email address</label><input id="fa-email" type="email" autocomplete="email"></div>
-        <div class="field"><label for="fa-event">Event and edition</label><input id="fa-event" type="text" value="The Lewos Tavern &middot; Weekend 01 &middot; 30 Oct to 2 Nov 2026" readonly></div>
-        <div class="check"><input id="fa-adult" type="checkbox"><label for="fa-adult">I am 18 or older and I am completing this agreement for myself.</label></div>
-        <div class="check"><input id="fa-image" type="checkbox"><label for="fa-image">I give permission for Lewos to record and publish photography, video and accompanying audio in which I am recognisable, for the uses described above.</label></div>
-        <div class="check"><input id="fa-voice" type="checkbox"><label for="fa-voice">I give permission for my voice and the audio recorded with that video to be used in the same way.</label></div>
-        <div class="check"><input id="fa-terms" type="checkbox"><label for="fa-terms">I have read this agreement and the <a href="/privacy/">privacy information</a>, and I understand how my personal data is handled.</label></div>
-      </fieldset>
+    <p class="draft" data-media-progress role="status" hidden></p>
 
-      <fieldset disabled>
-        <legend>Part B &middot; Paid advertising (optional)</legend>
-        <p>You can complete this agreement without this permission. Leaving it blank changes nothing else.</p>
-        <div class="check"><input id="fa-ads" type="checkbox"><label for="fa-ads"><strong>Optional:</strong> I also consent to selected photography or video featuring me being used in paid digital advertising for The Lewos Tavern, including advertising on platforms such as Meta, Google and TikTok.</label></div>
-      </fieldset>
+    <div class="preview">
+      <p class="eyebrow" data-media-label>Preview &middot; not active</p>
+      <form data-media-form>
+        <fieldset disabled data-media-fields>
+          <legend>Part A &middot; Permission to record and publish</legend>
+          <div class="field"><label for="fa-name">Full name</label><input id="fa-name" type="text" autocomplete="name" data-media-name></div>
+          <div class="field"><label for="fa-event">Event and edition</label><input id="fa-event" type="text" value="The Lewos Tavern &middot; Weekend 01 &middot; 30 Oct to 2 Nov 2026" readonly data-media-event></div>
+          <div class="check"><input id="fa-adult" type="checkbox" data-media-adult><label for="fa-adult">I am 18 or older and I am completing this agreement for myself.</label></div>
+          <div class="check"><input id="fa-image" type="checkbox" data-media-standard><label for="fa-image">I give permission for Lewos to record and publish photography, video and the voice and audio recorded with it, in which I am recognisable, for the uses described above.<br><small>Leaving this unticked is a decision too. It is recorded as no permission, and it changes nothing about your place, your price or your room.</small></label></div>
+          <div class="check"><input id="fa-terms" type="checkbox" data-media-terms><label for="fa-terms">I have read this agreement and the <a href="/privacy/">privacy information</a>, and I understand how my personal data is handled.</label></div>
+        </fieldset>
+
+        <fieldset disabled data-media-fields>
+          <legend>Part B &middot; Paid advertising (optional)</legend>
+          <p>You can complete this agreement without this permission. Leaving it blank changes nothing else, and it is never assumed from anything you ticked above.</p>
+          <div class="check"><input id="fa-ads" type="checkbox" data-media-ads><label for="fa-ads"><strong>Optional:</strong> I also consent to selected photography or video featuring me being used in paid digital advertising for The Lewos Tavern, including advertising on platforms such as Meta, Google and TikTok.</label></div>
+        </fieldset>
+
+        <button type="submit" hidden data-media-submit>Record my choices &rarr;</button>
+      </form>
+
+      <p class="review" data-media-status role="status" hidden></p>
 
       <p class="meta">Recorded with every completed agreement:</p>
       <dl class="meta">
@@ -188,6 +194,8 @@
     <p class="review"><strong>For legal review.</strong> Every field marked <span class="fill">to be inserted</span> is missing on purpose. None of them may be guessed, and this agreement cannot be put in front of a guest until they are filled in and the text has been checked under Spanish law.</p>
   </section>
 </main>
+
+<script type="module" src="/tavern/filming-agreement/media-agreement.js"></script>
 
 <footer><div class="wrap"><span>&copy; 2026 Lewos</span><span><a href="/legal/">Legal notice</a> &middot; <a href="/privacy/">Privacy</a></span></div></footer>
 </body>
