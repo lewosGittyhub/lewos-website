@@ -36,6 +36,12 @@ daarom niets over op de site gezet, en een test in `tests/filming.test.mjs` weig
 bewering erover tot jij antwoord geeft. Zeg je "Weekend 02 wordt niet professioneel
 gefilmd", dan komt die zin erbij en gaat die test mee om.
 
+**Bevestiging van Robert, 1 september 2026:** Weekend 02 wordt niet professioneel gefilmd.
+Lewos kan vooraf incidenteel vragen of een gast vrijwillig in een specifieke foto of korte
+video wil verschijnen; weigeren heeft geen gevolgen voor deelname. Herkenbare promotionele
+publicatie vereist vooraf specifieke toestemming. Betaalde advertenties blijven afzonderlijk
+optioneel.
+
 ## Actuele stand — 29 augustus 2026
 
 - De betaalpoort blijft dicht tot de externe papieren en regelingen definitief zijn. Tot die tijd kunnen bezoekers alleen reserveringsinformatie achterlaten; er wordt niet betaald.

@@ -23,14 +23,12 @@ test("Weekend 01 is presented as the filmed First Edition before anyone books",a
   assert.match(tavern,/paid advertising needs a separate, optional permission/i);
 });
 
-test("nothing on the site claims that Weekend 02 is not filmed",async()=>{
-  // Dat zou een sterk verkoopargument zijn, maar niemand heeft het bevestigd. Staat het
-  // er toch, dan is het een verzonnen feit. Zie de vraag aan Robert in HANDOVER.md.
-  const claims=[/Weekend 02 is not (currently )?scheduled for( professional)? filming/i,/Weekend 02[^.]{0,60}\bnot\b[^.]{0,40}\bfilmed\b/i];
-  for(const file of htmlFiles){
-    const html=await read(file);
-    for(const claim of claims)assert.doesNotMatch(html,claim,`${where(file)} claims something about Weekend 02 that is not confirmed`);
-  }
+test("Weekend 02 is described as not professionally filmed and keeps consent specific",async()=>{
+  const tavern=await read(path.join(root,"tavern/index.html"));
+  assert.match(tavern,/Weekend 02 is not planned as a professionally filmed edition/i);
+  assert.match(tavern,/Saying no has no effect on participation/i);
+  assert.match(tavern,/recognisable promotional use requires separate, specific permission beforehand/i);
+  assert.match(tavern,/paid advertising remains optional/i);
 });
 
 test("no checkbox anywhere on the site arrives pre-ticked",async()=>{
