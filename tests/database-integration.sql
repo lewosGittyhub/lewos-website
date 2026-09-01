@@ -132,6 +132,9 @@ declare
   stil_weekend uuid;
   film_claim uuid;
   stil_claim uuid;
+  vol_claim uuid;
+  registratie jsonb;
+  te_veel jsonb;
   deelnemer uuid;
   tweede uuid;
   hash_een text:=repeat('1',64);
@@ -162,6 +165,8 @@ begin
     values('Film Booker','film-booker@example.invalid',2,film_weekend,'paid',now()) returning id into film_claim;
   insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
     values('Quiet Booker','quiet-booker@example.invalid',2,stil_weekend,'paid',now()) returning id into stil_claim;
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
+    values('Full Booker','full-booker@example.invalid',2,film_weekend,'paid',now()) returning id into vol_claim;
 
   -- Weekend 01 vraagt een persoonlijke overeenkomst, Weekend 02 en elk ander weekend niet.
   if public.tavern_media_agreement_required('weekend-01') is not true then raise exception 'weekend_01_moet_verplicht_zijn'; end if;
@@ -173,13 +178,52 @@ begin
     raise exception 'er_is_toch_een_deelnemer_aangemaakt_voor_een_ongefilmd_weekend';
   end if;
 
-  -- Dezelfde deelnemer twee keer doorgeven levert één rij en dus één link op.
-  perform public.register_tavern_media_participants(film_claim,
+  -- Dezelfde deelnemer twee keer doorgeven levert één rij en dus één link op. En, sinds de
+  -- bevinding van Codex op 1 september 2026: een dubbele regel mag geen stoel kosten.
+  -- `film_claim` heeft party_size 2. De lijst hieronder is drie regels lang maar bevat twee
+  -- unieke gasten. Er werd op de lengte van de lijst geteld, dus dit werd geweigerd.
+  registratie:=public.register_tavern_media_participants(film_claim,
     '[{"fullName":"Film Guest","email":"film-guest@example.invalid","adultDeclared":true},
       {"fullName":"Film Guest","email":"film-guest@example.invalid","adultDeclared":true},
       {"fullName":"Second Guest","email":"second-guest@example.invalid","adultDeclared":true}]'::jsonb);
+  if registratie->>'status'<>'registered' then
+    raise exception 'een_dubbele_regel_werd_geteld_als_extra_deelnemer: %', registratie->>'status';
+  end if;
+  if (registratie->>'added')::integer<>2 then
+    raise exception 'verkeerd_aantal_toegevoegd: %', registratie->>'added';
+  end if;
   if (select count(*) from public.tavern_media_participants where claim_id=film_claim)<>2 then
     raise exception 'dezelfde_deelnemer_kreeg_twee_rijen';
+  end if;
+
+  -- Maar méér unieke gasten dan stoelen blijft geweigerd, en er wordt dan niets geplaatst.
+  te_veel:=public.register_tavern_media_participants(vol_claim,
+    '[{"fullName":"Guest One","email":"one@example.invalid","adultDeclared":true},
+      {"fullName":"Guest Two","email":"two@example.invalid","adultDeclared":true},
+      {"fullName":"Guest Three","email":"three@example.invalid","adultDeclared":true}]'::jsonb);
+  if te_veel->>'status'<>'too_many_participants' then
+    raise exception 'drie_unieke_gasten_pasten_op_twee_stoelen: %', te_veel->>'status';
+  end if;
+  if (select count(*) from public.tavern_media_participants where claim_id=vol_claim)<>0 then
+    raise exception 'een_geweigerde_registratie_plaatste_toch_deelnemers';
+  end if;
+
+  -- En een tweede aanroep mag het weekend niet alsnog overvullen. film_claim zit vol met
+  -- twee gasten; een derde adres erbij hoort te stuiten op dezelfde grens.
+  te_veel:=public.register_tavern_media_participants(film_claim,
+    '[{"fullName":"Third Guest","email":"third-guest@example.invalid","adultDeclared":true}]'::jsonb);
+  if te_veel->>'status'<>'too_many_participants' then
+    raise exception 'een_tweede_aanroep_kon_het_weekend_overvullen: %', te_veel->>'status';
+  end if;
+  if (select count(*) from public.tavern_media_participants where claim_id=film_claim)<>2 then
+    raise exception 'een_tweede_aanroep_voegde_er_toch_een_toe';
+  end if;
+
+  -- Dezelfde lijst nog een keer insturen verandert niets en is geen fout.
+  registratie:=public.register_tavern_media_participants(film_claim,
+    '[{"fullName":"Film Guest","email":"film-guest@example.invalid","adultDeclared":true}]'::jsonb);
+  if registratie->>'status'<>'registered' or (registratie->>'added')::integer<>0 then
+    raise exception 'een_herhaalde_inzending_was_niet_veilig: %', registratie;
   end if;
   select id into deelnemer from public.tavern_media_participants where email='film-guest@example.invalid';
   select id into tweede from public.tavern_media_participants where email='second-guest@example.invalid';

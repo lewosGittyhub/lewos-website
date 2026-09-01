@@ -335,6 +335,71 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · Een dubbele deelnemer kostte een stoel — hersteld · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `3dc867c`.
+
+**Wat Codex vond.** Op een tijdelijke Supabase-ontwikkelbranch (PostgreSQL 17.6) kon de
+migratie worden toegepast, en RLS en functierechten kwamen goed aan. Eén integratieproef
+faalde, op een echte logische fout: `register_tavern_media_participants` telde
+`jsonb_array_length(p_participants)` vóórdat er ontdubbeld werd. Twee unieke gasten met één
+dubbele regel werden daardoor geweigerd als `too_many_participants`. De branch is daarna
+verwijderd; productie, betaalpoort en mediaflow zijn niet aangeraakt.
+
+**Wat ik heb veranderd.** De volgorde in die functie is nu: eerst valideren, dan tellen,
+dan invoegen.
+- **Valideren eerst.** Een onbruikbare naam of een onbruikbaar adres komt er nu uit als
+  invoerfout, niet als een verhaal over te veel deelnemers.
+- **Ontdubbelen vóór tellen.** Er wordt geteld op `select distinct lower(trim(email))`, dus
+  twee keer hetzelfde adres is één gast en kost één stoel.
+- **De grens blijft.** Meer unieke gasten dan `party_size` wordt nog steeds geweigerd, en
+  een geweigerde aanroep plaatst niemand.
+
+**Een tweede gat in dezelfde regel, dat de proef van Codex niet raakte.** De oude controle
+keek alléén naar de meegestuurde lijst en nooit naar wat er al geregistreerd stond. Twee
+aanroepen met elk zes verschillende adressen hadden dus twaalf deelnemers op zes stoelen
+gezet. De telling is nu `al_geplaatst + nog_te_plaatsen > party_size`. Ik heb dat meegenomen
+omdat ik precies die regel toch aan het herschrijven was.
+
+**De vier gevallen, met de hand nagelopen op de nieuwe logica:**
+
+| geval | party_size | uitkomst |
+| --- | --- | --- |
+| twee unieke gasten, één dubbele regel | 2 | `registered`, `added: 2` |
+| drie unieke gasten | 2 | `too_many_participants`, niets geplaatst |
+| tweede aanroep met een nieuw adres terwijl het vol is | 2 | `too_many_participants` |
+| dezelfde lijst nog een keer insturen | 2 | `registered`, `added: 0` |
+
+**Tests.** `tests/database-integration.sql` dekt alle vier de gevallen met eigen foutmeldingen
+per geval, zodat een volgende run meteen zegt wélke regel brak — de bestaande proef die bij
+Codex faalde controleerde alleen het aantal rijen en niet de teruggegeven status. In
+`tests/media-database.test.mjs` staan twee statische regressietests bij: één die de vorm van
+de telling bewaakt (geen `jsonb_array_length` meer, wél `distinct`, wél `al_geplaatst`
+meegeteld, en de volgorde valideren → tellen → invoegen), en één die controleert dát die vier
+gevallen in het integratiebestand staan en dat er een `rollback` omheen zit.
+
+**Die tests zijn zelf getest.** Zeven bewuste breuken aangebracht — oude lengtecheck terug,
+`distinct` weggehaald, al geplaatste gasten niet meegeteld, de grens helemaal weg, de
+volgorde omgedraaid, een integratiegeval weggehaald, en de `rollback` vervangen door een
+`commit`. **Zeven van de zeven betrapt.** Daarna beide bestanden byte-voor-byte teruggezet
+en dat met `diff` gecontroleerd.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **140 tests, 0 fouten** (was 138).
+Alle JS door `node --check`.
+
+**Niet geverifieerd.** Ik heb de SQL niet gedraaid: er staat geen PostgreSQL op deze Mac. De
+tabel hierboven is een handmatige trace door de nieuwe code, geen meting. **Codex: het echte
+bewijs moet weer van jou komen.** De vier gevallen staan klaar onderaan
+`tests/database-integration.sql`, met verzonnen gegevens en een `rollback` eromheen.
+
+**Ongewijzigd:** de betaalpoort, de mediaschakelaar, de rechten en RLS. Alle elf functies
+staan nog op `set search_path=''` met volledig gekwalificeerde verwijzingen; de statische
+poortwachters daarvoor draaien nog steeds mee en blijven groen.
+
+**Wat nu volgt.** Codex: opnieuw een wegwerpbranch, migratie plus rollback-integratietests.
+Robert: `database/first-access.sql` heeft nog steeds hetzelfde search_path-probleem
+(vijftien functies, ~55 onbekwalificeerde verwijzingen); dat wacht op jouw akkoord.
+
 ### 2026-09-01 · Claude · Lege search_path op de mediafuncties, na Codex' bevinding · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `eb00a0c`,

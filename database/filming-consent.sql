@@ -112,7 +112,7 @@ grant execute on function public.tavern_media_agreement_required(text) to servic
 -- De hoofdboeker geeft de deelnemers door. Namen en e-mailadressen, meer niet.
 create or replace function public.register_tavern_media_participants(p_claim_id uuid,p_participants jsonb)
 returns jsonb language plpgsql security definer set search_path='' as $$
-declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; entry jsonb; naam text; adres text; toegevoegd integer:=0;
+declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; entry jsonb; naam text; adres text; toegevoegd integer:=0; nog_te_plaatsen integer; al_geplaatst integer;
 begin
   select * into claim from public.tavern_seat_claims where id=p_claim_id for update;
   if not found then return jsonb_build_object('status','unknown_claim'); end if;
@@ -122,13 +122,37 @@ begin
     return jsonb_build_object('status','not_required','weekend',weekend.slug);
   end if;
   if jsonb_typeof(p_participants)<>'array' then raise exception 'invalid_participants'; end if;
-  if jsonb_array_length(p_participants)>claim.party_size then return jsonb_build_object('status','too_many_participants'); end if;
+
+  -- Eerst elke inzending nakijken, en pas daarna tellen. Een onbruikbare naam of een
+  -- onbruikbaar adres is een fout in de aanroep; die hoort als zodanig terug te komen en
+  -- niet als een verhaal over te veel deelnemers.
   for entry in select * from jsonb_array_elements(p_participants) loop
     naam:=trim(coalesce(entry->>'fullName',''));
     adres:=lower(trim(coalesce(entry->>'email','')));
     if char_length(naam)<2 or char_length(naam)>120 then raise exception 'invalid_participant_name'; end if;
     if adres !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then raise exception 'invalid_participant_email'; end if;
+  end loop;
+
+  -- Tellen gebeurt ná het ontdubbelen. Twee keer hetzelfde e-mailadres is één gast en mag
+  -- geen tweede stoel kosten. Dit ging eerder mis: er werd op `jsonb_array_length` geteld,
+  -- dus twee gasten met één dubbele regel werden geweigerd als 'too_many_participants'.
+  -- Wat er al geregistreerd staat telt mee. Zonder dat zou een tweede aanroep met andere
+  -- adressen het weekend alsnog kunnen overvullen: zes plus zes op zes stoelen.
+  select count(*) into al_geplaatst from public.tavern_media_participants where claim_id=claim.id;
+  select count(*) into nog_te_plaatsen from (
+    select distinct lower(trim(item->>'email')) as email from jsonb_array_elements(p_participants) as item
+  ) uniek
+  where not exists(select 1 from public.tavern_media_participants bestaande
+                   where bestaande.claim_id=claim.id and bestaande.email=uniek.email);
+  if al_geplaatst+nog_te_plaatsen>claim.party_size then
+    return jsonb_build_object('status','too_many_participants','expected',claim.party_size,'unique',al_geplaatst+nog_te_plaatsen);
+  end if;
+
+  for entry in select * from jsonb_array_elements(p_participants) loop
+    naam:=trim(coalesce(entry->>'fullName',''));
+    adres:=lower(trim(coalesce(entry->>'email','')));
     -- Twee keer dezelfde deelnemer doorgeven maakt geen tweede rij en geen tweede link.
+    -- De eerste is hierboven al ingevoegd, dus de tweede vindt zichzelf terug en slaat over.
     if exists(select 1 from public.tavern_media_participants where claim_id=claim.id and email=adres) then continue; end if;
     insert into public.tavern_media_participants(claim_id,weekend_id,full_name,email,adult_declared)
       values(claim.id,weekend.id,naam,adres,coalesce((entry->>'adultDeclared')::boolean,false));

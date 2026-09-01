@@ -146,6 +146,26 @@ granted to `service_role` only: `tavern_media_agreement_required`,
 `withdraw_tavern_media_consent`, `get_tavern_media_progress`, plus
 `private.cleanup_tavern_media_invitations` and `private.purge_tavern_media_records`.
 
+### How the seat count works
+
+`register_tavern_media_participants` deduplicates on email address **before** it counts, and
+it counts what is already registered along with what is being submitted. The rule is:
+already registered + new unique addresses must not exceed `party_size`.
+
+That order matters, and it was wrong at first. The check used to be
+`jsonb_array_length(p_participants) > claim.party_size`, which counts raw list items. A lead
+booker with two guests who submitted one of them twice was refused with
+`too_many_participants`. Codex found it on a throwaway Supabase branch on 1 September 2026.
+
+Counting what is already stored closes a second hole in the same check: it only ever looked
+at the payload, so calling the function twice with six different addresses each time would
+have put twelve participants on a six-seat claim.
+
+More unique guests than seats is still refused, and a refused call inserts nothing. Sending
+the same list twice is safe and reports `added: 0`. The four cases are proven in
+`tests/database-integration.sql`; `tests/media-database.test.mjs` keeps the shape from
+regressing.
+
 ### Search path — why every reference carries its schema
 
 Every function in `database/filming-consent.sql` runs with `set search_path=''`, and every

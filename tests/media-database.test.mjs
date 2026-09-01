@@ -133,6 +133,44 @@ test("row level security stays on, with no policy handing out access",()=>{
   assert.doesNotMatch(migration,/disable row level security/i);
 });
 
+test("participants are deduplicated before they are counted against the seats",()=>{
+  // Codex vond dit op een tijdelijke Supabase-branch: er werd op `jsonb_array_length`
+  // geteld, dus twee unieke gasten met één dubbele regel werden geweigerd als
+  // 'too_many_participants'. Ontdubbelen hoort vóór het tellen.
+  const fn=functions.find(item=>item.name==="register_tavern_media_participants");
+  assert.ok(fn,"the registration function must exist");
+  assert.doesNotMatch(fn.body,/jsonb_array_length\(p_participants\)\s*>\s*claim\.party_size/,"the seat check may not count raw array items");
+  assert.match(fn.body,/select distinct lower\(trim\(item->>'email'\)\) as email/,"the count must run over distinct email addresses");
+  // Wat er al geregistreerd staat telt mee. Zonder dat vult een tweede aanroep met andere
+  // adressen het weekend alsnog: zes plus zes op zes stoelen.
+  assert.match(fn.body,/count\(\*\) into al_geplaatst from public\.tavern_media_participants where claim_id=claim\.id/);
+  assert.match(fn.body,/al_geplaatst\+nog_te_plaatsen>claim\.party_size/,"already registered participants must count towards the limit");
+  // De grens zelf blijft staan: meer unieke gasten dan stoelen wordt nog steeds geweigerd.
+  assert.match(fn.body,/'too_many_participants'/);
+  // En de volgorde: eerst valideren, dan tellen, dan pas invoegen. Zo komt een onbruikbaar
+  // adres eruit als invoerfout en niet als een verhaal over te veel deelnemers.
+  const validatie=fn.body.indexOf("invalid_participant_email");
+  const telling=fn.body.indexOf("into nog_te_plaatsen");
+  const invoegen=fn.body.indexOf("insert into public.tavern_media_participants");
+  assert.ok(validatie>-1&&telling>validatie&&invoegen>telling,`validate (${validatie}) then count (${telling}) then insert (${invoegen})`);
+});
+
+test("the integration file proves the seat count on a real database",async()=>{
+  // De statische test hierboven leest alleen de vorm. Het bewijs dat het klopt komt van de
+  // proef die Codex op een wegwerpbranch draait, dus die gevallen moeten er staan.
+  const integration=await readFile(path.join(root,"tests/database-integration.sql"),"utf8");
+  for(const geval of [
+    "een_dubbele_regel_werd_geteld_als_extra_deelnemer",
+    "drie_unieke_gasten_pasten_op_twee_stoelen",
+    "een_tweede_aanroep_kon_het_weekend_overvullen",
+    "een_herhaalde_inzending_was_niet_veilig",
+    "een_geweigerde_registratie_plaatste_toch_deelnemers"
+  ]){
+    assert.ok(integration.includes(geval),`the integration test must cover: ${geval}`);
+  }
+  assert.match(integration,/^rollback;$/m,"every fixture must be rolled back");
+});
+
 test("this migration leaves the payment gate and the media switch alone",()=>{
   // Het hardenen van de search_path mag niets opengooien.
   for(const forbidden of ["TAVERN_PAYMENTS_ENABLED","PUBLISHED_TERMS_VERSION","TAVERN_MEDIA_CONSENT_ENABLED","MEDIA_AGREEMENT_VERSION"]){
