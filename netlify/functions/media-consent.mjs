@@ -15,13 +15,16 @@ const rpc=async(name,body)=>{
 };
 
 // De poort zit vóór alles. Zolang hij dicht is raakt deze functie de database niet aan,
-// stuurt ze geen mail en schrijft ze niets weg — ze legt alleen uit dat het nog niet open is.
+// stuurt ze geen mail en schrijft ze niets weg.
+//
+// Wélke instelling ontbreekt gaat naar het serverlog en nooit naar de bezoeker. Een gast die
+// een link opent hoeft niets te weten over onze voorbereiding; hij krijgt een neutrale
+// melding en een adres waar hij terechtkan.
 const closedResponse=()=>{
-  const blockers=mediaConsentBlockers();
-  console.error("Media consent flow is closed",blockers);
+  console.error("Media consent flow is closed",mediaConsentBlockers());
   return json(503,{
     error:"media_consent_not_open",
-    message:"The Filming & Media Agreement is still a draft. It cannot be completed yet, and nothing you enter here would be stored."
+    message:"This agreement cannot be opened at the moment. Please contact Robert at lewos.co@gmail.com."
   });
 };
 

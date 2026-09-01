@@ -17,9 +17,13 @@ formulation it suggests still needs a Spanish privacy and media lawyer.
   where it may appear, and that every attendee signs personally. Public.
 - `/legal/#filming` carries the full disclosure, the excluded uses, the separate
   paid-advertising permission and the withdrawal wording. Public, `noindex`.
-- `/tavern/filming-agreement/` is the **draft** of the per-attendee agreement.
-  `noindex, nofollow`, a draft banner on its face, no form, no script, no
-  endpoint. It collects nothing. It exists so the text can be read and checked.
+- `/tavern/filming-agreement/` is the per-attendee agreement, written as a finished
+  document. `noindex, nofollow` — it belongs to a personal link, not to a search
+  result. It names the AEPD as supervisory authority, `lewos.co@gmail.com` as the
+  privacy contact, the full list of channels, and the retention wording. **Nothing
+  on it tells a guest anything about our own preparation**, and it collects nothing
+  while the gate below is shut: the form panel stays hidden and every field is
+  disabled in the HTML itself.
 - `/tavern/book/` and `/tavern/checkout/` ask the person paying to confirm they
   have read that Weekend 01 is filmed. That is an acknowledgement only.
 
@@ -29,35 +33,58 @@ behind it, and it sat on the same screen as the payment. `p_filming_consent`
 now always receives `false` from both checkout paths; a client that sends
 `filmingConsent:true` is ignored. Consent moves to the personal agreement.
 
-## Before this agreement may be put in front of a guest
+## What the public text now promises — internal only
 
-Robert, in this order:
+The page reads as finished, so everything on it is a promise. Read this list once and
+say if any of it is wrong; a guest can hold us to all of it.
 
-1. Confirm the operational rules below, or correct them. They are on the draft
-   page as working rules and are marked there as needing your confirmation.
-2. Supply what is marked `to be inserted` on the draft page: tax identification
-   number, full postal address, telephone, privacy contact address, retention
-   period, the competent supervisory authority, and the full list of platforms.
-   None of these may be guessed or copied out of a document found elsewhere.
-3. Have a Spanish privacy and media lawyer review the whole agreement, and the
-   withdrawal wording in particular, under Ley Orgánica 1/1982 and the GDPR.
-4. Only then: the per-attendee flow below may be switched on. It is built and shut.
-
-## Operational rules to confirm
-
-These are on the draft page. Say yes, no or different to each.
-
-- No filming in bedrooms, bathrooms, changing areas or other clearly private
-  spaces. (Already fixed in `.internal/filming-consent-v1.1.md`.)
+- No filming in bedrooms, bathrooms, changing areas or other clearly private spaces.
 - Guests are told when filming is actively taking place.
 - There are periods during the weekend when the cameras are down.
-- A guest can ask for the camera to stop during a personal or sensitive
-  conversation, and it stops.
+- A guest can ask for the camera to stop during a personal or sensitive conversation.
 - Meals are filmed selectively rather than continuously.
 - The game table is the main expected filming location.
-- Private conversations and sensitive disclosures are not published, even when
-  they were recorded. This is an editing rule, not only a filming rule.
-- Practical camera-free route or area for a guest who has not given permission.
+- Private conversations and sensitive disclosures are not published, even if recorded.
+- Withdrawal costs nothing and has no effect on the booking.
+- Paid advertising on Meta, Google and TikTok only with the separate optional consent.
+- Material in which a guest is recognisable may appear on: the Lewos website, the
+  StoryForgers website, official organic social media, newsletters, PR and editorial
+  publications, promotional films and trailers.
+
+## Still open, and deliberately not on the public page
+
+None of this is visible to a guest. It lives here, in `HANDOVER.md` and in the
+configuration gate, and nowhere else.
+
+1. **A Spanish privacy and media lawyer has not reviewed this text.** That review is
+   still required before the gate is opened, with the withdrawal clause under
+   Ley Orgánica 1/1982 and the GDPR as the first thing to check. The page says nothing
+   about it, because a guest has no business reading about our own preparation.
+2. **The ANBEN identity data is still missing**: tax identification number, full postal
+   address, telephone, tourism registration code and the insolvency guarantee. None of
+   it may be invented. The consent page works without it — it names the controller,
+   where Lewos is established, and a working contact address — but the **official sales
+   documents and the payment gate stay closed** until those details land.
+3. **The three statutory sales documents are still unfinished**: `/standard-information/`,
+   `/terms/` and `/travel-information/`. They still say on their face that they are not
+   in force, which is the honest thing for them to say and the opposite of what the
+   consent page needed. They sit inside the closed sales path: nothing in the open
+   customer route links to them, only `/tavern/book/` and `/tavern/checkout/` do, and
+   both of those are behind the shut payment gate. A test enforces exactly that, so the
+   day something in the open route links to one of them, the suite fails.
+   **Robert: if you would rather they were unreachable altogether, say so** — that is a
+   one-line change in `_redirects`, but it takes documents off the site that are linked
+   from the checkout, so it is your call and not mine.
+4. **The operational rules above became public promises.** They were "to be confirmed"
+   before; they are now printed. If one of them is wrong it has to come off the page.
+
+## One rule that is not on the public page
+
+A practical camera-free route or area for a guest who has not given permission. This is
+an arrangement on the ground rather than a term of the agreement, so it belongs in the
+crew briefing and not in the text a guest signs. It still has to exist on the weekend
+itself: a guest who declined and then has nowhere to sit has been given a choice on paper
+and not in practice.
 
 ## The agreement with the videographer
 

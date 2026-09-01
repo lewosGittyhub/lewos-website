@@ -335,6 +335,97 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · De overeenkomst is een afgemaakt document geworden · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `fb0c685`.
+
+**Wat Robert vroeg.** De klant ziet nooit onze interne opmerkingen. Geen conceptmelding,
+geen invulhaakje, geen aankondiging dat er nog een jurist meekijkt. De Filming & Media
+Agreement moet publiek af zijn; alles wat nog open staat hoort in dit dossier, in
+`operations/filming-weekend-01.md` en in de configuratiepoort — nergens anders.
+
+**Wat er publiek veranderd is.** `/tavern/filming-agreement/` is nu een afgemaakt document.
+Conceptbanner weg, titel en omschrijving zonder "draft", alle acht `to be inserted`-haakjes
+weg, de regel "For legal review" weg, en de zin over de nog te bevestigen werkregels weg.
+Ingevuld met wat Robert heeft aangeleverd: **AEPD** als toezichthouder met een link naar
+aepd.es, **lewos.co@gmail.com** als privacycontact, de volledige kanalenlijst (Lewos-site,
+StoryForgers-site, organische sociale media, nieuwsbrieven, PR en redactie, promotiefilms en
+trailers, en betaalde Meta-, Google- en TikTok-advertenties alléén via de aparte optionele
+toestemming), en de bewaartermijn in de vastgestelde bewoording. Ook `/legal/#filming` is
+opgeschoond: die zin vertelde de klant dat de tekst nog in voorbereiding was.
+
+**Geen ANBEN-gegevens verzonnen.** Fiscaal nummer, adres, telefoon, registratiecode en
+garantiegegevens staan er niet in en zijn niet bedacht. De verwerkingsverantwoordelijke
+staat er wél: Lewos, handelsnaam van Robert Neugebauer, gevestigd in het concejo Parres,
+Asturië, met een werkend contactadres. Dat is genoeg voor een toestemmingspagina. De
+officiële verkoopdocumenten en de betaalpoort blijven dicht tot die gegevens er zijn.
+
+**De poort is niet aangeraakt en de melding is neutraal geworden.** De 503 zei letterlijk
+dat de overeenkomst nog concept was en waarom. Dat is precies wat een gast niet hoeft te
+weten. Nu: *"This agreement cannot be opened at the moment. Please contact Robert at
+lewos.co@gmail.com."* Welke instelling ontbreekt gaat naar het serverlog. Ook nieuw: het
+formulierpaneel staat standaard `hidden` en komt pas tevoorschijn als de server zegt dat
+de link geldig is. Wie de pagina zonder link opent leest alleen de tekst — geen half
+formulier, geen uitgegrijsde velden.
+
+**Wat ik NIET gedaan heb, en waarom dat een beslissing van jou is.** Drie pagina's dragen
+nog wél interne woorden: `/standard-information/`, `/terms/` en `/travel-information/`. Die
+zijn echt niet af — ze missen precies de ANBEN-gegevens die ik niet mag verzinnen — en de
+melding dat ze niet gelden is daar het eerlijke, niet het slordige. Ze onzichtbaar maken was
+mijn keuze niet: het haalt drie juridische documenten van de site die vanuit de checkout
+gelinkt worden. Wat ik wél heb gedaan is aantonen dat ze binnen de gesloten verkoopweg
+liggen: **niets in de open klantroute linkt ernaartoe**, alleen `/tavern/book/` en
+`/tavern/checkout/` doen dat, en die zitten achter de dichte betaalpoort. Een test bewaakt
+dat nu, dus de dag dat iets uit de open route ernaartoe linkt, valt de suite om.
+**Robert: wil je ze liever helemaal onbereikbaar? Dat is één regel in `_redirects`. Zeg het.**
+
+**Vier dingen die nu publieke beloftes zijn.** Ze stonden er eerst als "nog te bevestigen".
+Nu staan ze er gewoon, en een gast kan ons eraan houden: camera's gaan periodiek uit · je
+mag vragen de camera te stoppen bij een persoonlijk gesprek · maaltijden worden selectief
+gefilmd · privégesprekken worden niet gepubliceerd, ook niet als ze zijn opgenomen. Ze staan
+voluit in `operations/filming-weekend-01.md` onder *What the public text now promises*.
+Klopt er één niet, dan moet hij van de pagina af.
+
+**De deelnemerflow is nagelopen en ongewijzigd.** Eén unieke link per volwassene · alleen de
+tokenhash in de database · geen gegevens van andere deelnemers · eerst ontdubbelen, dan
+tellen · alleen unieke deelnemers tegen `party_size` · Weekend 02 kan er niet in ·
+advertentietoestemming apart en nullable · intrekken laat een spoor na · een nieuwe versie
+vraagt opnieuw akkoord. Alle bestaande tests daarvoor draaien nog en blijven groen.
+
+**Nieuwe tests (vijf).** Eén die over élke publieke pagina de zichtbare tekst leest — titel,
+zoekomschrijving en paginatekst, zonder stijlblokken en zonder klassenamen, met
+HTML-entiteiten omgezet zoals een lezer ze ziet — en daar de verboden woorden in weigert.
+Eén die bewaakt dat de drie onafgemaakte verkoopdocumenten binnen de gesloten weg blijven.
+Eén die controleert dat de overeenkomst inhoudelijk af is: AEPD, privacycontact, de zeven
+kanalen en de bewaartermijn woord voor woord. Eén die eist dat het formulier verborgen blijft
+tot de server groen licht geeft. En één die het 503-antwoord natrekt op lekken: geen enkele
+blokkade uit `mediaConsentBlockers()` mag erin voorkomen.
+
+**Twee valkuilen die ik onderweg gevonden heb.** `todo` staat in de Spaanse tekst van
+`/travel-information/` ("durante todo el fin de semana"), dus de test op `TODO` is
+hoofdlettergevoelig — anders zou hij een correcte Spaanse zin afkeuren. En `class="draft"`
+is geen zin die iemand leest, dus de test kijkt naar zichtbare tekst en niet naar de HTML.
+Die klasse heet nu trouwens `callout`.
+
+**De tests zijn zelf getest.** Zes bewuste breuken: een conceptwoord in de klanttekst, een
+`TODO` in de juridische pagina, de toezichthouder eruit, de bewaartermijn afgezwakt, het
+formulier zichtbaar zonder link, en een link vanuit de open route naar een onafgemaakt
+verkoopdocument. **Zes van de zes betrapt**, daarna alles teruggezet en gecontroleerd.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **145 tests, 0 fouten** (was 140).
+In de browser nagelopen: het formulierpaneel is verborgen, nul zichtbare invoervelden,
+`noindex, nofollow`, geen console-fouten, en de pagina leest van boven tot onder als een af
+document.
+
+**Niet geverifieerd.** De juridische kwaliteit van de tekst. Ik heb geschreven wat er
+inhoudelijk hoort te staan en wat Robert heeft aangeleverd, maar of dit onder Spaans recht
+standhoudt weet een jurist en niet ik. Dat staat nu alleen nog intern, zoals gevraagd. Verder
+is er niets gedraaid tegen Supabase, niets gepusht en niets gedeployed.
+
+**Wat nu volgt.** Robert: de vier beloftes nakijken, de vraag over de drie verkoopdocumenten
+beantwoorden, en de ANBEN-gegevens aanleveren. De mediapoort en de betaalpoort staan allebei
+nog dicht en zijn in deze ronde niet aangeraakt.
+
 ### 2026-09-01 · Claude · Een dubbele deelnemer kostte een stoel — hersteld · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `3dc867c`.

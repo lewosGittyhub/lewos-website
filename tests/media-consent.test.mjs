@@ -130,6 +130,25 @@ test("the closed flow touches nothing: no database call, no email, no stored dat
   assert.equal(emailRequests,0,"a closed gate may not send an email");
 });
 
+test("a closed gate tells the guest nothing about our own preparation",async()=>{
+  // De blokkades horen in het serverlog, niet in het antwoord. Een gast die een link opent
+  // hoeft niet te weten welke instelling er ontbreekt.
+  closeTheGate();
+  const run=await handler();
+  const body=JSON.parse((await run({httpMethod:"GET",queryStringParameters:{token}})).body);
+  for(const phrase of [/\bdraft\b/i,/review/i,/lawyer/i,/not yet/i,/version/i,/config/i,/setting/i,/MEDIA_/,/TAVERN_/,/search_path/i,/supabase/i]){
+    assert.doesNotMatch(body.message||"",phrase,`the closed response leaks internal detail: ${phrase}`);
+    assert.doesNotMatch(body.error||"",phrase,`the closed error code leaks internal detail: ${phrase}`);
+  }
+  // Wat er wél in staat: een neutrale melding en een adres waar de gast terechtkan.
+  assert.match(body.message,/lewos\.co@gmail\.com/);
+  // En geen enkele blokkade uit mediaConsentBlockers() lekt mee.
+  const {mediaConsentBlockers}=await import("../netlify/functions/_media-config.mjs");
+  for(const blocker of mediaConsentBlockers()){
+    assert.ok(!JSON.stringify(body).includes(blocker),`the response repeats an internal blocker: ${blocker}`);
+  }
+});
+
 test("the invitation script refuses to run while the gate is shut",async()=>{
   const script=await read("scripts/issue-media-agreements.mjs");
   assert.match(script,/if\(!mediaConsentIsEnabled\(\)\)/,"the gate must be checked before anything is read");

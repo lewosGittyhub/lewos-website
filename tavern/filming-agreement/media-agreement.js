@@ -2,13 +2,14 @@
 // HTML zelf, dus zonder dit script — of zonder een open mediapoort — valt er niets in te
 // vullen en niets te versturen. Alleen een geldige persoonlijke link plus een server die
 // zegt dat de overeenkomst is goedgekeurd, zet de velden aan.
+const panel=document.querySelector("[data-media-panel]");
 const form=document.querySelector("[data-media-form]");
 const fieldsets=[...document.querySelectorAll("[data-media-fields]")];
 const submit=document.querySelector("[data-media-submit]");
 const status=document.querySelector("[data-media-status]");
 const progress=document.querySelector("[data-media-progress]");
-const draft=document.querySelector(".draft");
 const label=document.querySelector("[data-media-label]");
+const version=document.querySelector("[data-media-version]");
 const nameField=document.querySelector("[data-media-name]");
 const eventField=document.querySelector("[data-media-event]");
 const adult=document.querySelector("[data-media-adult]");
@@ -22,12 +23,14 @@ const progressToken=parameters.get("progress")||"";
 
 const say=(text,element=status)=>{element.textContent=text;element.hidden=false;};
 
-// Eén plek waar de pagina weer dichtgaat. Bij twijfel blijft alles uit.
+// Eén plek waar de pagina weer dichtgaat. Bij twijfel blijft alles uit. De bezoeker krijgt
+// nooit te horen wélke instelling ontbreekt: dat is onze administratie, niet zijn probleem.
 const keepClosed=text=>{
   for(const fieldset of fieldsets)fieldset.disabled=true;
   if(submit)submit.hidden=true;
   if(text)say(text);
 };
+const NOT_AVAILABLE="This agreement cannot be opened at the moment. Please contact Robert at lewos.co@gmail.com and he will sort it out.";
 
 const showProgress=async()=>{
   try{
@@ -40,8 +43,11 @@ const showProgress=async()=>{
 };
 
 const openAgreement=state=>{
-  if(draft)draft.hidden=true;
-  if(label)label.textContent="Your personal agreement";
+  // Het formulier verschijnt pas als de server zegt dat deze link geldig is. Wie de pagina
+  // zonder link leest, ziet alleen de tekst van de overeenkomst.
+  if(panel)panel.hidden=false;
+  if(label)label.textContent="Your choices";
+  if(version)version.textContent=state.agreementVersion||"";
   if(nameField){nameField.value=state.fullName||"";nameField.readOnly=true;}
   if(eventField)eventField.value=`The Lewos Tavern · ${state.weekendLabel}`;
   for(const fieldset of fieldsets)fieldset.disabled=false;
@@ -62,9 +68,9 @@ const load=async()=>{
   try{
     const response=await fetch(`/api/media-consent?token=${encodeURIComponent(token)}`,{headers:{accept:"application/json"}});
     const result=await response.json();
-    if(response.status===503){keepClosed(result.message||"The Filming & Media Agreement is still a draft and cannot be completed yet.");return;}
-    if(response.status===410){keepClosed("This link has expired. Ask Robert for a new one.");return;}
-    if(!response.ok){keepClosed("This link is not valid. Ask Robert for a new one.");return;}
+    if(response.status===503){keepClosed(NOT_AVAILABLE);return;}
+    if(response.status===410){keepClosed("This link has expired. Please contact Robert at lewos.co@gmail.com for a new one.");return;}
+    if(!response.ok){keepClosed("This link is not valid. Please contact Robert at lewos.co@gmail.com for a new one.");return;}
     openAgreement(result);
   }catch{keepClosed("The agreement could not be loaded right now. Nothing has been recorded.");}
 };
@@ -85,7 +91,7 @@ if(form){
         body:JSON.stringify({token,standardUse:standard?standard.checked:false,paidAdvertising:ads?ads.checked:false})
       });
       const result=await response.json();
-      if(response.status===503){keepClosed(result.message||"The agreement is not open yet. Nothing was recorded.");return;}
+      if(response.status===503){keepClosed(NOT_AVAILABLE);return;}
       if(!response.ok){say("Your choices could not be recorded. Nothing has been stored. Please try again or reply to the email that brought you here.");submit.disabled=false;return;}
       keepClosed(`Thank you. Your choices are recorded under reference ${result.auditReference}. ${result.standardUseConsent?"You gave permission for recognisable use.":"You did not give permission for recognisable use, and that is respected."} ${result.paidAdvertisingConsent===true?"You also allowed paid advertising.":"You did not allow paid advertising."}`);
     }catch{

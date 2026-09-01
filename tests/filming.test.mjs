@@ -59,10 +59,11 @@ test("the booker confirms the filmed edition, and confirms nothing on anyone's b
   assert.doesNotMatch(handler,/p_filming_consent:filmingConsent/);
 });
 
-test("the Filming & Media Agreement is a draft that cannot collect anything yet",async()=>{
+test("the Filming & Media Agreement collects nothing until the gate is open",async()=>{
   const page=await read(path.join(root,"tavern/filming-agreement/index.html"));
+  // De pagina blijft uit de zoekresultaten: hij hoort bij een persoonlijke link, niet bij
+  // een zoekopdracht. Dat is geen conceptmelding maar een eigenschap van de route.
   assert.match(page,/noindex/);
-  assert.match(page,/This is a draft. It cannot be completed yet/);
   // Twee gescheiden onderwerpen in één document: de toestemming, en de AVG-informatie.
   assert.match(page,/Permission to record and publish/);
   assert.match(page,/How your personal data is handled/);
@@ -70,7 +71,9 @@ test("the Filming & Media Agreement is a draft that cannot collect anything yet"
   assert.match(page,/Paid advertising \(optional\)/);
   assert.match(page,/paid digital advertising for The Lewos Tavern, including advertising on platforms such as Meta, Google and TikTok/);
   // Versie en bewijs horen bij elke ingevulde overeenkomst.
-  assert.match(page,/filming-media-agreement-draft-2026-09-01/);
+  // De versie komt van de server mee, niet uit de pagina: zo kan er nooit een andere versie
+  // op het scherm staan dan de versie die wordt vastgelegd.
+  assert.match(page,/data-media-version/);
   // De pagina mag uit zichzelf nergens naartoe posten. Er staat nu wel een script op dat
   // de velden kan aanzetten, maar alleen nadat de server heeft gezegd dat de poort open is.
   assert.doesNotMatch(page,/<form[^>]*\baction=/,"a draft agreement may not post anywhere by itself");
@@ -84,11 +87,8 @@ test("the Filming & Media Agreement is a draft that cannot collect anything yet"
   assert.match(script,/response\.status===503/,"the page must handle a closed gate explicitly");
   assert.match(script,/keepClosed/,"a closed gate must leave every field switched off");
   assert.match(script,/event\.preventDefault\(\)/,"the form may never submit itself");
-  // De ontbrekende juridische gegevens moeten zichtbaar ontbreken, niet ingevuld zijn.
-  for(const missing of ["Tax identification number","Full postal address","retention period","supervisory authority"]){
-    assert.ok(page.includes(missing),`the agreement must show ${missing} as still missing`);
-  }
-  assert.ok(page.split("to be inserted").length-1>=6,"every unconfirmed field must be marked as missing");
+  // Niets van onze eigen voorbereiding staat er nog in.
+  assert.ok(!page.includes("to be inserted"),"no placeholder may reach a guest");
 });
 
 test("no page promises a permission that can never be taken back",async()=>{
@@ -132,4 +132,95 @@ test("the filming work leaves the payment gate exactly as it was",async()=>{
   for(const route of ["/api/checkout","/tavern/book/","/tavern/checkout/"]){
     assert.ok(!agreement.includes(route),`the agreement page may not lead to ${route}`);
   }
+});
+
+// ---------------------------------------------------------------- wat de klant leest
+
+// Wat een bezoeker werkelijk ziet: de titel, de omschrijving die in een zoekresultaat komt,
+// en de tekst op de pagina. Stijlblokken en klassenamen tellen niet mee — `class="callout"`
+// is geen zin die iemand leest.
+const decodeEntities=value=>value
+  .replace(/&(?:mdash|ndash);/g,"-").replace(/&middot;/g,"·").replace(/&nbsp;/g," ")
+  .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"')
+  .replace(/&ntilde;/g,"ñ").replace(/&oacute;/g,"ó").replace(/&eacute;/g,"é").replace(/&copy;/g,"©")
+  .replace(/&larr;/g,"←").replace(/&rarr;/g,"→")
+  .replace(/&#(\d+);/g,(all,code)=>String.fromCharCode(Number(code)));
+
+const visibleText=html=>{
+  const stripped=decodeEntities(html.replace(/<style[\s\S]*?<\/style>/gi,"").replace(/<script[\s\S]*?<\/script>/gi,""));
+  const title=[...stripped.matchAll(/<title>([\s\S]*?)<\/title>/gi)].map(match=>match[1]).join(" ");
+  const description=[...stripped.matchAll(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)/gi)].map(match=>match[1]).join(" ");
+  return `${title} ${description} ${stripped.replace(/<[^>]+>/g," ")}`;
+};
+
+// De drie wettelijke verkoopdocumenten zijn bewust nog niet af: ze missen gegevens die
+// niemand mag verzinnen — fiscaal nummer, adres, telefoon, toeristische registratie en de
+// insolventiegarantie. Ze zeggen daarom op hun gezicht dat ze niet gelden, en ze liggen
+// binnen de gesloten verkoopweg. De test daaronder bewaakt dat die weg ook echt dicht is.
+const salesDocuments=["standard-information","terms","travel-information"];
+const inSalesPath=file=>salesDocuments.some(name=>where(file).startsWith(`${name}${path.sep}`))
+  ||where(file).startsWith(`tavern${path.sep}book`)||where(file).startsWith(`tavern${path.sep}checkout`);
+
+test("no page a guest reads carries a word from our own preparation",async()=>{
+  // Robert, 1 september 2026: de klant ziet nooit interne opmerkingen. Geen conceptmelding,
+  // geen invulhaakje, geen aankondiging dat er nog een jurist naar kijkt.
+  const banned=[/\bdrafts?\b/i,/\bdrafted\b/i,/\bconcept\b/i,/to be reviewed/i,/lawyer review/i,/to be inserted/i,/must still be inserted/i,/pending confirmation/i,/\bTODO\b/,/not yet checked/i,/not yet in force/i,/for legal review/i,/legally checked/i,/nog te controleren/i];
+  for(const file of htmlFiles){
+    if(inSalesPath(file))continue;
+    const text=visibleText(await read(file));
+    for(const phrase of banned){
+      assert.doesNotMatch(text,phrase,`${where(file)} shows our own preparation to the guest: ${phrase}`);
+    }
+  }
+});
+
+test("the unfinished sales documents stay inside the closed sales path",async()=>{
+  // Ze zijn uitgezonderd van de test hierboven, en die uitzondering mag alleen gelden zolang
+  // niemand er vanuit de open route naartoe kan lopen. Zodra dat wel kan, faalt dit.
+  const openRoute=htmlFiles.filter(file=>!inSalesPath(file));
+  for(const file of openRoute){
+    const html=await read(file);
+    for(const name of salesDocuments){
+      assert.ok(!html.includes(`href="/${name}/"`)&&!html.includes(`href="../${name}/"`),
+        `${where(file)} links to /${name}/, which is not finished and must stay behind the closed sales path`);
+    }
+  }
+  // En ze blijven zeggen dat ze niet gelden, zolang de ontbrekende gegevens ontbreken.
+  for(const name of salesDocuments){
+    const html=await read(path.join(root,name,"index.html"));
+    assert.match(html,/noindex/,`/${name}/ must stay out of search results while it is unfinished`);
+  }
+});
+
+test("the Filming & Media Agreement reads as a finished document",async()=>{
+  const page=await read(path.join(root,"tavern/filming-agreement/index.html"));
+  const text=visibleText(page);
+  // Toezichthouder, privacycontact en de volledige platformlijst staan er voluit in.
+  assert.match(text,/Agencia Española de Protección de Datos \(AEPD\)/);
+  assert.match(text,/lewos\.co@gmail\.com/);
+  for(const platform of ["Lewos website","StoryForgers website","organic social-media channels","newsletters","PR and editorial publications","promotional films and trailers"]){
+    assert.ok(text.includes(platform),`the agreement must name where material may appear: ${platform}`);
+  }
+  assert.match(text,/paid advertising on Meta, Google and TikTok/i);
+  // De bewaartermijn staat er in de vastgestelde bewoording.
+  assert.ok(text.includes("Filming preferences and consent records are kept for as long as needed to demonstrate and respect your choice."));
+  assert.ok(text.includes("Recordings approved for use are kept while that use remains relevant, unless consent is withdrawn for future use."));
+  assert.ok(text.includes("Booking, payment and invoice records are retained for the periods required by applicable accounting, tax and consumer law."));
+  // Geen invulhaakjes en geen restanten van de conceptopmaak.
+  assert.doesNotMatch(page,/class="fill"/);
+  assert.doesNotMatch(page,/class="draft"/);
+  // En nog steeds geen belofte die niet ingetrokken kan worden.
+  for(const phrase of [/\birrevocabl/i,/in perpetuity/i,/\bwaive/i,/\bforever\b/i])assert.doesNotMatch(text,phrase);
+});
+
+test("a guest never sees the form until the server says the link is good",async()=>{
+  const page=await read(path.join(root,"tavern/filming-agreement/index.html"));
+  const script=await read(path.join(root,"tavern/filming-agreement/media-agreement.js"));
+  // Zonder geldige link is de pagina alleen de tekst van de overeenkomst.
+  assert.match(page,/<div class="preview" data-media-panel hidden>/,"the form panel must start hidden");
+  assert.match(script,/if\(panel\)panel\.hidden=false;/,"only a ready state may reveal the form");
+  // En een dichte poort noemt nooit een reden.
+  const closed=script.match(/const NOT_AVAILABLE="([^"]+)"/);
+  assert.ok(closed,"there must be one neutral message for a closed gate");
+  for(const phrase of [/\bdraft\b/i,/review/i,/lawyer/i,/not yet/i,/config/i,/setting/i])assert.doesNotMatch(closed[1],phrase);
 });
