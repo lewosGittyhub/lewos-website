@@ -12,6 +12,14 @@ const rpc=async(name,body)=>{
   return response.json();
 };
 
+// Filmtoestemming komt niet meer uit dit formulier. Wie betaalt bevestigt alleen dát hij
+// weet dat Weekend 01 de gefilmde editie is; de eigenlijke toestemming geeft elke gast
+// straks zelf, in de Filming & Media Agreement, met een versienummer en een eigen bewijs
+// eronder. Een vinkje hier kan dat niet vastleggen, en de betaler kan het sowieso niet
+// namens de anderen geven. Daarom gaat er altijd `false` naar de database: een client die
+// zelf `filmingConsent:true` stuurt, krijgt daarmee geen toestemming geregistreerd.
+const FILMING_CONSENT_NEVER_FROM_CHECKOUT=false;
+
 // De prijs komt uit dezelfde rij als de prijs die de bezoeker te zien kreeg. Staat er
 // een onmogelijk bedrag in, dan gaat er niets naar Stripe: liever geen betaling dan een
 // afschrijving die niet klopt met wat er op de pagina stond.
@@ -79,10 +87,13 @@ export const handler=async event=>{
       const token=String(input.token||"");
       const adultConfirmed=input.adultConfirmed===true;
       const privacyAccepted=input.privacyAccepted===true;
-      const filmingConsent=input.filmingConsent===true;
+      // De uitnodiging zegt niet welk weekend het is; dat weet pas de database. Daarom
+      // wordt de bevestiging hier altijd gevraagd. Liever een gast van Weekend 02 die een
+      // zin over Weekend 01 leest, dan een gast van Weekend 01 die zonder die zin betaalt.
+      const filmingAcknowledged=input.filmingAcknowledged===true;
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
-      if(!adultConfirmed||!privacyAccepted)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
+      if(!adultConfirmed||!privacyAccepted||!filmingAcknowledged)return json(400,{error:"confirmations_required"});
+      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -90,9 +101,12 @@ export const handler=async event=>{
       const people=Number.parseInt(input.people,10);
       const adultConfirmed=input.adultConfirmed===true;
       const privacyAccepted=input.privacyAccepted===true;
-      const filmingConsent=input.filmingConsent===true;
+      const filmingAcknowledged=input.filmingAcknowledged===true;
       if(name.length<2||name.length>120||!emailOk(email)||!["weekend-01","weekend-02"].includes(weekend)||!Number.isInteger(people)||people<1||people>6||!adultConfirmed||!privacyAccepted)return json(400,{error:"invalid_details"});
-      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:filmingConsent,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
+      // Het vakje staat op de pagina alleen bij Weekend 01, dus de server eist het daar ook
+      // alleen. Een verzoek dat de pagina omzeilt en het weglaat, komt niet langs.
+      if(weekend==="weekend-01"&&!filmingAcknowledged)return json(400,{error:"confirmations_required"});
+      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES});
       hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"Weekend 01 · 30 Oct to 2 Nov 2026":"Weekend 02 · 6 to 9 Nov 2026"};
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}

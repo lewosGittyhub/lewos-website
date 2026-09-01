@@ -28,6 +28,14 @@ toegevoegd omdat ik het eerste lees. Te ruim gelezen? Zeg het.
 en sluit het aanmeldformulier over elf dagen, zeven weken vóór het weekend van 30 oktober.
 En of `/tavern/book/` dicht moet tot de verkoop open mag.
 
+**Van Claude aan Robert, 1 september 2026 — wordt Weekend 02 wél of niet gefilmd?**
+Het juridisch advies zegt dat een écht niet-gefilmd alternatief de toestemming voor
+Weekend 01 veel beter verdedigbaar maakt — maar alleen als het waar is. Nergens in deze
+repo, in `CLAUDE.md` of in het dossier staat iets over Weekend 02 en filmen. Ik heb er
+daarom niets over op de site gezet, en een test in `tests/filming.test.mjs` weigert elke
+bewering erover tot jij antwoord geeft. Zeg je "Weekend 02 wordt niet professioneel
+gefilmd", dan komt die zin erbij en gaat die test mee om.
+
 ## Actuele stand — 29 augustus 2026
 
 - De betaalpoort blijft dicht tot de externe papieren en regelingen definitief zijn. Tot die tijd kunnen bezoekers alleen reserveringsinformatie achterlaten; er wordt niet betaald.
@@ -163,6 +171,26 @@ Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontrol
 release, 18 brede ronde, 19 best-effort, 20 media en 21 juridische status; alle vijf staan
 in het logboek. De lijst loopt nu op volgorde van urgentie: eerst wat de deploy tegenhoudt,
 dan wat de verkoop tegenhoudt, dan de open vragen.*
+
+**Toegevoegd 1 september 2026 — de gefilmde editie.** Bewust zonder nummer: de genummerde
+lijst hieronder verwijst intern naar zijn eigen nummers ("na 7 en 8", "pas na 3–9") en die
+mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
+
+- **[Robert] Beantwoord de vier vragen rond de gefilmde editie.** Wordt Weekend 02 wel of
+  niet professioneel gefilmd · de acht ontbrekende gegevens op `/tavern/filming-agreement/`
+  (fiscaal nummer, volledig adres, telefoon, privacy-contactadres, bewaartermijn, bevoegde
+  toezichthouder, platformlijst) · de operationele filmregels bevestigen of corrigeren · de
+  overeenkomst met de videograaf. Alles staat uitgeschreven in
+  `operations/filming-weekend-01.md`.
+- **[Robert, extern] Spaanse privacy- en mediajurist over de Filming & Media Agreement.**
+  De conceptpagina staat er, `noindex` en zonder formulier. Zonder die review mag hij niet
+  naar een gast toe. Let vooral op de intrekkingsclausule: Spaans portretrecht laat
+  toestemming intrekken, dus er staat nergens *irrevocable* of *in perpetuity*, en een test
+  houdt dat zo.
+- **[Wie het eerst kan, na die twee] Bouw de per-deelnemer-flow.** Unieke, moeilijk te
+  raden links, één deelnemer per link, dubbele inzendingen veilig, advertentietoestemming
+  als eigen boolean, organisator ziet alleen aantallen. Eisen en schemavereisten staan in
+  `operations/filming-weekend-01.md`; de migratie is bewust nog niet geschreven.
 
 
 1. **[Robert, vóór of bij de deploy] Zet `PUBLIC_BOOKING_OPENS_AT` in Netlify.** **Niet
@@ -300,6 +328,93 @@ dan wat de verkoop tegenhoudt, dan de open vragen.*
 > Verwijst een ouder item naar een puntnummer uit *Openstaand*, dan gaat dat over de
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
+
+### 2026-09-01 · Claude · Weekend 01 als gefilmde First Edition, en toestemming weg bij de kassa · TE CONTROLEREN
+
+**Wat.** Weekend 01 heet nu overal *The Filmed First Edition*, en de tekst zegt vóór het
+betaalmoment wat er gefilmd wordt, waar het terechtkomt en dat elke gast zelf tekent.
+Gewijzigd: `tavern/index.html` (weekendkaart, de know-card en het FAQ-antwoord *Will I be
+filmed?*), `legal/index.html` (het blok `#filming` helemaal herschreven),
+`tavern/book/index.html` + `booking.js`, `tavern/checkout/index.html` + `checkout.js`,
+`netlify/functions/create-checkout-session.mjs`, `_redirects`, `robots.txt`. Nieuw:
+`tavern/filming-agreement/index.html` (concept), `operations/filming-weekend-01.md`,
+`tests/filming.test.mjs`. `tests/checkout.test.mjs` meegetrokken.
+
+**Waarom.** De site zei alleen *"We'll be filming the opening weekend"*. Dat is te weinig
+voor iemand die €2.025 uitgeeft: hij hoort te weten dat hij herkenbaar in promotiemateriaal
+kan komen vóórdat hij een bindende keuze maakt. En het vinkje dat er stond was een
+toestemming, gegeven op het betaalscherm, zonder versienummer, zonder bewijs en zonder
+ontvangstbevestiging. Zo'n vinkje houdt geen stand, en de betaler kan het sowieso niet
+namens de rest van zijn gezelschap geven.
+
+**De inhoudelijke keuze die je moet nakijken.** De checkout vraagt geen filmtoestemming
+meer. Wat er nu staat is een verplichte, niet vooraf aangevinkte *bevestiging*: "ik weet dat
+Weekend 01 de gefilmde First Edition is en dat iedere deelnemer zelf de overeenkomst
+invult". `p_filming_consent` krijgt vanaf nu altijd `false` mee vanuit beide checkoutpaden,
+ook als een client zelf `filmingConsent:true` stuurt. De eigenlijke toestemming verhuist
+naar de persoonlijke overeenkomst. `filming_consent_at` in de database blijft daardoor leeg
+tot die flow bestaat — dat is bedoeld, niet stuk. Aan het schema is niets veranderd.
+
+**De overeenkomst staat er als concept, niet als formulier.**
+`/tavern/filming-agreement/` is `noindex, nofollow`, heeft een conceptmelding op zijn gezicht,
+en bevat geen `<form>`, geen `action`, geen `<script>` en geen endpoint. De velden staan in
+een `<fieldset disabled>` zodat je de tekst kunt lezen en laten nakijken zonder dat er iets
+verzameld wordt. Acht plekken staan als `to be inserted`: fiscaal nummer, volledig adres,
+telefoon, privacy-contactadres, bewaartermijn, bevoegde toezichthouder en de platformlijst.
+Die vul ik niet in. De release gate in `.internal/filming-consent-v1.1.md` zegt dat de
+publieke filmpagina en de toestemmingslinks er niet mogen komen vóór de Spaanse review; door
+het als concept te bouwen blijft die grens staan én kan de tekst toch beoordeeld worden.
+
+**Drie beloftes staan nu publiek — kijk of je ze waar kunt maken.** Op `/tavern/`,
+`/tavern/book/`, `/tavern/checkout/` en `/legal/#filming` staat nu: *er wordt niet gefilmd
+in slaapkamers, badkamers of kleedruimtes* · *privégesprekken worden niet gepubliceerd* ·
+*betaalde advertenties vragen een aparte, optionele toestemming*. De eerste twee zijn
+beperkingen die jij jezelf oplegt, niet diensten die je belooft, en ze volgen uit de vaste
+besluiten in `.internal/filming-consent-v1.1.md` en uit het advies. De derde is een keuze
+van mij. Klopt er één niet, zeg het: dan haal ik hem eruit vóór er iemand op afgaat. De
+overige operationele regels (camera's uit, vragen om te stoppen, selectief filmen bij
+maaltijden) staan alleen op de conceptpagina en zijn daar gemarkeerd als nog te bevestigen.
+
+**Wat er bewust níét in zit.** De per-deelnemer-flow met unieke links is niet gebouwd en er
+is geen migratie geschreven. Dat is een echte datastroom met tokens, namen en e-mailadressen,
+en die hoort niet te bestaan zolang de tekst die hij verzamelt nog concept is. De eisen
+staan uitgeschreven in `operations/filming-weekend-01.md`. Over Weekend 02 staat er niets:
+zie de vraag aan Robert bovenaan.
+
+**Hoe te controleren.**
+- `node --test tests/*.test.mjs` → 101 tests, 0 fouten (was 84 in de vijf bestanden zonder
+  `load.test.mjs`; nieuw: 9 in `tests/filming.test.mjs` en 5 in `tests/checkout.test.mjs`).
+- `node --check` op de vijf gewijzigde JS-bestanden.
+- Lokale preview via een kopie onder `/private/tmp` (vanuit `~/Documents` weigert
+  `http.server` nog steeds). Op `/tavern/book/`: kies Weekend 01 → melding en vakje komen
+  tevoorschijn en het vakje wordt `required`; kies daarna Weekend 02 → alles verdwijnt, het
+  vakje wordt leeggemaakt en is niet meer verplicht; met alles ingevuld behalve dat vakje
+  weigert de browser te versturen en wijst hij precies `filming-acknowledged` aan.
+- Op `/tavern/filming-agreement/`: alle acht invoervelden matchen `:disabled`, en een
+  `click()` op een vinkje verandert het niet. Geen console-fouten. Geen horizontale scroll
+  op 375px en op 1280px. Koppenvolgorde h1 → h2 → h3, elk veld heeft zijn eigen label.
+- De betaalpoort is niet aangeraakt: de drie constanten in `_booking-config.mjs` staan nog
+  leeg en een test bewaakt dat nu ook.
+
+**Niet geverifieerd.** Geen enkele Supabase-aanroep is echt gedraaid — ik heb daar geen
+toegang, dus `p_filming_consent:false` is alleen in de mockserver bevestigd, niet tegen de
+echte RPC. Geen Stripe. Geen live site: er is niets gepusht en niets gedeployed. De
+juridische formuleringen zijn níét door een jurist gezien; dat staat als eis op de pagina
+zelf en in `operations/filming-weekend-01.md`. Van de PDF met het advies heb ik de tekst uit
+alle acht pagina's gelezen; er zat geen handtekening of goedkeuring in — het is advies.
+
+**Eén ding meegenomen dat er los van staat.** `/.internal/*` had geen eigen afschermregel.
+Op 29 augustus is live vastgesteld dat die map al 404 geeft, dus er lekte niets, maar dat
+hing op gedrag van Netlify met puntmappen in plaats van op een regel. Er staat nu een
+`404!`-regel in `_redirects` en een `Disallow` in `robots.txt`, met een test erbij. De
+bestaande test in `site.test.mjs` slaat puntmappen bewust over; die heb ik niet aangepast.
+
+**Wat nu volgt.** Robert: de vraag over Weekend 02 hierboven, de acht ontbrekende gegevens,
+en de operationele filmregels bevestigen of corrigeren — ze staan als *nog te bevestigen* op
+de conceptpagina en in `operations/filming-weekend-01.md`. Daarna pas de Spaanse jurist, en
+pas daarna de per-deelnemer-flow. Codex: de bevestiging-in-plaats-van-toestemming bij de
+checkout is een inhoudelijke keuze van mij; kijk die na, ik kan mijn eigen keuze niet
+goedkeuren.
 
 ### 2026-08-29 · Claude · Vraag aan Codex over de Spaanse juridische termen · TE CONTROLEREN
 

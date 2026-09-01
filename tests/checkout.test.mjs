@@ -47,7 +47,7 @@ after(async()=>{globalThis.fetch=nativeFetch;server.closeAllConnections?.();awai
 
 test("First Access invitation creates a Stripe session only after a seat hold",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).checkoutUrl,"https://checkout.stripe.test/session");
   assert.equal(calls.filter(call=>call.url==="/rest/v1/rpc/check_tavern_request_limit").length,2);assert.equal(calls[2].url,"/rest/v1/rpc/begin_tavern_first_access_checkout");assert.equal(calls[3].url,"/v1/checkout/sessions");assert.equal(calls[4].url,"/rest/v1/rpc/attach_tavern_checkout_session");
 });
@@ -69,7 +69,7 @@ test("the atomic database gate can still stop public checkout after the readines
 test("an existing First Access checkout resumes without creating another Stripe session",async()=>{
   holdResult={...holdResult,checkoutUrl:"https://checkout.stripe.test/existing"};
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).resumed,true);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
   const beginBody=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);assert.equal(beginBody.p_adult_confirmed,true);assert.equal(beginBody.p_privacy_accepted,true);
 });
@@ -77,26 +77,26 @@ test("an existing First Access checkout resumes without creating another Stripe 
 test("a full weekend never creates a Stripe session",async()=>{
   holdResult={status:"not_available",remaining:2};
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingConsent:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,409);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
 });
 
 test("a Stripe failure releases the temporary hold",async()=>{
   stripeFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingConsent:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");
 });
 
 test("an attachment failure never returns a payable Stripe link and releases the hold",async()=>{
   attachFails=true;const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions/cs_test_1/expire"),true);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
 });
 
 test("a rejected attachment response never returns a payable Stripe link",async()=>{
   attachResult={status:"unknown_payment"};
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions/cs_test_1/expire"),true);assert.equal(calls.at(-1).url,"/rest/v1/rpc/release_tavern_checkout");assert.equal(JSON.parse(result.body).checkoutUrl,undefined);
 });
 
@@ -123,21 +123,21 @@ test("public checkout remains closed before its configured opening",async()=>{
 test("all payment routes remain closed while the global payment gate is off",async()=>{
   process.env.TAVERN_PAYMENTS_ENABLED="false";
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.length,0);
 });
 
 test("payments remain closed until a final terms version is configured",async()=>{
   delete process.env.BOOKING_TERMS_VERSION;
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.length,0);
 });
 
 test("payments remain closed until immutable booking documents are configured",async()=>{
   delete process.env.BOOKING_TERMS_DOCUMENT_URL;
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,503);assert.equal(calls.length,0);
 });
 
@@ -148,10 +148,44 @@ test("an invalid public opening timestamp keeps public booking closed",async()=>
   assert.equal(result.statusCode,403);assert.equal(calls.length,0);
 });
 
-test("Weekend 01 can be booked when optional filming consent is declined",async()=>{
+test("Weekend 01 goes through on the acknowledgement alone, and never records consent",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
+  assert.equal(result.statusCode,200);
+  const begin=calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout");
+  assert.ok(begin,"the seat hold must be attempted");
+  // Toestemming om iemand herkenbaar te publiceren hoort bij de persoonlijke overeenkomst,
+  // met een versienummer en bewijs eronder. Nooit bij een betaalscherm.
+  assert.equal(JSON.parse(begin.body).p_filming_consent,false);
+});
+
+test("Weekend 01 refuses a checkout that skips the filming acknowledgement",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true})});
-  assert.equal(result.statusCode,200);assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),true);
+  assert.equal(result.statusCode,400);
+  assert.equal(JSON.parse(result.body).error,"confirmations_required");
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),false);
+});
+
+test("Weekend 02 is not asked for a Weekend 01 acknowledgement",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:1,adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,200);
+});
+
+test("a client that claims filming consent by itself is not believed",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:1,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,filmingConsent:true})});
+  assert.equal(result.statusCode,200);
+  assert.equal(JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body).p_filming_consent,false);
+});
+
+test("an invited checkout also has to confirm it read the filming notice",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  assert.equal(result.statusCode,400);
+  assert.equal(JSON.parse(result.body).error,"confirmations_required");
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"),false);
 });
 
 test("webhook rejects an invalid signature",async()=>{
@@ -212,7 +246,7 @@ test("the amount charged comes from the seat hold and never from a number in the
   assert.doesNotMatch(source,/unit_amount\]","\d/,"the charged amount must not be hardcoded");
   assert.match(source,/unit_amount\]",String\(unitAmount\)\)/);
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
-  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
   assert.equal(result.statusCode,200);
   const sent=new URLSearchParams(calls.find(call=>call.url==="/v1/checkout/sessions").body);
   assert.equal(sent.get("line_items[0][price_data][unit_amount]"),"202500");
@@ -225,7 +259,7 @@ test("an impossible price stops the checkout instead of charging it",async()=>{
   for(const priceCents of [undefined,null,0,-100,1,99999999,"202500x",202500.5]){
     calls=[];
     holdResult={...original,priceCents};
-    const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true})});
+    const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
     assert.equal(result.statusCode,503,`price ${priceCents} should never reach Stripe`);
     assert.equal(JSON.parse(result.body).error,"checkout_unavailable");
     assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false,`price ${priceCents} reached Stripe`);

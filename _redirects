@@ -5,4 +5,5 @@
 /AGENTS.md  /404.html  404!
 /CLAUDE.md  /404.html  404!
 /operations/*  /404.html  404!
+/.internal/*  /404.html  404!
 https://lewos.netlify.app/*  https://lewos.co/:splat  301!

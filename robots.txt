@@ -4,5 +4,6 @@ Disallow: /HANDOVER.md
 Disallow: /AGENTS.md
 Disallow: /CLAUDE.md
 Disallow: /operations/
+Disallow: /.internal/
 
 Sitemap: https://lewos.co/sitemap.xml
