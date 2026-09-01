@@ -335,6 +335,81 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · Twee gaten in de flow, een testplan voor Codex, en de Resend-uitvraag af · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `77ba4c0` —
+nagerekend, HEAD stond er ook echt op. `origin/main` op `9013051`, geen upstream: niets
+gepusht, gedeployed of gemigreerd.
+
+**De belangrijkste bevinding: de mediaflow is compleet vanaf de uitnodiging en leeg
+daarvóór.** Ik heb naast elkaar gelegd welke RPC's de applicatie aanroept en welke de
+migratie definieert, en daar vielen twee dingen uit:
+
+1. **Niets roept `register_tavern_media_participants` aan.** De functie bestaat, is getest in
+   het integratieblok en doet precies wat hij moet doen — maar geen enkele Netlify-functie en
+   geen enkel script gebruikt hem. Er is dus geen manier om de deelnemers er überhaupt in te
+   krijgen.
+2. **Niets geeft een voortgangstoken uit.** `media_progress_token_hash` wordt gelézen door
+   `get_tavern_media_progress` en opgeruimd door de cleanup, maar nergens aangemaakt. Het
+   integratieblok zet hem met een kale `update`. De teller *"4 of 6 guests have completed"*
+   werkt dus wel, maar kan aan niemand gegeven worden.
+
+**Ik heb ze bewust niet gebouwd**, en dat is geen luiheid. Allebei hangen ze op dezelfde
+onbeantwoorde vraag: **wie mag de deelnemers invoeren, en hoe bewijst die persoon dat?** Twee
+werkbare antwoorden, en het is een keuze van Robert:
+- *De operator doet het.* Robert verzamelt de namen zelf en draait een script, zoals
+  `issue-first-access.mjs` al werkt. Geen nieuwe publieke route, geen nieuwe authenticatie.
+  Klein, en in een middag te bouwen.
+- *De hoofdboeker doet het.* Een pagina waar de betaler de deelnemers intypt. Dat vraagt een
+  derde soort token naast de deelnemerslink en de voortgangslink, plus een besluit over wat
+  er gebeurt als hij de lijst wijzigt nadat de uitnodigingen eruit zijn.
+
+Die keuze bepaalt wie de naam en het e-mailadres van een ander in de database mag zetten. Dat
+verzin ik niet namens Robert. Uitgeschreven in `operations/filming-weekend-01.md`.
+
+**Drie randgevallen waren niet gedekt, nu wel.** Een verzoek boven de snelheidslimiet krijgt
+429 en raakt de database niet · een intrekking op een onbekende link geeft 404 en op een lege
+toestemming 409 · een verlopen voortgangslink geeft 410, een onbekende 404, en een weekend
+zonder verplichte overeenkomst 404. Alle drie waren al zo geïmplementeerd; er hield alleen
+niets ze vast.
+
+**Nieuw: `operations/supabase-migration-testplan.md`.** Codex kan de proef draaien, ik niet —
+geen CLI, geen `psql`, geen koppeling. Daarom een plan dat uitvoerbaar is zonder overleg:
+zeven controles met de queries erbij, de vijf verplichte gevallen met per geval de
+foutmelding die het integratieblok geeft, de rechten- en RLS-queries uitgeschreven, de
+controle dát de rollback echt alles heeft teruggedraaid, een idempotentieronde, de advisors,
+en wat er moet gebeuren als iets faalt. Met erbij waaróm het opnieuw moet: de migratie is
+sinds Codex' vorige run op drie punten gewijzigd, en **een lege `search_path` is precies het
+soort wijziging die pas bij het aanroepen stukgaat** — mist er één kwalificatie, dan faalt die
+functie met `relation ... does not exist`, en niet bij het aanmaken maar bij het eerste
+gebruik. Statisch is het gecontroleerd; statisch is niet gedraaid.
+
+**Resend-uitvraag compleet gemaakt.** Ging van negen losse vragen naar vijftien, elk gekoppeld
+aan het artikellid van de AVG waar het vandaan komt (artikel 28 lid 3). Wat er ontbrak waren
+juist de bepalingen die het vaakst worden overgeslagen: verwerken uitsluitend op onze
+instructie en niet voor eigen doeleinden, geheimhouding van hun personeel, bijstand bij
+verzoeken van betrokkenen, wat er bij einde contract met de gegevens gebeurt, en auditrechten.
+Bovenaan staat nu een statusregel: **niets aangevraagd, niets ontvangen, niets bevestigd.** Er
+is geen contact geweest met Resend en er wordt niets namens hen beweerd. Het conceptbericht is
+meegegroeid naar twaalf punten.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **155 tests, 0 fouten** (was 152).
+`node --check` over alle 25 JS-bestanden schoon. Betaalpoort: de drie constanten staan nog
+leeg. Publieke tekst: met een patroonzoeker over alle uitgeleverde pagina's gecontroleerd op
+*lawyer*, *legal review*, *jurist*, *abogado*, *draft*, *concept*, *TODO*, *to be inserted*,
+*pending confirmation*, *not yet in force* en *legally checked* — **niets gevonden**.
+
+**`PUBLIC_BOOKING_OPENS_AT` staat nog op `2026-09-09T09:00:00Z` en is niet gewijzigd.** Nu ook
+vastgelegd in de checklist met de vier feiten eromheen: een eerdere datum kan de verkoop niet
+openen, maar sluit wél het aanmeldformulier; ontbreekt de variabele, dan antwoordt het
+formulier 503. De beslissing ligt bij Robert.
+
+**Niet geverifieerd.** Alles wat een echte database of een deploy vraagt. De migratie is
+nergens gedraaid.
+
+**Wat nu volgt.** Robert: de keuze wie de deelnemers invoert · de datum · de uitvraag bij
+Resend · de zes ANBEN-gegevens. Codex: het testplan draaien op een wegwerpbranch.
+
 ### 2026-09-01 · Claude · Inhoudelijke review van de overeenkomst: vier echte gaten · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `2466758`.

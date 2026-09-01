@@ -300,6 +300,42 @@ with `MEDIA_AGREEMENT_SEND_CONFIRM=SEND_MEDIA_AGREEMENTS_NOW`.
 banner and is not linked from any navigation. Its fields are disabled in the HTML itself,
 so without the gate open there is nothing to fill in and nothing to send.
 
+## Two gaps between the reservation and the invitation
+
+Found on 1 September 2026 by checking which RPCs the application actually calls against
+which the migration defines. Both are holes in the path *towards* the flow; the flow itself
+is complete and tested on the database side.
+
+**1. Nothing calls `register_tavern_media_participants`.** The function exists, is tested in
+`tests/database-integration.sql`, and does exactly what it should. But no Netlify function
+and no script invokes it, so there is no way for the attendees to get into the system in the
+first place.
+
+**2. Nothing issues a progress token.** `tavern_seat_claims.media_progress_token_hash` is read
+by `get_tavern_media_progress` and cleared by the cleanup function, but no code ever mints one
+and stores its hash. The integration test sets it with a plain `update`. So the counter —
+*"4 of 6 guests have completed the Filming & Media Agreement"* — works, but cannot be handed
+to anyone.
+
+**Both wait on the same unanswered question, which is why neither was built:** who is allowed
+to submit the attendees, and how do they prove it? Two workable answers, and it is Robert's
+call, not ours:
+
+- *The operator does it.* Robert collects the names himself and runs a script, the way
+  `scripts/issue-first-access.mjs` already works. No new public route, no new authentication,
+  nothing extra to secure. The progress counter then becomes something Robert looks at, and
+  the organiser token is only needed if he wants to send the lead booker a link.
+- *The lead booker does it.* A page where the person who paid types in the attendees. That
+  needs its own token — a third kind, next to the participant link and the progress link —
+  and a decision about what happens when they change the list after invitations have gone out.
+
+The first is much smaller and can be built in an afternoon. The second is nicer for the guest
+and is a real feature with its own security surface. **Nothing should be built until Robert
+picks one**, because the choice determines who can put a stranger's name and email address
+into the database.
+
+Until then the media flow is complete from the invitation onwards, and empty before it.
+
 ## Weekend 02 — answered
 
 Robert settled it on 1 September 2026 in commit `49310f0`: Weekend 02 is **not** planned as

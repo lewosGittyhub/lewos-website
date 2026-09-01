@@ -88,6 +88,27 @@ dus reviewbaar) én `TAVERN_PAYMENTS_ENABLED=true` in Netlify. Eén van de twee 
 Die laatste regel is geen formaliteit. De migratie is sinds de vorige Supabase-proef
 gewijzigd: lege `search_path`, gekwalificeerde verwijzingen, en de herstelde telling van
 deelnemers. Dat moet opnieuw langs een echte database voordat er iets naar productie gaat.
+Het uitvoerbare plan daarvoor staat in `operations/supabase-migration-testplan.md`: zeven
+controles, de vijf verplichte gevallen, de rechten- en RLS-queries, en wat er moet gebeuren
+als iets faalt.
+
+## 6b. Twee stukken die nog niet bestaan
+
+Geen controle maar een constatering: de mediaflow is compleet vanaf de uitnodiging, en leeg
+daarvóór. Niets roept `register_tavern_media_participants` aan, en niets geeft een
+voortgangstoken uit aan de hoofdboeker. Allebei wachten op dezelfde vraag — wie mag de
+deelnemers invoeren en hoe bewijst die persoon dat — en die vraag ligt bij Robert. Uitgewerkt
+in `operations/filming-weekend-01.md`.
+
+## 6c. `PUBLIC_BOOKING_OPENS_AT`
+
+| | controle | stand 1 september 2026 |
+| --- | --- | --- |
+| [lokaal] | huidige waarde | `2026-09-09T09:00:00Z` — **niet gewijzigd**, en te wijzigen alleen op uitdrukkelijke opdracht |
+| [lokaal] | kan een eerdere datum de verkoop openen? | **nee** — `publicBookingIsOpen()` valt eerst over `paymentsAreEnabled()`, en die hangt aan drie lege constanten |
+| [lokaal] | wat de datum wél doet | sluit het First Access-formulier: daarna `409 first_access_closed` |
+| [lokaal] | wat er gebeurt als de variabele ontbreekt | het formulier antwoordt `503` voor de vaste weekenden |
+| [Robert] | beslissing | vóór 9 september vooruitzetten, of bewust accepteren dat het formulier dichtgaat terwijl er nog niet betaald kan worden |
 
 ## 7. Productie
 

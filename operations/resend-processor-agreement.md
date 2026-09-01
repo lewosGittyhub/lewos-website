@@ -2,6 +2,11 @@
 
 Intern. `/operations/*` geeft 404 en staat in `robots.txt`.
 
+> **Status op 1 september 2026: niets aangevraagd, niets ontvangen, niets bevestigd.**
+> Er is geen contact geweest met Resend. Er is geen verwerkersovereenkomst opgevraagd,
+> ontvangen of getekend. Elke regel onder *Wat Robert moet regelen* is een openstaande vraag.
+> Vul de uitkomstkolom pas in met wat Resend zélf schriftelijk antwoordt.
+
 Opgesteld 1 september 2026 op commit `069d515`. Alles onder *Wat er feitelijk doorheen gaat*
 komt uit de code van deze repo en is daar regel voor regel op nagelezen. Alles onder *Wat
 Robert moet regelen* is een vraag, geen constatering: **ik heb Resend niet benaderd en kan
@@ -63,25 +68,40 @@ grond van een aanname.
 
 ## Wat Robert bij Resend moet regelen
 
-Dit is de uitvraag. Geen enkel punt hieronder is een bewering over wat Resend biedt.
+Dit is de uitvraag. **Geen enkel punt hieronder is een bewering over wat Resend biedt.**
+De nummers tussen haakjes verwijzen naar artikel 28 lid 3 AVG, zodat te zien is dat dit geen
+willekeurig lijstje is maar de onderdelen die een verwerkersovereenkomst moet bevatten.
 
-1. **Is er een verwerkersovereenkomst (DPA) in het account?** Bij veel aanbieders staat die
-   onder de accountinstellingen als document dat je online accepteert. Kijk daar eerst;
-   is hij er, dan is het een kwestie van accepteren en een kopie bewaren.
-2. **Welk doorgiftemechanisme geldt** voor verwerking in de Verenigde Staten:
-   standaardcontractbepalingen, het EU–VS Data Privacy Framework, of iets anders? Vraag om
-   het stuk zelf, niet om een verwijzing.
-3. **Welke subverwerkers** zetten zij in, en is er een meldingsplicht bij wijziging?
-4. **Hoe lang bewaren zij de inhoud van een bericht**, en hoe lang de logs en metadata?
-   Dit is de vraag die er voor ons het meest toe doet, vanwege de tokens in stromen 3 en 4.
-5. **Wie binnen Resend kan bij berichtinhoud**, en onder welke voorwaarden?
-6. **Verwijdering**: kunnen wij verwijdering van een bericht of van een adres vragen, en
-   binnen welke termijn?
-7. **Beveiliging**: welke technische en organisatorische maatregelen, en is er een
-   certificering of auditrapport dat zij delen?
-8. **Datalekken**: binnen welke termijn melden zij aan ons?
-9. **Is er een EU-regio mogelijk** voor verzending of opslag? Dat zou vraag 2 een stuk
-   eenvoudiger maken.
+Vul de laatste kolom pas in als je het schriftelijk hebt.
+
+| # | vraag | AVG | antwoord / datum |
+| --- | --- | --- | --- |
+| 1 | Is er een verwerkersovereenkomst in het account, en hoe accepteer je hem en bewaar je een kopie? | 28(3) | |
+| 2 | Bevestigen zij dat zij **verwerker** zijn voor deze gegevens en niet zelf verwerkingsverantwoordelijke? | 28(3) | |
+| 3 | Verwerken zij **uitsluitend op onze instructie**, en gebruiken zij de gegevens niet voor eigen doeleinden — geen productverbetering, geen analyse, geen training van modellen? | 28(3)(a) | |
+| 4 | Zijn hun medewerkers tot **geheimhouding** verplicht? | 28(3)(b) | |
+| 5 | Welke **technische en organisatorische beveiligingsmaatregelen**, en is er een certificering of auditrapport dat zij delen? | 28(3)(c), 32 | |
+| 6 | Welke **subverwerkers**, en is er een meldingsplicht met bezwaarrecht bij wijziging? | 28(2), 28(3)(d) | |
+| 7 | Helpen zij ons bij **verzoeken van betrokkenen** — inzage, verwijdering, bezwaar? | 28(3)(e) | |
+| 8 | Binnen welke termijn melden zij een **datalek** aan ons? | 28(3)(f), 33(2) | |
+| 9 | Wat gebeurt er met de gegevens bij **einde van het contract**: teruggave of verwijdering, en binnen welke termijn? | 28(3)(g) | |
+| 10 | Stellen zij informatie beschikbaar om naleving aan te tonen, en staan zij **audits** toe? | 28(3)(h) | |
+| 11 | Welk **doorgiftemechanisme** geldt voor verwerking in de Verenigde Staten — standaardcontractbepalingen, het EU–VS Data Privacy Framework, of iets anders? Vraag om het stuk zelf, niet om een verwijzing. | 44–49 | |
+| 12 | Hoe lang bewaren zij **berichtinhoud**, en hoe lang logs en metadata? | 28(3)(g) | |
+| 13 | **Wie binnen Resend** kan bij berichtinhoud, en onder welke voorwaarden? | 28(3)(b), 32 | |
+| 14 | Kunnen wij verwijdering van een **afzonderlijk bericht of adres** vragen, en binnen welke termijn? | 17 | |
+| 15 | Is er een **EU-regio** mogelijk voor verzending of opslag? Dat zou vraag 11 aanzienlijk eenvoudiger maken. | 44 | |
+
+Vraag 12 en 13 wegen voor ons zwaarder dan bij een gemiddelde afzender, vanwege de ruwe
+tokens in stromen 3 en 4. Vraag 3 is de vraag die het vaakst wordt overgeslagen en het meest
+oplevert.
+
+**Wat wij zelf moeten kunnen overleggen.** Een verwerkersovereenkomst hoort een omschrijving
+te bevatten van onderwerp, duur, aard en doel van de verwerking, de soorten
+persoonsgegevens en de categorieën betrokkenen. Die staan hierboven onder *Wat er feitelijk
+doorheen gaat*: transactionele e-mail aan gasten en geïnteresseerden van The Lewos Tavern,
+met naam en e-mailadres, voor de duur van de klantrelatie. Neem die alinea over in de bijlage
+als Resend erom vraagt.
 
 ## Conceptbericht aan Resend
 
@@ -106,7 +126,13 @@ Kort houden; support-afdelingen antwoorden beter op een lijstje dan op een betoo
 >    shortened;
 > 5. your security measures and any audit report or certification you share;
 > 6. your breach notification timeline;
-> 7. whether an EU processing or sending region is available.
+>  7. whether you act as processor and process only on our documented instructions,
+>     without using the data for your own purposes;
+>  8. whether your personnel are bound by confidentiality;
+>  9. how you assist with data subject requests;
+> 10. what happens to the data at the end of the contract;
+> 11. whether you make information available for audits;
+> 12. whether an EU processing or sending region is available.
 >
 > Thank you,
 > Robert Neugebauer — Lewos

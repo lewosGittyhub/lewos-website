@@ -11,6 +11,7 @@ const read=file=>readFile(path.join(root,file),"utf8");
 
 let calls=[];let stateResult;let recordResult;let progressResult;let withdrawResult;let emailRequests=0;let server;
 let limiterFails=false;
+let limiterAllows=true;
 const nativeFetch=globalThis.fetch;
 const originalEnv={...process.env};
 
@@ -39,7 +40,7 @@ before(async()=>{
       response.setHeader("content-type","application/json");
       if(request.url==="/rest/v1/rpc/check_tavern_request_limit"){
         if(limiterFails){response.statusCode=500;return response.end('{"message":"limiter_down"}');}
-        return response.end("true");
+        return response.end(limiterAllows?"true":"false");
       }
       if(request.url==="/rest/v1/rpc/get_tavern_media_agreement_state")return response.end(JSON.stringify(stateResult));
       if(request.url==="/rest/v1/rpc/record_tavern_media_consent")return response.end(JSON.stringify(recordResult));
@@ -64,7 +65,7 @@ before(async()=>{
   process.env.NODE_ENV="test";
 });
 beforeEach(()=>{
-  calls=[];emailRequests=0;limiterFails=false;
+  calls=[];emailRequests=0;limiterFails=false;limiterAllows=true;
   openTheGate();
   stateResult={status:"ready",participantId:"participant-1",fullName:"Test Guest",weekend:"weekend-01",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",agreementVersion:"media-test-v1",alreadyRecorded:false};
   recordResult={status:"recorded",participantId:"participant-1",auditReference:"abc123",recordedAt:"2026-10-01T10:00:00Z",standardUseConsent:true,paidAdvertisingConsent:false};
@@ -334,6 +335,45 @@ test("withdrawal is recorded rather than erased",async()=>{
 });
 
 // ---------------------------------------------------------------- wie ziet wat
+
+// ---------------------------------------------------------------- randgevallen
+
+test("too many requests are turned away before the database is touched",async()=>{
+  // De begrenzer zat er wel, maar niets hield vast dát een verzoek erboven ook echt
+  // geweigerd wordt. Een stille versoepeling zou nu niet opvallen.
+  const run=await handler();
+  limiterAllows=false;
+  const response=await run({httpMethod:"GET",queryStringParameters:{token}});
+  assert.equal(response.statusCode,429);
+  assert.equal(JSON.parse(response.body).error,"too_many_requests");
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/get_tavern_media_agreement_state"),false,"a throttled request may not reach the agreement");
+});
+
+test("a withdrawal on an unknown link is refused",async()=>{
+  const run=await handler();
+  withdrawResult={status:"invalid_link"};
+  const unknown=await run({httpMethod:"POST",body:JSON.stringify({token,action:"withdraw"})});
+  assert.equal(unknown.statusCode,404);
+  // En er valt niets in te trekken wat er niet is: dat is een conflict, geen succes.
+  withdrawResult={status:"nothing_to_withdraw"};
+  const leeg=await run({httpMethod:"POST",body:JSON.stringify({token,action:"withdraw"})});
+  assert.equal(leeg.statusCode,409);
+  assert.equal(JSON.parse(leeg.body).error,"nothing_to_withdraw");
+});
+
+test("an expired organiser link stops showing the counts",async()=>{
+  const run=await handler();
+  progressResult={status:"link_expired"};
+  const verlopen=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
+  assert.equal(verlopen.statusCode,410);
+  progressResult={status:"invalid_link"};
+  const onbekend=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
+  assert.equal(onbekend.statusCode,404);
+  // Ook een weekend zonder verplichte overeenkomst geeft hier geen tellingen terug.
+  progressResult={status:"not_required",weekend:"weekend-02"};
+  const nietNodig=await run({httpMethod:"GET",queryStringParameters:{progress:token}});
+  assert.equal(nietNodig.statusCode,404);
+});
 
 test("the organiser sees counts and never another guest's details",async()=>{
   const run=await handler();
