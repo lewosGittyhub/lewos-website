@@ -100,9 +100,11 @@ export const handler=async event=>{
         weekend:state.weekend,
         weekendLabel:state.weekendLabel,
         agreementVersion:agreement.version,
-        agreementDocument:agreement.document,
-        privacyContact:agreement.privacyContact,
-        retention:agreement.retention,
+        // Bewust niet meegestuurd: documentreferentie, privacycontact en bewaartermijn.
+        // Die staan vast in de tekst van de overeenkomst zelf en worden gedekt door de
+        // teksthash. Zou de pagina ze uit de configuratie halen, dan kan er iets anders op
+        // het scherm staan dan wat er is vastgelegd. `MEDIA_RETENTION_PERIOD` blijft wel een
+        // eis van de poort: Robert moet een termijn hebben bepaald voordat dit open kan.
         alreadyRecorded:state.alreadyRecorded===true,
         standardUseConsent:state.standardUseConsent,
         paidAdvertisingConsent:state.paidAdvertisingConsent,

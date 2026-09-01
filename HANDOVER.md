@@ -335,6 +335,70 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · Inhoudelijke review van de overeenkomst: vier echte gaten · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `2466758`.
+`origin/main` staat nog op `9013051`, geen upstream: niets gepusht, gedeployed of gemigreerd.
+
+Vorige ronde heb ik de overeenkomst gecontroleerd op wat er níét in mocht staan. Deze ronde
+heb ik hem gelezen zoals een gast hem leest, en dat leverde vier dingen op die er wél in
+hadden moeten staan of anders hadden gemoeten.
+
+**1. Een onzichtbare opmaakfout op het belangrijkste moment van de pagina.** De alinea met
+`data-media-status` had `class="review"`. Bij het opschonen van de conceptmeldingen heb ik die
+CSS-regel hernoemd naar `.note` en dit ene element vergeten. Gevolg: de bevestiging die een
+gast ná het invullen ziet — *"Thank you. Your choices are recorded under reference…"* — kwam
+volledig ongestyled binnen, zonder rand en zonder achtergrond, terwijl elke andere melding op
+de pagina die wel heeft. Dat valt bij het lezen van de HTML niet op en bij het draaien van de
+tests ook niet; het valt pas op als iemand het scherm ziet. Hersteld, en er staat nu een test
+die élke klasse op de pagina langs de CSS legt, zodat een volgende wees-klasse meteen opvalt.
+
+**2. Er stond nergens wat er gebeurt als je nee zegt.** Dat is de vraag die iedereen stelt,
+en het antwoord ontbrak. Toegevoegd, en het is geen nieuwe belofte maar een vastlegging van
+wat al besloten was in `.internal/filming-consent-v1.1.md`: wie geen toestemming geeft mag in
+gepubliceerd materiaal niet herkenbaar zijn — niet aan gezicht, stem, naam, of aan een
+combinatie van details die naar hem wijst. Er staat nu ook bij dat je bij aankomst kunt zeggen
+dat je liever helemaal niet gefilmd wordt.
+
+**3. Twee verwijzingen die niet klopten.** De platformlijst zei dat betaalde advertenties een
+aparte toestemming *"below"* vragen, terwijl dat vinkje hóger op de pagina staat — en zonder
+geldige persoonlijke link staat het er helemaal niet, want dan is het formulier verborgen.
+Positieverwijzingen zijn hier dus sowieso broos; het is nu *"its own separate, optional
+permission"*. Daarnaast verwees de inleiding naar *"the full media and privacy terms"*, een
+document dat niet bestaat. Dat is nu een verwijzing naar deze pagina zelf en naar de
+privacysectie onderaan.
+
+**4. De AEPD-link** staat nu exact zoals Robert hem opgaf, `https://www.aepd.es/`.
+
+**Eén technische opruiming, met een reden.** De API stuurde `retention`, `privacyContact` en
+`agreementDocument` mee in het antwoord, en de pagina deed er niets mee. Weggehaald — niet
+omdat het lekt (het is onze eigen configuratie, geen persoonsgegeven), maar omdat het de
+verkeerde kant op wijst: **de bewaartekst en het contactadres horen vast te staan in de
+overeenkomst zelf**, want die wordt gedekt door de teksthash. Zou de pagina ze uit de
+configuratie halen, dan kan er iets anders op het scherm staan dan wat er is vastgelegd, en
+dan is de hash zijn functie kwijt. `MEDIA_RETENTION_PERIOD` blijft wél een eis van de poort:
+Robert moet een termijn hebben bepaald voordat de flow open kan, maar die instelling bepaalt
+niet wat de gast leest. Daarmee is ook punt 9 van de opdracht beantwoord: de bewaartekst is de
+gangbare, verdedigbare formulering die Robert heeft aangeleverd, niet een verzonnen termijn.
+
+**Vier nieuwe tests, en ze zijn zelf getest.** Elke klasse heeft een stijlregel · de
+niet-toestemmen-uitleg staat er · de overeenkomst verwijst alleen naar dingen die bestaan ·
+de tekst komt van de pagina en niet uit de configuratie. Vijf bewuste breuken aangebracht,
+waaronder de wees-klasse die ik zojuist herstelde: **vijf van de vijf betrapt.**
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` → **152 tests, 0 fouten** (was 148).
+`node --check` schoon. In de browser op 390px nagelopen: formulier verborgen zonder link, nul
+zichtbare invoervelden, `noindex, nofollow`, geen horizontale scroll, geen console-fouten, en
+de bevestigingsmelding heeft nu de goudkleurige rand en achtergrond die hij hoorde te hebben.
+
+**Niet geverifieerd.** De juridische houdbaarheid van de tekst; dat blijft werk voor de
+Spaanse jurist en staat nergens op de publieke pagina. En nog steeds geen Supabase: de
+migratie is sinds Codex' laatste run gewijzigd en moet opnieuw langs een echte database.
+
+**Wat nu volgt.** Onveranderd: `PUBLIC_BOOKING_OPENS_AT` staat over zeven dagen het
+aanmeldformulier te sluiten terwijl er nog niet betaald kan worden · de uitvraag bij Resend ·
+de zes ANBEN-gegevens · en voor Codex de integratieproef op een wegwerpbranch.
+
 ### 2026-09-01 · Claude · Controleronde, Resend-dossier en checklist voor livegang · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `069d515`,

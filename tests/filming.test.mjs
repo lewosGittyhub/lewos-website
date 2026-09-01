@@ -257,3 +257,55 @@ test("a guest never sees the form until the server says the link is good",async(
   assert.ok(closed,"there must be one neutral message for a closed gate");
   for(const phrase of [/\bdraft\b/i,/review/i,/lawyer/i,/not yet/i,/config/i,/setting/i])assert.doesNotMatch(closed[1],phrase);
 });
+
+test("every class the agreement page uses actually has a style",async()=>{
+  // Een wees-klasse valt niet op tot een gast hem tegenkomt. Dit ging mis met
+  // `class="review"`: bij het opschonen heette de CSS-regel al `.note`, dus de bevestiging
+  // die iemand ná het invullen ziet — het belangrijkste moment van de pagina — kwam
+  // ongestyled binnen. Zonder deze test zou dat pas op een screenshot opvallen.
+  const page=await read(path.join(root,"tavern/filming-agreement/index.html"));
+  const style=(page.match(/<style>([\s\S]*?)<\/style>/)||[])[1]||"";
+  assert.ok(style.length>200,"the page must carry its own styles");
+  const defined=new Set([...style.matchAll(/\.([a-z][\w-]*)/g)].map(match=>match[1]));
+  const used=new Set();
+  for(const [,value] of page.matchAll(/class="([^"]+)"/g))for(const name of value.trim().split(/\s+/))used.add(name);
+  const orphans=[...used].filter(name=>!defined.has(name));
+  assert.deepEqual(orphans,[],`class used with no style rule: ${orphans.join(", ")}`);
+});
+
+test("a guest who says no is told what that means for them",async()=>{
+  // Dit is de vraag die iedereen stelt en die er eerst niet in stond. Het antwoord is een
+  // beperking die Lewos zichzelf oplegt, vastgelegd in `.internal/filming-consent-v1.1.md`:
+  // wie geen toestemming geeft, mag in gepubliceerd materiaal niet herkenbaar zijn.
+  const text=visibleText(await read(path.join(root,"tavern/filming-agreement/index.html")));
+  assert.match(text,/And if you would rather not\?/);
+  assert.match(text,/not by face, not by voice, not by name/);
+  assert.match(text,/nothing changes about your booking/i);
+});
+
+test("the agreement points only at things that exist",async()=>{
+  const page=await read(path.join(root,"tavern/filming-agreement/index.html"));
+  const text=visibleText(page);
+  // Verwees eerst naar "the full media and privacy terms" — een document dat niet bestaat.
+  assert.doesNotMatch(text,/full media and privacy terms/i,"no reference to a document that does not exist");
+  // Verwees eerst naar een vinkje "below" dat er hoger staat, en dat zonder geldige link
+  // helemaal niet op de pagina staat. Positieverwijzingen horen hier niet.
+  assert.doesNotMatch(text,/permission below/i,"a position reference breaks when the form is hidden");
+  // De toezichthouder-link is de link die Robert opgaf.
+  assert.match(page,/href="https:\/\/www\.aepd\.es\/"/);
+});
+
+test("the agreement text comes from the page, never from configuration",async()=>{
+  // De bewaartekst, het privacycontact en de documentreferentie staan vast in de
+  // overeenkomst en worden gedekt door de teksthash. Zou de pagina ze uit de configuratie
+  // halen, dan kan er iets anders op het scherm staan dan wat is vastgelegd.
+  const handler=await read(path.join(root,"netlify/functions/media-consent.mjs"));
+  const ready=handler.slice(handler.indexOf('status:"ready"'),handler.indexOf("recordedAt:state.recordedAt"));
+  for(const field of ["retention","privacyContact","agreementDocument"]){
+    assert.ok(!ready.includes(`${field}:`),`${field} may not be sent to the page; the agreement text is fixed`);
+  }
+  // De poort blijft die instelling wél eisen: er moet een termijn bepaald zijn.
+  const config=await read(path.join(root,"netlify/functions/_media-config.mjs"));
+  assert.match(config,/MEDIA_RETENTION_PERIOD/);
+  assert.match(config,/no confirmed retention period is published/);
+});
