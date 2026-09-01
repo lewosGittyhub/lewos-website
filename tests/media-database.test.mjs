@@ -252,3 +252,50 @@ test("the progress counter is an operator call with no token and no names",async
   assert.ok(!migration.includes("media_progress_token_hash"),"the unused progress column must be gone");
   assert.ok(!migration.includes("media_progress_expires_at"),"the unused progress expiry must be gone");
 });
+
+test("a raw token never reaches a screen, a log or a shell history",async()=>{
+  // De ruwe token bestaat maar op twee plekken: kort in het geheugen van het script, en in
+  // de link in de mail. Zodra hij in een console-regel belandt staat hij in de scrollback en
+  // in het logbestand van wie het script draait, en dan is de link niet meer persoonlijk.
+  const invitations=await readFile(path.join(root,"scripts/issue-media-agreements.mjs"),"utf8");
+  const operator=await readFile(path.join(root,"scripts/media-participants.mjs"),"utf8");
+  for(const [name,source] of [["issue-media-agreements",invitations],["media-participants",operator]]){
+    for(const [line] of source.matchAll(/console\.(?:log|error)\([^\n]*/g)){
+      assert.ok(!/\$\{token\}|\$\{link\}|\$\{rawToken\}/.test(line),`${name} prints a raw token or link: ${line.slice(0,90)}`);
+    }
+  }
+  // En het operatorscript kent de ruwe token helemaal niet: het maakt er geen aan en krijgt
+  // er geen terug. Alleen het uitnodigingsscript raakt hem aan, en geeft hem door aan de mail.
+  assert.ok(!operator.includes("randomBytes"),"the operator tool has no business minting tokens");
+  assert.match(invitations,/const link=`\$\{origin\}\/tavern\/filming-agreement\/\?token=\$\{encodeURIComponent\(token\)\}`/);
+  // De database ziet nooit meer dan de hash.
+  assert.match(invitations,/p_token_hash:hash/);
+  assert.ok(!/p_token:\s*token/.test(invitations),"a raw token may never be sent to the database");
+});
+
+test("the eight cases Robert listed are each proven somewhere",async()=>{
+  // Deze test is een inhoudsopgave. Hij valt om zodra een van de acht gevallen uit de proef
+  // verdwijnt, ook als de rest blijft draaien.
+  const integration=await readFile(path.join(root,"tests/database-integration.sql"),"utf8");
+  const cases={
+    "dubbele deelnemer":"dezelfde_deelnemer_kreeg_twee_rijen",
+    "te veel deelnemers":"drie_unieke_gasten_pasten_op_twee_stoelen",
+    "verlopen token":"een_verlopen_link_werd_niet_geweigerd",
+    "ingetrokken token":"een_door_de_operator_ingetrokken_link_werkte_nog",
+    "onbekende token":"een_ingetrokken_link_werkte_nog",
+    "token van A voor B":"de_token_van_a_opende_het_record_van_iemand_anders",
+    "opnieuw uitgeven":"na_intrekken_kon_er_geen_nieuwe_link_worden_uitgegeven",
+    "geen gedeeltelijke opslag":"een_geweigerde_registratie_plaatste_toch_deelnemers"
+  };
+  for(const [label,marker] of Object.entries(cases)){
+    assert.ok(integration.includes(marker),`the integration test no longer covers: ${label}`);
+  }
+  // Elk blok draait binnen een transactie die wordt teruggedraaid. Tellen, niet matchen: er
+  // staan twee blokken in dit bestand, en met alleen `assert.match` zou een `commit;` in het
+  // ene blok wegvallen tegen de `rollback;` van het andere. Die fout zat hier eerst in.
+  const begins=(integration.match(/^begin;$/gm)||[]).length;
+  const rollbacks=(integration.match(/^rollback;$/gm)||[]).length;
+  assert.ok(begins>0,"the integration test must open a transaction");
+  assert.equal(rollbacks,begins,`every one of the ${begins} blocks must end in a rollback`);
+  assert.doesNotMatch(integration,/^commit;$/m,"a fixture may never be committed");
+});

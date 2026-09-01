@@ -335,6 +335,67 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-01 · Claude · De grens tussen twee deelnemers wordt nu echt geprobeerd · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `3015f99`.
+Niets gepusht, gedeployed of gemigreerd.
+
+Robert vroeg om de operator-flow te bouwen. Die stond er al, van vorige ronde. **In plaats van
+hem opnieuw te bouwen heb ik hem punt voor punt langs de opdracht gelegd** — acht functies,
+twee scripts, de gebruiksaanwijzing, en de acht gevraagde testgevallen. Zeven van de acht
+waren gedekt. Eén niet goed genoeg, en dat bleek net de belangrijkste.
+
+**Het gat: "token van deelnemer A gebruikt voor deelnemer B" was alleen nagelezen, niet
+geprobeerd.** De dekking bestond uit een statische test die in de SQL-tekst controleert dát
+elke deelnemersfunctie op de tokenhash zoekt en geen deelnemer-id van de aanroeper accepteert.
+Dat is een goede controle, maar het is de code lezen. Voor de belangrijkste grens van de hele
+flow — één gast, één sleutel, alleen zijn eigen record — is dat te mager.
+
+Het integratieblok registreert nu twee gasten, geeft ze allebei een eigen token, en probeert
+het uit: A's token geeft A's id en A's naam · B ziet niet dat A getekend heeft · er ontstaat
+geen toestemmingsrij bij B · B kan met zijn eigen token tekenen zónder A's keuze te
+overschrijven · en als A intrekt blijft de toestemming van B staan en zakt de teller van twee
+naar één. Tien nieuwe foutmeldingen, elk met een eigen naam, zodat een volgende run meteen
+zegt wélke grens brak.
+
+**Daarbij verschoof een verwachting, en dat is leerzaam.** Doordat B nu ook tekent staat de
+teller op twee in plaats van één. Dat klopt: de teller telt deelnemers met een levende
+toestemmingsrij voor déze versie, ongeacht of ze ja of nee zeiden. **Een weigering is óók een
+voltooide keuze** — dat is precies wat *"4 of 6 guests have completed"* hoort te betekenen.
+
+**Eén eigenschap vastgelegd die ik onderweg verifieerde.** Geen van beide scripts drukt ooit
+een ruwe token of link af. De ruwe waarde bestaat maar op twee plekken: kort in het geheugen
+van het uitnodigingsscript, en in de link in de mail. Er staat nu een test op, en in de
+gebruiksaanwijzing staat waaróm er geen "druk de links af"-optie komt: zodra een link op een
+scherm verschijnt staat hij in de scrollback, in de shell-geschiedenis en in elk meekijkend
+logbestand, en dan is hij niet meer persoonlijk. Mag Resend nog niet, dan is het antwoord
+wachten — niet printen.
+
+**Eén test was zelf te zwak.** Ik controleerde met `assert.match` dat er een `rollback;` in het
+integratiebestand staat. Er staan er twee, dus een `commit;` in het ene blok viel weg tegen de
+`rollback;` van het andere — mijn mutatieproef liet dat zien. Nu wordt er geteld: evenveel
+`rollback;` als `begin;`, en nergens een `commit;`. Daarmee betrapt de proef beide varianten.
+
+**Ook toegevoegd: een inhoudsopgave-test.** Die valt om zodra een van Roberts acht gevallen
+uit het integratiebestand verdwijnt, ook als de rest gewoon blijft draaien.
+
+**Tests.** `node --test tests/*.test.mjs` → **161 tests, 0 fouten** (was 159). Vijf bewuste
+breuken aangebracht: een ruwe link afgedrukt door de operator · een ruwe token in de uitvoer ·
+het geval "token A voor B" uit de proef · het geval "opnieuw uitgeven" eruit · en de rollback
+vervangen door een commit, zowel de eerste als alle twee. **Vijf van de vijf betrapt**, na de
+verscherping hierboven.
+
+**Niets dubbel gebouwd en niets weggehaald.** De acht databasefuncties, de twee scripts, de
+poort, de RLS en de rechten zijn ongewijzigd. Er is alleen bewijs bijgekomen.
+
+**Nog steeds niet gedraaid: de Supabase-proef.** Geen CLI, geen `psql`, geen koppeling. Het
+testplan is bijgewerkt met de nieuwe isolatieproef erbij. Dit is de derde ronde waarin de
+migratie is gewijzigd zonder dat hij tegen een echte database is gehouden; **dat is nu het
+grootste openstaande risico in dit dossier.**
+
+**Wat nu volgt.** Codex: het testplan draaien. Robert: de datum, Resend, de zes ANBEN-gegevens,
+en de Spaanse jurist.
+
 ### 2026-09-01 · Claude · De operator-flow gebouwd; de mediaflow is compleet · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `b8e5ea5`.

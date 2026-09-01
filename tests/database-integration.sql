@@ -267,6 +267,37 @@ begin
     raise exception 'er_staan_twee_levende_toestemmingen_voor_dezelfde_versie';
   end if;
 
+  -- De grens tussen twee deelnemers, echt uitgeprobeerd. Dit is de belangrijkste regel van de
+  -- hele flow: de token van A opent het record van A en verder niets. In de code staat dat er
+  -- goed in — elke functie zoekt op de tokenhash en accepteert geen deelnemer-id van de
+  -- aanroeper — maar nagelezen is niet hetzelfde als geprobeerd.
+  if public.get_tavern_media_agreement_state(hash_een,'codex-test-v1')->>'participantId'<>deelnemer::text then
+    raise exception 'de_token_van_a_opende_het_record_van_iemand_anders';
+  end if;
+  if public.get_tavern_media_agreement_state(hash_twee,'codex-test-v1')->>'participantId'<>tweede::text then
+    raise exception 'de_token_van_b_opende_het_record_van_iemand_anders';
+  end if;
+  if public.get_tavern_media_agreement_state(hash_een,'codex-test-v1')->>'fullName'<>'Film Guest' then
+    raise exception 'de_naam_bij_de_token_van_a_klopte_niet';
+  end if;
+  -- A heeft getekend, B niet. Dat mag bij B niets veranderd hebben.
+  if (public.get_tavern_media_agreement_state(hash_twee,'codex-test-v1')->>'alreadyRecorded')::boolean is not false then
+    raise exception 'de_toestemming_van_a_lekte_naar_het_record_van_b';
+  end if;
+  if (select count(*) from public.tavern_media_consents where participant_id=tweede)<>0 then
+    raise exception 'er_stond_een_toestemming_bij_b_die_a_had_gegeven';
+  end if;
+  -- En B kan met zijn eigen token gewoon tekenen, zonder dat dat A raakt.
+  if public.record_tavern_media_consent(hash_twee,'codex-test-v1',repeat('a',64),false,null)->>'status'<>'recorded' then
+    raise exception 'b_kon_niet_tekenen_met_zijn_eigen_token';
+  end if;
+  if (select standard_use_consent from public.tavern_media_consents where participant_id=deelnemer and withdrawn_at is null) is not true then
+    raise exception 'de_keuze_van_b_overschreef_die_van_a';
+  end if;
+  if (select standard_use_consent from public.tavern_media_consents where participant_id=tweede and withdrawn_at is null) is not false then
+    raise exception 'de_keuze_van_b_werd_niet_als_eigen_keuze_vastgelegd';
+  end if;
+
   -- Een inhoudelijk nieuwe versie vraagt opnieuw akkoord.
   status_v1:=public.get_tavern_media_agreement_state(hash_een,'codex-test-v1');
   status_v2:=public.get_tavern_media_agreement_state(hash_een,'codex-test-v2');
@@ -275,8 +306,10 @@ begin
 
   -- De operator ziet aantallen, en die aantallen horen bij één versie. Geen token: in de
   -- operator-flow roept alleen service_role deze functie aan, met het claim-id.
+  -- Twee deelnemers, allebei getekend: A gaf toestemming, B weigerde. Een weigering is óók
+  -- een voltooide keuze, dus de teller staat op twee. Wie wat koos, komt hier niet uit.
   telling:=public.get_tavern_media_progress(film_claim,'codex-test-v1');
-  if (telling->>'completed')::integer<>1 or (telling->>'total')::integer<>2 then raise exception 'de_voortgangsteller_klopt_niet'; end if;
+  if (telling->>'completed')::integer<>2 or (telling->>'total')::integer<>2 then raise exception 'de_voortgangsteller_klopt_niet'; end if;
   if telling ? 'fullName' or telling ? 'email' or telling ? 'standardUseConsent' then
     raise exception 'de_voortgang_lekte_gegevens_van_deelnemers';
   end if;
@@ -290,8 +323,13 @@ begin
   if (select withdrawn_at from public.tavern_media_consents where audit_reference=eerste->>'auditReference') is null then
     raise exception 'de_intrekking_werd_niet_vastgelegd';
   end if;
-  if (public.get_tavern_media_progress(film_claim,'codex-test-v1')->>'completed')::integer<>0 then
-    raise exception 'een_ingetrokken_toestemming_telde_nog_mee';
+  -- A trekt in. B heeft ook getekend, dus de teller hoort op één te blijven staan en niet
+  -- op nul: intrekken raakt alleen de intrekker.
+  if (public.get_tavern_media_progress(film_claim,'codex-test-v1')->>'completed')::integer<>1 then
+    raise exception 'het_intrekken_door_a_raakte_ook_de_toestemming_van_b';
+  end if;
+  if (select withdrawn_at from public.tavern_media_consents where participant_id=tweede) is not null then
+    raise exception 'de_intrekking_van_a_trok_ook_de_toestemming_van_b_in';
   end if;
   -- Een onbekende claim geeft geen tellingen terug.
   if public.get_tavern_media_progress('00000000-0000-4000-8000-000000000000'::uuid,'codex-test-v1')->>'status'<>'unknown_claim' then

@@ -96,6 +96,25 @@ weer in — een link die niemand heeft ontvangen blijft niet leven.
 
 **De mail gaat naar één deelnemer en noemt niemand anders.**
 
+### Waarom er geen "druk de links af"-optie is
+
+Die vraag komt vanzelf, zeker zolang de verwerkersovereenkomst met Resend nog niet rond is.
+Toch staat hij er bewust niet in.
+
+Een link ís de sleutel. Zodra hij op je scherm verschijnt staat hij in de scrollback van je
+terminal, in je shell-geschiedenis als je hem doorpipet, en in elk logbestand dat meekijkt.
+Daarna is het geen persoonlijke link meer, en de hele opzet — één gast, één sleutel, alleen
+zijn eigen record — is dan een aanname in plaats van een feit. Een test bewaakt dat geen van
+beide scripts ooit een ruwe token of link afdrukt.
+
+De ruwe token bestaat daarom maar op twee plekken: kort in het geheugen van het
+uitnodigingsscript, en in de link in de mail. De database ziet alleen de sha256-hash.
+
+Mag Resend nog niet, dan is het antwoord niet "dan printen we ze maar", maar: **wachten tot
+de verwerkersovereenkomst rond is.** Zie `operations/resend-processor-agreement.md`. Wil je
+per se een ander kanaal, dan is dat een nieuw ontwerp met dezelfde vraag eronder — hoe komt
+de sleutel bij precies één persoon — en geen omweg die er even bij kan.
+
 ## De volgorde
 
 1. `list` — kijk wat er al staat.

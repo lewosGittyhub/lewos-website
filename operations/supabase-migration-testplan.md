@@ -77,7 +77,16 @@ Daarnaast dekt het blok: Weekend 02 komt niet in de flow · dezelfde tokenhash k
 twee deelnemers · een lege keuze wordt geweigerd · een afwijkende teksthash wordt geweigerd ·
 een tweede inzending geeft dezelfde audit-referentie · een nieuwe versie vraagt opnieuw
 akkoord · de teller lekt geen deelnemersgegevens · intrekken wist niets · een verlopen of
-ingetrokken link doet niets meer.
+ingetrokken link doet niets meer · intrekken door de operator zonder tokenhash, twee keer
+intrekken, en opnieuw uitgeven daarna.
+
+**En sinds 1 september 2026 de belangrijkste van allemaal: de grens tussen twee deelnemers.**
+Het blok registreert twee gasten, geeft ze allebei een eigen token, en probeert dan echt uit
+dat de token van A het record van A opent en dat van B niet: A's token geeft A's id en A's
+naam terug · B ziet niet dat A getekend heeft · er ontstaat geen toestemmingsrij bij B ·
+B kan met zijn eigen token tekenen zonder A's keuze te overschrijven · en als A intrekt,
+blijft de toestemming van B staan en zakt de teller van twee naar één. Dit stond eerder
+alleen statisch in de code nagelezen; nu wordt het gedraaid.
 
 ### 4. Alles is teruggedraaid
 
