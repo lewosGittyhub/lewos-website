@@ -355,6 +355,27 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-02 · Codex · Tijdelijke Supabase-proef en heruitgifte-link hersteld · GECONTROLEERD
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, commit `9daa3b9`, werkmap schoon. De
+volledige lokale suite telde 163 geslaagde tests.
+
+De migraties `database/first-access.sql` en `database/filming-consent.sql` zijn op een
+nieuwe tijdelijke Supabase-branch (`ckdhzykqvsncaoufvjcy`) toegepast. Het integratieblok uit
+`tests/database-integration.sql` faalde eerst op het opnieuw uitgeven van een link na het
+intrekken van toestemming: `issue_tavern_media_invitation` weigerde deelnemers met status
+`withdrawn`. Dat was inconsistent met de test en met de operator-flow: intrekking bewaart de
+oude keuze, maar mag een deelnemer niet verhinderen een nieuwe persoonlijke link te krijgen.
+
+De vroege statusweigering is verwijderd. Daarna slaagden het volledige integratieblok, de
+rollback-controle (alle testtabellen en testgegevens op nul) en een tweede idempotente
+migratieronde. Supabase-advisors melden alleen informatieve RLS-zonder-policy-waarschuwingen
+en index-/platformadviezen; geen `function_search_path_mutable`-melding.
+
+**Niet geverifieerd.** `database/first-access.sql` is nog niet tegen een echte database
+gedraaid met `search_path=''`; de tijdelijke proef gebruikte de huidige `=public`-functies.
+Dat blijft een apart openstaand beveiligingspunt. De tijdelijke branch is na de proef verwijderd.
+
 ### 2026-09-01 · Claude · De grens tussen twee deelnemers wordt nu echt geprobeerd · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `3015f99`.

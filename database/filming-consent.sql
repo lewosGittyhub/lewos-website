@@ -166,7 +166,9 @@ begin
   if p_token_hash is null or char_length(p_token_hash)<>64 then raise exception 'invalid_token_hash'; end if;
   select * into deelnemer from public.tavern_media_participants where id=p_participant_id for update;
   if not found then return jsonb_build_object('status','unknown_participant'); end if;
-  if deelnemer.status='withdrawn' then return jsonb_build_object('status','participant_withdrawn'); end if;
+  -- Een ingetrokken toestemming blokkeert geen nieuwe persoonlijke link. De deelnemer
+  -- moet via die link zijn actuele keuze kunnen herzien; de oude toestemming blijft
+  -- afzonderlijk bewaard met withdrawn_at.
   select * into weekend from public.tavern_weekends where id=deelnemer.weekend_id;
   if not public.tavern_media_agreement_required(weekend.slug) then return jsonb_build_object('status','not_required'); end if;
   if deelnemer.invitation_token_hash is not null and deelnemer.invitation_expires_at>clock_timestamp() then
