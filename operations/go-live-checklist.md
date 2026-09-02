@@ -9,8 +9,16 @@ Twee soorten controles staan hier door elkaar, en het verschil is belangrijk:
   hier niets over te zeggen. Vul het in met de uitkomst en de datum, niet met een verwachting.
 
 Er is op dit moment **niets gedeployed en niets naar productie gemigreerd.** `origin/main`
-staat nog op `9013051`; de branch `verwijder-dnd-merknaam` loopt daar tien commits op vooruit
-en is niet gepusht.
+staat nog op `9013051`.
+
+**Bijgewerkt 2 september 2026, gecontroleerd op `f6d31f0`.** De branch `verwijder-dnd-merknaam`
+loopt achttien commits vóór op `origin/main` en **is inmiddels wél gepusht**:
+`origin/verwijder-dnd-merknaam` staat op dezelfde commit als lokaal (`git rev-list --left-right
+--count` geeft `0 0`). Dat is een feature-branch, geen deploy — die hangt aan de hoofdbranch, en
+`origin/main` is onaangeroerd. **Wel te controleren in het Netlify-dashboard:** staan
+branch-previews aan, dan is deze branch op een previewdomein leesbaar. Er is geen `netlify.toml`,
+dus dat staat alleen in het dashboard en is hiervandaan niet vast te stellen. De `_redirects`
+reist mee, dus de drie juridische routes geven daar ook 404.
 
 ## 1. De drie juridische routes geven 404
 
@@ -81,9 +89,9 @@ dus reviewbaar) én `TAVERN_PAYMENTS_ENABLED=true` in Netlify. Eén van de twee 
 
 | | controle | uitkomst 1 september 2026 |
 | --- | --- | --- |
-| [lokaal] | `node --test tests/*.test.mjs` | **148 tests, 0 fouten** |
-| [lokaal] | `node --check` op alle JS | schoon |
-| [Codex] | `tests/database-integration.sql` op een wegwerpbranch, met `rollback` | **nog niet gedraaid sinds de laatste wijziging** |
+| [lokaal] | `node --test tests/*.test.mjs` | **163 tests, 0 fouten** — zelf gedraaid op `f6d31f0`, 2 september 2026 |
+| [lokaal] | `node --check` op alle JS | **26 bestanden schoon** — zelf gedraaid op `f6d31f0` |
+| [database] | `tests/database-integration.sql` op een wegwerpbranch, met `rollback` | het logboek bevat twee items van 2 september die zo'n run beschrijven. **Hiervandaan niet te verifiëren**: geen `supabase`-CLI, geen `psql`, geen koppeling. Wie dit afvinkt moet het zelf hebben zien draaien. |
 
 Die laatste regel is geen formaliteit. De migratie is sinds de vorige Supabase-proef
 gewijzigd: lege `search_path`, gekwalificeerde verwijzingen, en de herstelde telling van
@@ -92,13 +100,34 @@ Het uitvoerbare plan daarvoor staat in `operations/supabase-migration-testplan.m
 controles, de vijf verplichte gevallen, de rechten- en RLS-queries, en wat er moet gebeuren
 als iets faalt.
 
-## 6b. Twee stukken die nog niet bestaan
+## 6b. ~~Twee stukken die nog niet bestaan~~ — afgesloten
 
-Geen controle maar een constatering: de mediaflow is compleet vanaf de uitnodiging, en leeg
-daarvóór. Niets roept `register_tavern_media_participants` aan, en niets geeft een
-voortgangstoken uit aan de hoofdboeker. Allebei wachten op dezelfde vraag — wie mag de
-deelnemers invoeren en hoe bewijst die persoon dat — en die vraag ligt bij Robert. Uitgewerkt
-in `operations/filming-weekend-01.md`.
+*Deze sectie was verouderd en is op 2 september 2026 gecorrigeerd, nagerekend op `f6d31f0`.*
+
+Robert koos op 1 september de operator-flow, en daarmee zijn beide gaten dicht:
+
+- `register_tavern_media_participants` **wordt wel aangeroepen**, door
+  `scripts/media-participants.mjs:104`.
+- De voortgangstoken **bestaat niet meer** en hoeft ook niet te bestaan: in de operator-flow
+  leest Robert de teller zelf. `grep -c media_progress_token database/filming-consent.sql`
+  geeft `0`.
+
+## 6b-bis. Wat er wél nog ontbreekt: een test op `database/first-access.sql`
+
+**Aangetoond op 2 september 2026.** Commit `f6d31f0` zet alle vijftien `SECURITY DEFINER`-functies
+in `database/first-access.sql` op `set search_path=''` en kwalificeert alle verwijzingen. Ik heb
+dat nagerekend en het klopt: 15 van 15 functies gepind, nul ongekwalificeerde verwijzingen, alle
+`%rowtype` gekwalificeerd, 15 `revoke`s naar `public, anon, authenticated`, 14 `grant execute`
+uitsluitend naar `service_role`, en `private.cleanup_tavern_claims()` terecht zonder grant.
+
+**Maar geen enkele test bewaakt dat.** `tests/media-database.test.mjs` leest uitsluitend
+`database/filming-consent.sql`. Wie in `first-access.sql` een `search_path=public` of een kale
+tabelnaam terugzet, houdt alle 163 tests groen — en die fout valt dan pas op bij de eerste
+aanroep in productie, met `relation ... does not exist`.
+
+Tweede gat van dezelfde soort: `operations/supabase-migration-testplan.md` gaat over
+`filming-consent.sql` en noemt `first-access.sql` alleen als voorwaarde vooraf. Stap 2 van dat
+plan — *elke functie minstens één keer echt aanroepen* — bestaat niet voor deze vijftien.
 
 ## 6c. `PUBLIC_BOOKING_OPENS_AT`
 
@@ -108,14 +137,16 @@ in `operations/filming-weekend-01.md`.
 | [lokaal] | kan een eerdere datum de verkoop openen? | **nee** — `publicBookingIsOpen()` valt eerst over `paymentsAreEnabled()`, en die hangt aan drie lege constanten |
 | [lokaal] | wat de datum wél doet | sluit het First Access-formulier: daarna `409 first_access_closed` |
 | [lokaal] | wat er gebeurt als de variabele ontbreekt | het formulier antwoordt `503` voor de vaste weekenden |
-| [Robert] | beslissing | vóór 9 september vooruitzetten, of bewust accepteren dat het formulier dichtgaat terwijl er nog niet betaald kan worden |
+| [Robert] | beslissing | **genomen op 2 september 2026: ongewijzigd laten** tot er een definitieve verkoopdatum is. Het gevolg is bewust aanvaard: staat de variabele in Netlify op 9 september, dan sluit First Access die dag terwijl er nog niet betaald kan worden. |
+| [lokaal] | kan een datum de poort omzeilen? | **nee, uitgevoerd op `f6d31f0`**: de handler aangeroepen met `TAVERN_PAYMENTS_ENABLED=true`, een geldige termsversie en vijf datums (1970 · 9 september · zojuist · onzin · leeg), in beide modi `public` en `first_access`. Tien van de tien: `503 {"error":"checkout_not_open"}`. |
 
 ## 7. Productie
 
 | | controle |
 | --- | --- |
-| [lokaal] | niets gepusht: `origin/main` staat op `9013051`, de branch heeft geen upstream |
-| [lokaal] | `database/filming-consent.sql` is nergens uitgevoerd |
+| [lokaal] | `origin/main` staat op `9013051` — onaangeroerd, geverifieerd op 2 september 2026 |
+| [lokaal] | ⚠️ de feature-branch **is** gepusht naar `origin/verwijder-dnd-merknaam`; dat is geen deploy, maar de eerdere regel *"geen upstream"* klopte niet meer |
+| [lokaal] | `database/filming-consent.sql` is **niet naar productie** gemigreerd. Over runs op tijdelijke databases: zie de regel in sectie 6 — hiervandaan niet te verifiëren. |
 | [handmatig] | geen Netlify-variabele gewijzigd |
 | [handmatig] | Robert geeft expliciet toestemming vóór een push, een deploy of een productiemigratie |
 

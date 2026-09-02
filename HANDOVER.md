@@ -355,6 +355,133 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-02 · Claude · Onafhankelijke controle op f6d31f0 · TE CONTROLEREN
+
+**Startpunt, zelf gecontroleerd.** `git status`: branch `verwijder-dnd-merknaam`, werkmap schoon.
+`git log -1`: `f6d31f00c58609288be3f78e220de85b81171966`. Achttien commits vóór `origin/main`,
+dat nog op `9013051` staat. **De branch heeft nu wel een upstream en staat op de remote:**
+`origin/verwijder-dnd-merknaam` is gelijk aan lokaal (`git rev-list --left-right --count` → `0 0`).
+Dat is een feature-branch, geen deploy; `origin/main` is onaangeroerd en er staat niets live.
+
+**`database/first-access.sql` — nagerekend, en het klopt.** Vijftien `SECURITY DEFINER`-functies,
+vijftien keer `set search_path=''`, geen enkele `=public` over. Met een eigen scanner over de
+tekst (commentaarregels weggestript) gezocht naar kale verwijzingen naar de drie tabellen en de
+vijftien functienamen: **nul ongekwalificeerde verwijzingen**. Alle zes `%rowtype`-declaraties
+staan als `public.…%rowtype`. Geen enkele functie buiten `pg_catalog`. Rechten: vijftien
+`revoke all … from public, anon, authenticated`, veertien `grant execute … to service_role` en
+géén ander doelwit dan `service_role`; `private.cleanup_tavern_claims()` heeft terecht geen
+grant, want die wordt intern aangeroepen door vijf andere definers. RLS staat aan op alle drie
+de tabellen, er is geen enkele policy en er is geen table-grant. Losse constatering, geen risico:
+`create extension if not exists pgcrypto` op regel 7 wordt nergens meer gebruikt.
+
+**Waar het aan ontbreekt: er staat geen test op.** `tests/media-database.test.mjs` leest alleen
+`database/filming-consent.sql`. Deze harding kan ongemerkt teruggedraaid worden zonder dat er
+één test omvalt. Ook `operations/supabase-migration-testplan.md` dekt deze vijftien functies
+niet: dat plan gaat over de mediamigratie en noemt `first-access.sql` alleen als voorwaarde
+vooraf. Zie sectie 6b-bis van de checklist. **Ik heb dat gat niet zelf gedicht** — dat is een
+wijziging, en de opdracht was controleren.
+
+**Advisorbevindingen, alle drie beoordeeld.** Ontbrekende FK-indexen: **informatief**. Alle drie
+de FK's in `first-access.sql` zijn gedekt; in `filming-consent.sql` missen `supersedes`,
+`weekend_id` en `agreement_version` er een. Een ongeïndexeerde FK doet pijn bij het verwijderen
+van een ouderrij, en die ouders — twee weekendrijen en de overeenkomstversies — worden per
+definitie nooit verwijderd. Ongebruikte expiry-index: **informatief**. Die melding komt uit
+`idx_scan = 0`, en op een database zonder verkeer leest elke index als ongebruikt.
+`tavern_media_participants_expiry_idx` past bovendien exact op de enige query die hem nodig heeft
+(`cleanup_tavern_media_invitations`). Auth-connectionmelding: **niet van toepassing** — de hele
+repo doorzocht, er is geen enkel gebruik van Supabase Auth; alles loopt via `service_role` vanuit
+Netlify Functions.
+
+**De betaalpoort: uitgevoerd, niet beredeneerd.** De handler `create-checkout-session.mjs`
+aangeroepen met `URL=https://lewos.co`, `NODE_ENV=production`, `TAVERN_PAYMENTS_ENABLED=true`, een
+geldige `BOOKING_TERMS_VERSION` en beide documentvariabelen — dus alles wat een aanvaller of een
+vergissing in Netlify kan zetten. Vijf datums (1970 · 2026-09-09 · zojuist · een onzinstring · leeg)
+maal twee modi (`public`, `first_access`). **Tien van de tien: `503 {"error":"checkout_not_open"}`.**
+De datum kan de poort niet omzeilen.
+
+**⚠️ `/tavern/book/` is geen niet-betalend aanmeldformulier.** Dit is de belangrijkste bevinding
+en hij spreekt de aanname in de opdracht tegen. `tavern/book/booking.js` post `mode:"public"` naar
+`/api/checkout` en stuurt bij succes door naar `result.checkoutUrl` — de Stripe-betaalpagina. De
+knop heet *"Secure my seats and continue →"*. Het échte niet-betalende formulier staat op
+`tavern/index.html:653` en post naar `/api/first-access`. Omdat de poort dicht staat krijgt elke
+inzending op `/tavern/book/` nu een 503, en de bezoeker leest *"We could not secure this
+checkout."* — **zijn gegevens worden nergens opgeslagen en niemand krijgt bericht.** De pagina is
+niet geblokkeerd in `_redirects` en wordt prominent gelinkt vanaf `tavern/index.html:688` met de
+knop *"Book the First Edition →"*. Tweede scheefheid op dezelfde pagina: de tekst zegt *"No payment
+details are collected with this reservation"*, terwijl de code naar Stripe doorstuurt zodra de
+poort opengaat. Nu onzichtbaar, straks precies op het verkeerde moment. **Niets aan veranderd:**
+dit raakt de structuur van de verkoopweg en is een beslissing van Robert.
+
+**Tests, zelf gedraaid op `f6d31f0`.** `node --test tests/*.test.mjs` → **163 tests, 0 fouten**,
+667 ms. `node --check` over alle **26** JS-bestanden: schoon.
+
+**Wat ik wél heb gewijzigd.** Alleen `operations/go-live-checklist.md` en dit dossier. Zes
+aantoonbare correcties in de checklist: het commitaantal en de push · het testaantal · sectie 6b,
+die beweerde dat niets `register_tavern_media_participants` aanroept terwijl
+`scripts/media-participants.mjs:104` dat doet en de voortgangstoken niet meer bestaat · de
+beslissing over `PUBLIC_BOOKING_OPENS_AT` · de regel *"de branch heeft geen upstream"* · en de
+regels over wat er wel en niet tegen een database gedraaid is. Nieuw: sectie 6b-bis over het
+ontbrekende testvangnet. Geen code, geen SQL, geen test aangeraakt.
+
+**Niet geverifieerd, en dat blijft zo.** Alles wat een echte database vraagt. Er staat geen
+`supabase`-CLI, geen `psql` en geen koppeling op deze Mac; dat is opnieuw nagegaan. Dit dossier
+bevat twee items van vandaag die runs op tijdelijke branches beschrijven — **ik heb die runs niet
+gezien en kan er niet voor instaan.** Ook niet vast te stellen: of Netlify branch-previews bouwt
+(geen `netlify.toml`, staat in het dashboard), en of `PUBLIC_BOOKING_OPENS_AT` daar staat.
+
+**Wat nu volgt.** Robert: de zes ANBEN-gegevens · de Spaanse jurist · de verwerkersovereenkomst
+met Resend · de verkoopdatum · en de vraag wat `/tavern/book/` moet worden. Wie een database heeft:
+de vijftien First Access-functies minstens één keer echt aanroepen met de lege `search_path`.
+
+### 2026-09-02 · Claude · De datum vastgezet en bewezen dat hij niets opent · TE CONTROLEREN
+
+**Robert heeft drie dingen beslist en één voorwaarde gesteld.** Er gaat voorlopig niets
+live. `PUBLIC_BOOKING_OPENS_AT` blijft ongewijzigd tot er een definitieve verkoopdatum is.
+De drie wettelijke routes blijven op harde 404 met de bestanden bewaard. En de enige
+volgende technische stap is het testplan op een tijdelijke database, door Codex.
+
+**De voorwaarde was het enige echte werk.** *"Zorg dat deze datum de betaalpoort niet kan
+openen zolang de vereiste gegevens ontbreken."* Dat was al zo, maar het was niet bewezen.
+De keten is: `publicBookingIsOpen()` → `paymentsAreEnabled()` → `termsArePublished()` → de
+drie constanten `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
+`PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs`. Alle drie leeg. De
+datum wordt pas gelezen op regel 29, ná de poortcontrole op regel 28. Die volgorde is het
+hele slot — en er stond geen enkele test op.
+
+**Twee tests toegevoegd aan `tests/booking-config.test.mjs`.** De eerste zet een publieke
+deployment na (`URL=https://lewos.co`, `NODE_ENV=production`), zet alle vier de
+omgevingsvariabelen goed, en loopt dan zes datums langs: 1970, de 9-septemberdatum zelf,
+een seconde geleden, nú, een onzinstring en een lege waarde. Bij elk daarvan moeten
+`publicBookingIsOpen()` en `paymentsAreEnabled()` onwaar zijn. De tweede test houdt vast
+dat elk van de drie constanten leeg blijft.
+
+**Mutatieproef, vier van de vier betrapt.** De datumcontrole vóór de poortcontrole zetten ·
+`PUBLISHED_TERMS_VERSION` vullen · alle drie de constanten vullen · het lokale testluik
+(`localTestOverridesAllowed`) altijd open zetten. Elke breuk gaf een rode test; het bestand
+staat na afloop weer schoon (`git diff` leeg).
+
+**Aan de drie 404-routes is niets veranderd, want er was niets te veranderen.** Nagelopen:
+`_redirects` heeft voor alle drie een geforceerde `404!` op zowel `/naam` als `/naam/*` —
+zonder uitroepteken zou Netlify het bestaande bestand alsnog uitleveren, en dat ging op 29
+augustus al een keer mis. `robots.txt` verbiedt ze, de sitemap noemt ze niet, geen enkele
+uitgeleverde pagina linkt ernaartoe, en de twee vinkjes in `/tavern/book/` en
+`/tavern/checkout/` vragen niet langer om bevestiging van een document dat niet te lezen is.
+De drie `index.html`-bestanden staan er nog en worden door `tests/site.test.mjs` gelezen —
+wie ze weggooit, breekt de suite. Bewaakt in `tests/filming.test.mjs`.
+
+**Wat ik niet heb aangeraakt.** `PUBLIC_BOOKING_OPENS_AT` zelf — die staat in Netlify, niet
+in de repo, en blijft zoals hij is. `database/first-access.sql` heb ik bewust laten liggen.
+
+> **Achterhaald, gecorrigeerd op 2 september 2026.** De zin hieronder stond er oorspronkelijk:
+> *"`database/first-access.sql` houdt zijn oude `search_path=public`-zwakte (15 functies, ~55
+> ongekwalificeerde verwijzingen)."* Dat klopt niet meer sinds `f6d31f0`. Nagerekend: alle
+> vijftien functies staan op `set search_path=''` en er is geen ongekwalificeerde verwijzing
+> meer over. Dit item stond bovendien onder het sjabloon in plaats van bovenaan het logboek;
+> dat is hierbij rechtgezet.
+
+**Stand:** 163 tests, 0 fouten (was 161). Niets gepusht, gemerged, gedeployed of
+gemigreerd.
+
 ### 2026-09-02 · Codex · Tijdelijke Supabase-proef en heruitgifte-link hersteld · GECONTROLEERD
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, commit `9daa3b9`, werkmap schoon. De
@@ -3364,47 +3491,3 @@ buiten de EER blijft terecht openstaan.
 
 Bij controle: zet `TE CONTROLEREN` om naar `GECONTROLEERD door <naam>, <datum>` en zet
 er direct onder wat je hebt nagelopen en wat de uitkomst was. Ook als alles klopte.
-
-## 2 september 2026 — Claude — de datum vastgezet en bewezen dat hij niets opent
-
-**Robert heeft drie dingen beslist en één voorwaarde gesteld.** Er gaat voorlopig niets
-live. `PUBLIC_BOOKING_OPENS_AT` blijft ongewijzigd tot er een definitieve verkoopdatum is.
-De drie wettelijke routes blijven op harde 404 met de bestanden bewaard. En de enige
-volgende technische stap is het testplan op een tijdelijke database, door Codex.
-
-**De voorwaarde was het enige echte werk.** *"Zorg dat deze datum de betaalpoort niet kan
-openen zolang de vereiste gegevens ontbreken."* Dat was al zo, maar het was niet bewezen.
-De keten is: `publicBookingIsOpen()` → `paymentsAreEnabled()` → `termsArePublished()` → de
-drie constanten `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
-`PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs`. Alle drie leeg. De
-datum wordt pas gelezen op regel 29, ná de poortcontrole op regel 28. Die volgorde is het
-hele slot — en er stond geen enkele test op.
-
-**Twee tests toegevoegd aan `tests/booking-config.test.mjs`.** De eerste zet een publieke
-deployment na (`URL=https://lewos.co`, `NODE_ENV=production`), zet alle vier de
-omgevingsvariabelen goed, en loopt dan zes datums langs: 1970, de 9-septemberdatum zelf,
-een seconde geleden, nú, een onzinstring en een lege waarde. Bij elk daarvan moeten
-`publicBookingIsOpen()` en `paymentsAreEnabled()` onwaar zijn. De tweede test houdt vast
-dat elk van de drie constanten leeg blijft.
-
-**Mutatieproef, vier van de vier betrapt.** De datumcontrole vóór de poortcontrole zetten ·
-`PUBLISHED_TERMS_VERSION` vullen · alle drie de constanten vullen · het lokale testluik
-(`localTestOverridesAllowed`) altijd open zetten. Elke breuk gaf een rode test; het bestand
-staat na afloop weer schoon (`git diff` leeg).
-
-**Aan de drie 404-routes is niets veranderd, want er was niets te veranderen.** Nagelopen:
-`_redirects` heeft voor alle drie een geforceerde `404!` op zowel `/naam` als `/naam/*` —
-zonder uitroepteken zou Netlify het bestaande bestand alsnog uitleveren, en dat ging op 29
-augustus al een keer mis. `robots.txt` verbiedt ze, de sitemap noemt ze niet, geen enkele
-uitgeleverde pagina linkt ernaartoe, en de twee vinkjes in `/tavern/book/` en
-`/tavern/checkout/` vragen niet langer om bevestiging van een document dat niet te lezen is.
-De drie `index.html`-bestanden staan er nog en worden door `tests/site.test.mjs` gelezen —
-wie ze weggooit, breekt de suite. Bewaakt in `tests/filming.test.mjs`.
-
-**Wat ik niet heb aangeraakt.** `PUBLIC_BOOKING_OPENS_AT` zelf — die staat in Netlify, niet
-in de repo, en blijft zoals hij is. `database/first-access.sql` houdt zijn oude
-`search_path=public`-zwakte (15 functies, ~55 ongekwalificeerde verwijzingen); dat wacht nog
-steeds op Roberts akkoord en is bewust ongemoeid gelaten.
-
-**Stand:** 163 tests, 0 fouten (was 161). Niets gepusht, gemerged, gedeployed of
-gemigreerd.
