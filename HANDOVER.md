@@ -376,6 +376,17 @@ en index-/platformadviezen; geen `function_search_path_mutable`-melding.
 gedraaid met `search_path=''`; de tijdelijke proef gebruikte de huidige `=public`-functies.
 Dat blijft een apart openstaand beveiligingspunt. De tijdelijke branch is na de proef verwijderd.
 
+### 2026-09-02 · Codex · First Access search_path gehard en echt uitgevoerd · GECONTROLEERD
+
+De vijftien `SECURITY DEFINER`-functies in `database/first-access.sql` draaien nu met een
+lege `search_path`; tabelnamen en `%rowtype`-declaraties zijn volledig naar `public` gekwalificeerd.
+De wijziging is toegepast op een nieuwe tijdelijke Supabase-branch en daarna echt uitgevoerd.
+De beschikbaarheids-, publieke-gereedheids- en rate-limitfuncties zijn aangeroepen; het volledige
+media-integratieblok slaagde opnieuw, en een tweede toepassing van de media-migratie was idempotent.
+De branch is na afloop verwijderd. De lokale suite staat op 163/163 groen. Advisors melden geen
+`function_search_path_mutable`; de overige meldingen zijn informatieve RLS-zonder-policy- en
+indexadviezen.
+
 ### 2026-09-01 · Claude · De grens tussen twee deelnemers wordt nu echt geprobeerd · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, werkmap schoon, bovenste commit `3015f99`.
