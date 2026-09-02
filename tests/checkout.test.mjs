@@ -267,3 +267,55 @@ test("an impossible price stops the checkout instead of charging it",async()=>{
     assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/release_tavern_checkout"),true,"the seats must be released again");
   }
 });
+
+// ── De drie informatievelden op het boekingspad ──────────────────────────────
+// Robert, 2 september 2026: allergieën en dieetwensen mogen niet opnieuw in één algemeen
+// berichtveld belanden. De publieke checkout maakt een nieuwe claim en is daarmee het
+// tweede pad waarop een gast ze kan doorgeven.
+
+test("the public checkout sends allergies, dietary needs and notes as separate fields",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    allergies:"Peanuts - severe\nShellfish",dietary:"Vegetarian",message:"We arrive late."})});
+  const body=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body);
+  assert.equal(body.p_allergies,"Peanuts - severe\nShellfish","the allergy did not survive as its own field");
+  assert.equal(body.p_dietary,"Vegetarian");
+  assert.equal(body.p_message,"We arrive late.","the note is polluted with the other fields");
+});
+
+test("the public checkout refuses an over-long field instead of trimming it",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    allergies:"p".repeat(501)})});
+  assert.equal(result.statusCode,400);
+  assert.equal(JSON.parse(result.body).error,"field_too_long");
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),false,"an over-long allergy reached the database");
+});
+
+test("a booking without the three fields still works and sends empty values",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
+  assert.equal(result.statusCode,200);
+  const body=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body);
+  assert.equal(body.p_allergies,"");
+  assert.equal(body.p_dietary,"");
+});
+
+test("the First Access checkout forwards added allergies without erasing anything",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"a".repeat(43),adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    allergies:"Peanuts - severe\nShellfish",dietary:"",message:"Remembered this at the last minute."})});
+  const body=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);
+  assert.equal(body.p_allergies,"Peanuts - severe\nShellfish","the added allergy never reached the database");
+  assert.equal(body.p_dietary,"","an empty field must stay empty so the database keeps what is there");
+  assert.equal(body.p_message,"Remembered this at the last minute.");
+});
+
+test("the First Access checkout refuses an over-long field instead of trimming it",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"a".repeat(43),adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    allergies:"p".repeat(501)})});
+  assert.equal(result.statusCode,400);
+  assert.equal(JSON.parse(result.body).error,"field_too_long");
+  assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"),false,"an over-long allergy reached the database");
+});

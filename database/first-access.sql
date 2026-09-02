@@ -43,6 +43,21 @@ alter table public.tavern_weekends add column if not exists ends_on date;
 -- opnieuw en zou een prijs die Robert zelf aanpast weer overschrijven.
 alter table public.tavern_weekends add column if not exists price_cents integer not null default 202500 check (price_cents > 0);
 
+-- Allergieën en dieetwensen staan bewust in eigen kolommen en niet in `message`. Een
+-- allergie die in een vrij tekstveld verdwijnt is een allergie die iemand over het hoofd
+-- ziet. `message` blijft bestaan voor overige opmerkingen en wordt niet aangeraakt, dus
+-- bestaande aanvragen blijven precies zoals ze zijn: deze twee kolommen zijn dan null.
+alter table public.tavern_seat_claims add column if not exists allergies text;
+alter table public.tavern_seat_claims add column if not exists dietary_requirements text;
+do $$ begin
+  if not exists(select 1 from pg_constraint where conname='tavern_seat_claims_allergies_length') then
+    alter table public.tavern_seat_claims add constraint tavern_seat_claims_allergies_length check (allergies is null or char_length(allergies)<=500);
+  end if;
+  if not exists(select 1 from pg_constraint where conname='tavern_seat_claims_dietary_length') then
+    alter table public.tavern_seat_claims add constraint tavern_seat_claims_dietary_length check (dietary_requirements is null or char_length(dietary_requirements)<=500);
+  end if;
+end $$;
+
 alter table public.tavern_seat_claims add column if not exists hold_expires_at timestamptz;
 alter table public.tavern_seat_claims add column if not exists payment_reference text;
 alter table public.tavern_seat_claims add column if not exists checkout_token_hash text;
@@ -113,18 +128,37 @@ end; $$;
 revoke all on function private.cleanup_tavern_claims() from public, anon, authenticated;
 
 drop function if exists public.register_tavern_interest(text,text,integer,text,text);
-create or replace function public.register_tavern_interest(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_message text default null,p_first_access_closes_at timestamptz default null)
+drop function if exists public.register_tavern_interest(text,text,integer,text,text,timestamptz);
+create or replace function public.register_tavern_interest(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_message text default null,p_first_access_closes_at timestamptz default null,p_allergies text default null,p_dietary text default null)
 returns jsonb language plpgsql security definer set search_path=''  as $$
-declare requested public.tavern_weekends%rowtype; alternative public.tavern_weekends%rowtype; existing_claim public.tavern_seat_claims%rowtype; occupied integer; active_claims integer; claim_id uuid;
+declare requested public.tavern_weekends%rowtype; alternative public.tavern_weekends%rowtype; existing_claim public.tavern_seat_claims%rowtype; occupied integer; active_claims integer; claim_id uuid; details_bijgewerkt boolean;
 begin
   if char_length(trim(p_name)) < 2 or char_length(trim(p_name)) > 120 then raise exception 'invalid_name'; end if;
   if p_email !~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' then raise exception 'invalid_email'; end if;
   if p_party_size < 1 or p_party_size > 12 then raise exception 'invalid_party_size'; end if;
+  -- Niet afkappen maar weigeren. Zie de kolomtoelichting hierboven.
+  if char_length(coalesce(p_allergies,'')) > 500 then raise exception 'invalid_allergies'; end if;
+  if char_length(coalesce(p_dietary,'')) > 500 then raise exception 'invalid_dietary'; end if;
   if p_weekend_slug='private' then
     if p_party_size < 4 then raise exception 'private_party_too_small'; end if;
     select * into existing_claim from public.tavern_seat_claims where lower(email)=lower(trim(p_email)) and status='private_inquiry' order by created_at desc limit 1;
-    if found then return jsonb_build_object('status','private_inquiry','claimId',existing_claim.id,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
-    insert into public.tavern_seat_claims(name,email,party_size,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),now()) returning id into claim_id;
+    if found then
+      -- Een herhaalde aanvraag mag nieuwe allergie- of dieetinformatie niet weggooien: dat is
+      -- juist het geval waarin iemand terugkomt omdat hij iets vergeten was. Een lege waarde
+      -- overschrijft nooit wat er al staat, dus niets kan per ongeluk gewist worden.
+      details_bijgewerkt:=(nullif(trim(p_allergies),'') is not null and coalesce(existing_claim.allergies,'') is distinct from trim(p_allergies))
+        or (nullif(trim(p_dietary),'') is not null and coalesce(existing_claim.dietary_requirements,'') is distinct from trim(p_dietary))
+        or (nullif(trim(p_message),'') is not null and coalesce(existing_claim.message,'') is distinct from trim(p_message));
+      if details_bijgewerkt then
+        update public.tavern_seat_claims set
+          allergies=coalesce(nullif(trim(p_allergies),''),allergies),
+          dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),
+          message=coalesce(nullif(trim(p_message),''),message)
+        where id=existing_claim.id;
+      end if;
+      return jsonb_build_object('status','private_inquiry','claimId',existing_claim.id,'duplicate',true,'detailsUpdated',details_bijgewerkt,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
+    end if;
+    insert into public.tavern_seat_claims(name,email,party_size,status,message,allergies,dietary_requirements,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,'private_inquiry',nullif(trim(p_message),''),nullif(trim(p_allergies),''),nullif(trim(p_dietary),''),now()) returning id into claim_id;
     return jsonb_build_object('status','private_inquiry','claimId',claim_id);
   end if;
   select * into requested from public.tavern_weekends where slug=p_weekend_slug and visible=true;
@@ -135,29 +169,72 @@ begin
   if p_first_access_closes_at is null or clock_timestamp()>=p_first_access_closes_at then raise exception 'first_access_closed'; end if;
   select * into existing_claim from public.tavern_seat_claims where lower(email)=lower(trim(p_email)) and assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid') order by created_at limit 1;
   if found then
-    return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
+    -- Een herhaalde aanvraag mag nieuwe allergie- of dieetinformatie niet weggooien: dat is
+    -- juist het geval waarin iemand terugkomt omdat hij iets vergeten was. Een lege waarde
+    -- overschrijft nooit wat er al staat, dus niets kan per ongeluk gewist worden.
+    details_bijgewerkt:=(nullif(trim(p_allergies),'') is not null and coalesce(existing_claim.allergies,'') is distinct from trim(p_allergies))
+      or (nullif(trim(p_dietary),'') is not null and coalesce(existing_claim.dietary_requirements,'') is distinct from trim(p_dietary))
+      or (nullif(trim(p_message),'') is not null and coalesce(existing_claim.message,'') is distinct from trim(p_message));
+    if details_bijgewerkt then
+      update public.tavern_seat_claims set
+        allergies=coalesce(nullif(trim(p_allergies),''),allergies),
+        dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),
+        message=coalesce(nullif(trim(p_message),''),message)
+      where id=existing_claim.id;
+    end if;
+    return jsonb_build_object('status',existing_claim.status,'claimId',existing_claim.id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'detailsUpdated',details_bijgewerkt,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
   end if;
   select count(*)::integer into active_claims from public.tavern_seat_claims where lower(email)=lower(trim(p_email)) and status in('first_access_held','payment_pending','paid');
   if active_claims >= 2 then raise exception 'email_claim_limit'; end if;
   select coalesce(sum(party_size),0)::integer into occupied from public.tavern_seat_claims where assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid');
   if requested.capacity-occupied >= p_party_size then
-    insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'first_access_held',nullif(trim(p_message),''),now()) returning id into claim_id;
+    insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,message,allergies,dietary_requirements,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'first_access_held',nullif(trim(p_message),''),nullif(trim(p_allergies),''),nullif(trim(p_dietary),''),now()) returning id into claim_id;
     return jsonb_build_object('status','first_access_held','claimId',claim_id,'weekend',requested.slug,'weekendLabel',requested.label||' · '||requested.date_label,'seats',p_party_size,'remaining',requested.capacity-occupied-p_party_size);
   end if;
   select w.* into alternative from public.tavern_weekends w where w.visible=true and w.sort_order>requested.sort_order and w.capacity-coalesce((select sum(c.party_size) from public.tavern_seat_claims c where c.assigned_weekend_id=w.id and c.status in('first_access_held','payment_pending','paid')),0)>=p_party_size order by w.sort_order limit 1;
   if found then
     select * into existing_claim from public.tavern_seat_claims where lower(email)=lower(trim(p_email)) and requested_weekend_id=requested.id and offered_weekend_id=alternative.id and status='alternative_offered' order by created_at limit 1;
-    if found then return jsonb_build_object('status','alternative_offered','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'offeredWeekend',alternative.slug,'offeredWeekendLabel',alternative.label||' · '||alternative.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
-    insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,offered_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,alternative.id,'alternative_offered',nullif(trim(p_message),''),now()) returning id into claim_id;
+    if found then
+      -- Een herhaalde aanvraag mag nieuwe allergie- of dieetinformatie niet weggooien: dat is
+      -- juist het geval waarin iemand terugkomt omdat hij iets vergeten was. Een lege waarde
+      -- overschrijft nooit wat er al staat, dus niets kan per ongeluk gewist worden.
+      details_bijgewerkt:=(nullif(trim(p_allergies),'') is not null and coalesce(existing_claim.allergies,'') is distinct from trim(p_allergies))
+        or (nullif(trim(p_dietary),'') is not null and coalesce(existing_claim.dietary_requirements,'') is distinct from trim(p_dietary))
+        or (nullif(trim(p_message),'') is not null and coalesce(existing_claim.message,'') is distinct from trim(p_message));
+      if details_bijgewerkt then
+        update public.tavern_seat_claims set
+          allergies=coalesce(nullif(trim(p_allergies),''),allergies),
+          dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),
+          message=coalesce(nullif(trim(p_message),''),message)
+        where id=existing_claim.id;
+      end if;
+      return jsonb_build_object('status','alternative_offered','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'offeredWeekend',alternative.slug,'offeredWeekendLabel',alternative.label||' · '||alternative.date_label,'seats',existing_claim.party_size,'duplicate',true,'detailsUpdated',details_bijgewerkt,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
+    end if;
+    insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,offered_weekend_id,status,message,allergies,dietary_requirements,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,alternative.id,'alternative_offered',nullif(trim(p_message),''),nullif(trim(p_allergies),''),nullif(trim(p_dietary),''),now()) returning id into claim_id;
     return jsonb_build_object('status','alternative_offered','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'offeredWeekend',alternative.slug,'offeredWeekendLabel',alternative.label||' · '||alternative.date_label,'seats',p_party_size);
   end if;
   select * into existing_claim from public.tavern_seat_claims where lower(email)=lower(trim(p_email)) and requested_weekend_id=requested.id and status='future_weekend_interest' order by created_at limit 1;
-  if found then return jsonb_build_object('status','future_weekend_interest','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null); end if;
-  insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,status,message,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,'future_weekend_interest',nullif(trim(p_message),''),now()) returning id into claim_id;
+  if found then
+    -- Een herhaalde aanvraag mag nieuwe allergie- of dieetinformatie niet weggooien: dat is
+    -- juist het geval waarin iemand terugkomt omdat hij iets vergeten was. Een lege waarde
+    -- overschrijft nooit wat er al staat, dus niets kan per ongeluk gewist worden.
+    details_bijgewerkt:=(nullif(trim(p_allergies),'') is not null and coalesce(existing_claim.allergies,'') is distinct from trim(p_allergies))
+      or (nullif(trim(p_dietary),'') is not null and coalesce(existing_claim.dietary_requirements,'') is distinct from trim(p_dietary))
+      or (nullif(trim(p_message),'') is not null and coalesce(existing_claim.message,'') is distinct from trim(p_message));
+    if details_bijgewerkt then
+      update public.tavern_seat_claims set
+        allergies=coalesce(nullif(trim(p_allergies),''),allergies),
+        dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),
+        message=coalesce(nullif(trim(p_message),''),message)
+      where id=existing_claim.id;
+    end if;
+    return jsonb_build_object('status','future_weekend_interest','claimId',existing_claim.id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',existing_claim.party_size,'duplicate',true,'detailsUpdated',details_bijgewerkt,'receiptEmailSent',existing_claim.receipt_email_sent_at is not null);
+  end if;
+  insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,status,message,allergies,dietary_requirements,consented_at) values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,'future_weekend_interest',nullif(trim(p_message),''),nullif(trim(p_allergies),''),nullif(trim(p_dietary),''),now()) returning id into claim_id;
   return jsonb_build_object('status','future_weekend_interest','claimId',claim_id,'requestedWeekend',requested.label||' · '||requested.date_label,'seats',p_party_size);
 end; $$;
-revoke all on function public.register_tavern_interest(text,text,integer,text,text,timestamptz) from public, anon, authenticated;
-grant execute on function public.register_tavern_interest(text,text,integer,text,text,timestamptz) to service_role;
+revoke all on function public.register_tavern_interest(text,text,integer,text,text,timestamptz,text,text) from public, anon, authenticated;
+grant execute on function public.register_tavern_interest(text,text,integer,text,text,timestamptz,text,text) to service_role;
 
 create or replace function public.mark_tavern_receipt_email_sent(p_claim_id uuid,p_provider_id text)
 returns jsonb language plpgsql security definer set search_path=''  as $$
@@ -242,11 +319,18 @@ grant execute on function public.check_tavern_request_limit(text,integer,integer
 -- receives a short hold; payment speed never decides who gets the seats.
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,integer);
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,integer);
-create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_public_booking_opens_at timestamptz,p_hold_minutes integer default 30)
+-- De publieke checkout maakt een nieuwe claim en is daarmee het enige andere pad waarop
+-- een gast zijn allergie kan doorgeven. Zelfde drie velden, zelfde grenzen, zelfde regel:
+-- weigeren in plaats van afkappen.
+drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer);
+create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_public_booking_opens_at timestamptz,p_hold_minutes integer default 30,p_allergies text default null,p_dietary text default null,p_message text default null)
 returns jsonb language plpgsql security definer set search_path=''  as $$
 declare requested public.tavern_weekends%rowtype; occupied integer; claim_id uuid; expires_at timestamptz;
 begin
   if p_party_size < 1 or p_party_size > 6 then raise exception 'invalid_party_size'; end if;
+  if char_length(coalesce(p_allergies,'')) > 500 then raise exception 'invalid_allergies'; end if;
+  if char_length(coalesce(p_dietary,'')) > 500 then raise exception 'invalid_dietary'; end if;
+  if char_length(coalesce(p_message,'')) > 2000 then raise exception 'invalid_message'; end if;
   if p_adult_confirmed is not true or p_privacy_accepted is not true then raise exception 'required_terms_not_accepted'; end if;
   if p_terms_version is null or char_length(trim(p_terms_version)) < 1 then raise exception 'missing_terms_version'; end if;
   select * into requested from public.tavern_weekends where slug=p_weekend_slug and visible=true;
@@ -265,13 +349,13 @@ begin
     return jsonb_build_object('status','not_available','remaining',greatest(requested.capacity-occupied,0));
   end if;
   expires_at:=clock_timestamp()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
-  insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,consented_at,hold_expires_at,payment_reference,price_cents,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at,filming_consent_at)
-  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',now(),expires_at,p_payment_reference,requested.price_cents,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end,case when requested.slug='weekend-01' and p_filming_consent is true then now() else null end)
+  insert into public.tavern_seat_claims(name,email,party_size,requested_weekend_id,assigned_weekend_id,status,allergies,dietary_requirements,message,consented_at,hold_expires_at,payment_reference,price_cents,adult_confirmed_at,privacy_accepted_at,terms_version,filming_notice_acknowledged_at,filming_consent_at)
+  values(trim(p_name),lower(trim(p_email)),p_party_size,requested.id,requested.id,'payment_pending',nullif(trim(p_allergies),''),nullif(trim(p_dietary),''),nullif(trim(p_message),''),now(),expires_at,p_payment_reference,requested.price_cents,now(),now(),trim(p_terms_version),case when requested.slug='weekend-01' then now() else null end,case when requested.slug='weekend-01' and p_filming_consent is true then now() else null end)
   returning id into claim_id;
   return jsonb_build_object('status','payment_pending','claimId',claim_id,'seats',p_party_size,'priceCents',requested.price_cents,'holdExpiresAt',expires_at,'remaining',requested.capacity-occupied-p_party_size);
 end; $$;
-revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) from public, anon, authenticated;
-grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer) to service_role;
+revoke all on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer,text,text,text) from public, anon, authenticated;
+grant execute on function public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer,text,text,text) to service_role;
 
 drop function if exists public.confirm_tavern_payment(text);
 create or replace function public.confirm_tavern_payment(p_payment_reference text,p_paid_at timestamptz)
@@ -282,7 +366,7 @@ begin
   select * into claim from public.tavern_seat_claims where payment_reference=p_payment_reference for update;
   if not found then return jsonb_build_object('status','unknown_payment'); end if;
   select * into weekend from public.tavern_weekends where id=claim.assigned_weekend_id;
-  if claim.status='paid' then return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label,'termsVersion',claim.terms_version,'confirmationEmailSent',claim.confirmation_email_sent_at is not null,'duplicate',true); end if;
+  if claim.status='paid' then return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label,'allergies',claim.allergies,'dietary',claim.dietary_requirements,'notes',claim.message,'termsVersion',claim.terms_version,'confirmationEmailSent',claim.confirmation_email_sent_at is not null,'duplicate',true); end if;
   -- The Stripe session expiry is set a moment after the database hold begins, so
   -- a payment accepted in that final sliver can carry a timestamp just past the
   -- hold. Stripe never accepts payment on an expired session, so this narrow
@@ -291,7 +375,7 @@ begin
     return jsonb_build_object('status','expired','claimId',claim.id);
   end if;
   update public.tavern_seat_claims set status='paid',hold_expires_at=null where id=claim.id;
-  return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label,'termsVersion',claim.terms_version,'confirmationEmailSent',false);
+  return jsonb_build_object('status','paid','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'weekendLabel',weekend.label||' · '||weekend.date_label,'allergies',claim.allergies,'dietary',claim.dietary_requirements,'notes',claim.message,'termsVersion',claim.terms_version,'confirmationEmailSent',false);
 end; $$;
 revoke all on function public.confirm_tavern_payment(text,timestamptz) from public, anon, authenticated;
 grant execute on function public.confirm_tavern_payment(text,timestamptz) to service_role;
@@ -361,12 +445,20 @@ revoke all on function public.revoke_tavern_checkout_invitation(uuid,text) from 
 grant execute on function public.revoke_tavern_checkout_invitation(uuid,text) to service_role;
 
 drop function if exists public.begin_tavern_first_access_checkout(text,text,integer);
-create or replace function public.begin_tavern_first_access_checkout(p_token_hash text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_hold_minutes integer default 30)
+-- Ook hier de drie velden, maar dit pad hervat een bestaande claim in plaats van er een
+-- te maken. Een lege waarde laat dus staan wat de gast bij zijn aanmelding heeft ingevuld;
+-- alleen iets nieuws overschrijft. Wie zijn allergie vergeten was kan hem hier alsnog
+-- toevoegen, vlak voor hij betaalt.
+drop function if exists public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer);
+create or replace function public.begin_tavern_first_access_checkout(p_token_hash text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_hold_minutes integer default 30,p_allergies text default null,p_dietary text default null,p_message text default null)
 returns jsonb language plpgsql security definer set search_path=''  as $$
 declare claim public.tavern_seat_claims%rowtype; weekend public.tavern_weekends%rowtype; expires_at timestamptz;
 begin
   if p_adult_confirmed is not true or p_privacy_accepted is not true then raise exception 'confirmations_required'; end if;
   if p_terms_version is null or char_length(trim(p_terms_version))<1 then raise exception 'missing_terms_version'; end if;
+  if char_length(coalesce(p_allergies,'')) > 500 then raise exception 'invalid_allergies'; end if;
+  if char_length(coalesce(p_dietary,'')) > 500 then raise exception 'invalid_dietary'; end if;
+  if char_length(coalesce(p_message,'')) > 2000 then raise exception 'invalid_message'; end if;
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
   select * into claim from public.tavern_seat_claims where checkout_token_hash=p_token_hash for update;
@@ -374,7 +466,7 @@ begin
   if claim.status='paid' then return jsonb_build_object('status','already_paid'); end if;
   select * into weekend from public.tavern_weekends where id=claim.assigned_weekend_id;
   if claim.status='payment_pending' and claim.hold_expires_at>clock_timestamp() then
-    update public.tavern_seat_claims set adult_confirmed_at=coalesce(adult_confirmed_at,now()),privacy_accepted_at=coalesce(privacy_accepted_at,now()),terms_version=coalesce(terms_version,trim(p_terms_version)),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then coalesce(filming_notice_acknowledged_at,now()) else filming_notice_acknowledged_at end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then coalesce(filming_consent_at,now()) else filming_consent_at end where id=claim.id;
+    update public.tavern_seat_claims set allergies=coalesce(nullif(trim(p_allergies),''),allergies),dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),message=coalesce(nullif(trim(p_message),''),message),adult_confirmed_at=coalesce(adult_confirmed_at,now()),privacy_accepted_at=coalesce(privacy_accepted_at,now()),terms_version=coalesce(terms_version,trim(p_terms_version)),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then coalesce(filming_notice_acknowledged_at,now()) else filming_notice_acknowledged_at end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then coalesce(filming_consent_at,now()) else filming_consent_at end where id=claim.id;
     return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'priceCents',coalesce(claim.price_cents,weekend.price_cents),'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',claim.hold_expires_at,'paymentReference',claim.payment_reference,'checkoutUrl',claim.checkout_session_url);
   end if;
   if claim.status='payment_pending' and claim.checkout_session_id is not null then
@@ -386,12 +478,12 @@ begin
   end if;
   if claim.status not in('first_access_held','payment_pending') then return jsonb_build_object('status','claim_not_eligible'); end if;
   expires_at:=clock_timestamp()+make_interval(mins=>greatest(5,least(p_hold_minutes,60)));
-  update public.tavern_seat_claims set status='payment_pending',hold_expires_at=expires_at,payment_reference=p_payment_reference,price_cents=weekend.price_cents,adult_confirmed_at=now(),privacy_accepted_at=now(),terms_version=trim(p_terms_version),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then now() else null end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then now() else null end
+  update public.tavern_seat_claims set allergies=coalesce(nullif(trim(p_allergies),''),allergies),dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),message=coalesce(nullif(trim(p_message),''),message),status='payment_pending',hold_expires_at=expires_at,payment_reference=p_payment_reference,price_cents=weekend.price_cents,adult_confirmed_at=now(),privacy_accepted_at=now(),terms_version=trim(p_terms_version),filming_notice_acknowledged_at=case when weekend.slug='weekend-01' then now() else null end,filming_consent_at=case when weekend.slug='weekend-01' and p_filming_consent is true then now() else null end
     where id=claim.id;
   return jsonb_build_object('status','payment_pending','claimId',claim.id,'name',claim.name,'email',claim.email,'seats',claim.party_size,'priceCents',weekend.price_cents,'weekend',weekend.slug,'weekendLabel',weekend.label||' · '||weekend.date_label,'holdExpiresAt',expires_at);
 end; $$;
-revoke all on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer) from public, anon, authenticated;
-grant execute on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer) to service_role;
+revoke all on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer,text,text,text) from public, anon, authenticated;
+grant execute on function public.begin_tavern_first_access_checkout(text,text,boolean,boolean,text,boolean,integer,text,text,text) to service_role;
 
 drop function if exists public.attach_tavern_checkout_session(text,text,text,boolean,boolean,text,boolean);
 create or replace function public.attach_tavern_checkout_session(p_payment_reference text,p_checkout_session_id text,p_checkout_session_url text)

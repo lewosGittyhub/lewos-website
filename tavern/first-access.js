@@ -196,6 +196,10 @@
       if(data.error==='public_booking_open'){showPublicBooking();return;}
       if(data.error==='first_access_closed'){showFirstAccessWaiting();return;}
       if(!response.ok)throw new Error(data.error||'request_failed');
+      // Een herhaalde aanvraag maakt geen tweede claim, maar de nieuwe allergie- of
+      // dieetinformatie is wél opgeslagen. Dan hoort de gast dat te lezen in plaats van
+      // stilzwijgend doorgestuurd te worden naar een bedankpagina.
+      if(data.duplicate&&data.detailsUpdated){show('You already have a request under this email address, so we have not created a second one. We have updated the details you just sent, including any allergies and dietary requirements. Nothing you wrote has been lost.');return;}
       if(data.status==='first_access_held'){window.location.assign(`/thanks/?status=held&weekend=${encodeURIComponent(data.weekendLabel)}&seats=${data.seats}`);return;}
       if(data.status==='alternative_offered'){weekend.value=data.offeredWeekend;show(`${data.requestedWeekend} cannot fit your complete party. We have selected ${data.offeredWeekendLabel}, where your ${data.seats} seats can still stay together. Check the new date and submit again to claim them.`,'alternative');return;}
       if(data.status==='future_weekend_interest'){show('The announced weekends cannot fit your complete party. We have registered your interest in opening the next Tavern chapter and will contact you with the next suitable date.','future');return;}
@@ -207,7 +211,11 @@
       const tooLarge=error.message==='featured_party_too_large';
       const privateTooSmall=error.message==='private_party_too_small';
       const emailLimit=error.message==='email_claim_limit';
-      show(unavailable?'Seat registration is temporarily unavailable. Please try again shortly or contact Robert directly.':tooMany?'Too many requests were sent in a short time. Your existing request is safe; please wait fifteen minutes before trying again.':tooLarge?'Featured weekends have six seats. For a larger group, choose a private Tavern in the same weekend menu.':privateTooSmall?'A private Tavern starts with four players. Bring your group to at least four, or choose one of the featured six-seat weekends.':emailLimit?'This email address already has seats held for the maximum number of featured weekends. Contact Robert if you need to change one of those requests.':'We could not check the seats. Please review your details and try again.','error');
+      // De server kapt niets meer af, dus hij kan 'te lang' terugmelden. Zeg dan wélk
+      // veld en hoeveel te veel — een gast die zijn allergie opschrijft moet weten dat
+      // die tekst niet is aangekomen, en waarom.
+      const tooLong=error.message==='field_too_long';
+      show(tooLong?'One of your answers is longer than we can store. Shorten the field that shows a red counter and send again — nothing has been saved yet.':unavailable?'Seat registration is temporarily unavailable. Please try again shortly or contact Robert directly.':tooMany?'Too many requests were sent in a short time. Your existing request is safe; please wait fifteen minutes before trying again.':tooLarge?'Featured weekends have six seats. For a larger group, choose a private Tavern in the same weekend menu.':privateTooSmall?'A private Tavern starts with four players. Bring your group to at least four, or choose one of the featured six-seat weekends.':emailLimit?'This email address already has seats held for the maximum number of featured weekends. Contact Robert if you need to change one of those requests.':'We could not check the seats. Please review your details and try again.','error');
     }
     finally{submit.disabled=false;submit.textContent=submitLabel();}
   });

@@ -52,6 +52,13 @@
     .footer-inner { display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; }
     @media (max-width:850px) { .contact-grid { grid-template-columns:1fr; } }
     @media (max-width:600px) { .wrap { width:min(calc(100% - 32px),var(--max)); } .direct { grid-template-columns:1fr; margin-top:38px; } main { padding:70px 0; } }
+
+    /* Lengtegrenzen: de teller staat onder het veld, de tekstuele grens gaat naar de
+       schermlezer. Zie assets/field-limits.js. */
+    .field-count{display:block;margin-top:4px;font-size:.78rem;opacity:.72;text-align:right}
+    .field-count[data-state="near"]{opacity:1;font-weight:700}
+    .field-count[data-state="over"]{opacity:1;font-weight:700;color:#E5643A}
+    .field-count__sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
@@ -76,14 +83,15 @@
       <form name="tavern-question" method="POST" data-netlify="true" netlify-honeypot="contact-bot-field" action="/contact-thanks/">
         <input type="hidden" name="form-name" value="tavern-question">
         <p class="bot-field" aria-hidden="true"><label for="contact-bot-field">Do not fill this out if you are human</label><input id="contact-bot-field" name="contact-bot-field" type="text" tabindex="-1" autocomplete="off"></p>
-        <div class="field"><label for="contact-name">Your name</label><input id="contact-name" name="name" type="text" autocomplete="name" required></div>
-        <div class="field"><label for="contact-email">Email</label><input id="contact-email" name="email" type="email" autocomplete="email" required></div>
-        <div class="field"><label for="contact-question">Your question</label><textarea id="contact-question" name="question" maxlength="500" required></textarea></div>
+        <div class="field"><label for="contact-name">Your name</label><input id="contact-name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
+        <div class="field"><label for="contact-email">Email</label><input id="contact-email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
+        <div class="field"><label for="contact-question">Your question</label><textarea id="contact-question" name="question" maxlength="500" data-limit="question" required></textarea></div>
         <button class="button" type="submit">Send my question →</button>
         <p class="note">Maximum 500 characters. Your details are used only to answer your question. <a href="/privacy/">Privacy details</a>.</p>
       </form>
     </section>
   </main>
   <footer><div class="footer-inner wrap"><span>© 2026 Lewos</span><span><a href="../privacy/">Privacy</a> · <a href="../legal/">Legal</a></span></div></footer>
+  <script src="/assets/field-limits.js" defer></script>
 </body>
 </html>

@@ -21,20 +21,35 @@
       people:data.people,
       weekend:'private',
       consent:data.consent||'',
+      // Allergieën en dieetwensen gaan als eigen velden mee en worden bewust NIET in het
+      // bericht geplakt: ze horen in hun eigen kolom, waar de operator ze terugvindt.
+      allergies:String(data.allergies||'').trim(),
+      dietary:String(data.dietary||'').trim(),
       message:(when?`When: ${when}\n\n`:'')+idea
     };
+    // De twee velden worden hier tot één bericht geplakt, dus de grens van het
+    // berichtveld geldt voor de som. Elk veld heeft zijn eigen maxlength en samen
+    // passen ze, maar dit is het net eronder: liever een melding dan een 400.
+    const berichtGrens=(window.LEWOS_FIELD_LIMITS&&window.LEWOS_FIELD_LIMITS.message)||2000;
+    if(payload.message.length>berichtGrens){
+      show(`Your description and preferred dates are ${payload.message.length-berichtGrens} characters longer than we can store together. Shorten one of them and send again — nothing has been sent yet.`,'error');
+      return;
+    }
     submit.disabled=true;submit.textContent='Sending…';result.hidden=true;
     try{
       const response=await fetch('/api/first-access',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},body:JSON.stringify(payload)});
       const body=await response.json();
       if(!response.ok)throw new Error(body.error||'request_failed');
+      if(body.duplicate&&body.detailsUpdated){show('You already have a request under this email address, so we have not created a second one. We have updated the details you just sent, including any allergies and dietary requirements. Nothing you wrote has been lost.');return;}
       if(body.status==='private_inquiry'){window.location.assign('/contact-thanks/');return;}
       show('Thank you. We have received your request and will come back to you.');
     }catch(error){
       const tooSmall=error.message==='private_party_too_small';
       const tooMany=error.message==='too_many_requests';
       const unavailable=error.message==='booking_service_not_configured'||error.message==='booking_service_unavailable';
+      const tooLong=error.message==='field_too_long';
       show(
+        tooLong?'One of your answers is longer than we can store. Shorten the field that shows a red counter and send again — nothing has been saved yet.':
         tooSmall?'A private Tavern starts with four players. Bring your group to at least four, or write to Robert directly at lewos.co@gmail.com.':
         tooMany?'Too many requests were sent in a short time. Your request is safe; please wait fifteen minutes before trying again.':
         unavailable?'Requests are temporarily unavailable. Please try again shortly, or email lewos.co@gmail.com.':

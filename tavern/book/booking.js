@@ -22,12 +22,16 @@ form.addEventListener("submit",async event=>{
   event.preventDefault();
   if(!form.reportValidity())return;
   error.hidden=true;button.disabled=true;button.textContent="Securing your seats…";
-  const input={mode:"public",name:form.elements.name.value,email:form.elements.email.value,weekend:weekend.value,people:form.elements.people.value,adultConfirmed:form.elements.adultConfirmed.checked,privacyAccepted:form.elements.privacyAccepted.checked,filmingAcknowledged:filmingInput.checked};
+  const input={mode:"public",name:form.elements.name.value,email:form.elements.email.value,weekend:weekend.value,people:form.elements.people.value,adultConfirmed:form.elements.adultConfirmed.checked,privacyAccepted:form.elements.privacyAccepted.checked,filmingAcknowledged:filmingInput.checked,
+    // Eigen velden, bewust niet samengevoegd tot één bericht: de operator moet een
+    // allergie kunnen terugvinden zonder een vrije tekst te hoeven doorlezen.
+    allergies:form.elements.allergies.value,dietary:form.elements.dietary.value,message:form.elements.message.value};
   try{
     const response=await fetch("/api/checkout",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(input)});
     const result=await response.json();
     if(response.ok&&result.checkoutUrl){location.assign(result.checkoutUrl);return;}
     if(result.error==="not_available")error.textContent=`Your complete party does not fit. ${result.remaining||"No"} seat${result.remaining===1?" remains":"s remain"} for this weekend. Choose the other announced weekend or contact Robert and we will keep your group together.`;
+    else if(result.error==="field_too_long")error.textContent="One of your answers is longer than we can store. Shorten the field that shows a red counter and try again. No payment was taken.";
     else error.textContent="We could not secure this checkout. No payment was taken. Please check the details or contact Robert.";
   }catch{error.textContent="The booking service could not be reached. No payment was taken. Please try again.";}
   error.hidden=false;error.focus();button.disabled=false;button.textContent="Secure my seats and continue →";

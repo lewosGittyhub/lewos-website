@@ -1,14 +1,15 @@
 import {createHash} from "node:crypto";
 import {publicBookingIsOpen} from "./_booking-config.mjs";
+import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
+import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const redirect=location=>({statusCode:303,headers:{location,"cache-control":"no-store"},body:""});
 const header=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
 const parseBody=event=>header(event,"content-type").includes("application/json")?JSON.parse(event.body||"{}"):Object.fromEntries(new URLSearchParams(event.body||""));
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const clientAddress=event=>header(event,"x-nf-client-connection-ip")||header(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
 const rateKey=value=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${value}`).digest("hex");
-const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","email_claim_limit","first_access_closed"]);
+const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","invalid_allergies","invalid_dietary","email_claim_limit","first_access_closed"]);
 const firstAccessClosesAt=()=>{
   const value=Date.parse(process.env.PUBLIC_BOOKING_OPENS_AT||"");
   return Number.isFinite(value)?value:null;
@@ -26,7 +27,7 @@ const databasePublicBookingReady=async({supabaseUrl,serviceKey})=>{
   return await response.json()===true;
 };
 
-const sendGuestEmail=async({email,name,people,result})=>{
+const sendGuestEmail=async({email,name,people,result,allergies,dietary,notes})=>{
   const apiKey=process.env.RESEND_API_KEY;
   const from=process.env.TAVERN_FROM_EMAIL;
   if(!apiKey||!from)return null;
@@ -34,10 +35,10 @@ const sendGuestEmail=async({email,name,people,result})=>{
   let message="Thank you. We have received your request and will contact you with the next step.";
   if(result.status==="first_access_held"){
     subject=`Your ${people} First Access seat${people===1?" is":"s are"} set aside`;
-    message=`We have set aside ${people} seat${people===1?"":"s"} for ${escapeHtml(result.weekendLabel)}. Your party stays together, and no payment is due today. When booking opens you get 24 hours to complete payment before the weekend goes public — we will email you before that window starts. Seats that are not paid for within those 24 hours are released.`;
+    message=`We have set aside ${people} seat${people===1?"":"s"} for ${result.weekendLabel}. Your party stays together, and no payment is due today. When booking opens you get 24 hours to complete payment before the weekend goes public — we will email you before that window starts. Seats that are not paid for within those 24 hours are released.`;
   }else if(result.status==="alternative_offered"){
     subject="Your Tavern weekend options";
-    message=`Your complete party does not fit at ${escapeHtml(result.requestedWeekend)}, so we have not split your group. ${escapeHtml(result.offeredWeekendLabel)} can currently fit all ${people} of you. Return to the form to choose that weekend and claim the seats.`;
+    message=`Your complete party does not fit at ${result.requestedWeekend}, so we have not split your group. ${result.offeredWeekendLabel} can currently fit all ${people} of you. Return to the form to choose that weekend and claim the seats.`;
   }else if(result.status==="future_weekend_interest"){
     subject="The next Tavern chapter";
     message=`The announced weekends cannot fit your complete party, so we have registered your interest in opening the next suitable Tavern weekend. We will contact you when that date is ready.`;
@@ -45,7 +46,17 @@ const sendGuestEmail=async({email,name,people,result})=>{
     subject="Your private Tavern request";
     message="Thank you. We have received your request for a private Tavern and will come back to you personally.";
   }
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${apiKey}`,"content-type":"application/json","idempotency-key":`first-access-receipt-${result.claimId}`},body:JSON.stringify({from,to:[email],reply_to:"lewos.co@gmail.com",subject,html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Hi ${escapeHtml(name)},</h1><p>${message}</p><p>The first story can only be told once.</p><p>Robert<br>The Lewos Tavern</p></div>`})});
+  // Terugkoppelen wat de gast heeft ingevuld. Wie een allergie doorgeeft moet in zijn
+  // eigen postvak kunnen nalezen dat hij goed is aangekomen, en een fout kunnen melden.
+  const genoteerd=labelledBlock(
+    [["Allergies",allergies],["Dietary requirements",dietary],["Anything else",notes]],
+    "We have noted the following. If anything here is wrong or incomplete, reply to this email and we will correct it."
+  );
+  const tekst=`Hi ${name},\n\n${message}${genoteerd.text}\n\nThe first story can only be told once.\n\nRobert\nThe Lewos Tavern`;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${apiKey}`,"content-type":"application/json","idempotency-key":`first-access-receipt-${result.claimId}`},body:JSON.stringify(resendPayload({
+    from,to:[email],subject,text:tekst,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Hi ${escapeHtml(name)},</h1><p>${escapeHtml(message)}</p>${genoteerd.html}<p>The first story can only be told once.</p><p>Robert<br>The Lewos Tavern</p></div>`
+  }))});
   if(!response.ok){console.error("First Access email error",response.status,await response.text());return null;}
   const delivery=await response.json();
   return delivery.id||"resend-accepted";
@@ -73,8 +84,15 @@ export const handler=async event=>{
   const email=String(input.email||"").trim().toLowerCase();
   const weekend=String(input.weekend||"");
   const people=Number.parseInt(input.people,10);
-  const message=String(input.message||"").trim().slice(0,2000);
-  if(name.length<2||name.length>120||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(people)||people<1||people>12||!input.consent) return json(400,{error:"invalid_details"});
+  // Bewust géén .slice() meer. Dit veld draagt allergieën en dieetwensen; stil afkappen
+  // betekende dat een gast dacht dat hij iets had doorgegeven wat nooit is aangekomen.
+  // Te lang wordt nu geweigerd, met het veld en het aantal tekens erbij.
+  const message=String(input.message||"").trim();
+  const allergies=String(input.allergies||"").trim();
+  const dietary=String(input.dietary||"").trim();
+  const teLang=tooLongFields({name,email,allergies,dietary,message});
+  if(teLang.length) return json(400,{error:"field_too_long",fields:teLang});
+  if(name.length<NAME_MIN||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(people)||people<1||people>12||!input.consent) return json(400,{error:"invalid_details"});
   if(!["weekend-01","weekend-02","private"].includes(weekend)) return json(400,{error:"invalid_weekend"});
   if(weekend==="private"&&people<4) return json(400,{error:"private_party_too_small"});
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
@@ -101,7 +119,7 @@ export const handler=async event=>{
   }catch(error){console.error("Rate limit connection error",error);return json(503,{error:"booking_service_unavailable"});}
   let result;
   try{
-    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message,p_first_access_closes_at:weekend==="private"?null:new Date(closesAt).toISOString()})});
+    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message,p_allergies:allergies,p_dietary:dietary,p_first_access_closes_at:weekend==="private"?null:new Date(closesAt).toISOString()})});
     if(!response.ok){
       const inputError=await databaseError(response);
       if(inputError)return json(422,{error:inputError});
@@ -113,7 +131,7 @@ export const handler=async event=>{
   let emailSent=result.receiptEmailSent===true;
   if(!emailSent&&result.claimId){
     let providerId=null;
-    try{providerId=await sendGuestEmail({email,name,people,result});}catch(error){console.error("First Access email connection error",error);}
+    try{providerId=await sendGuestEmail({email,name,people,result,allergies,dietary,notes:message});}catch(error){console.error("First Access email connection error",error);}
     emailSent=Boolean(providerId);
     if(providerId){
       try{

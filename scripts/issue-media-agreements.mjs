@@ -3,13 +3,13 @@
 // weigert het ook dan. Er kan dus niet per ongeluk een uitnodiging de deur uit.
 import {createHash,randomBytes} from "node:crypto";
 import {MEDIA_INVITATION_WINDOW_DAYS,mediaAgreement,mediaConsentBlockers,mediaConsentIsEnabled} from "../netlify/functions/_media-config.mjs";
+import {escapeHtml,resendPayload} from "../netlify/functions/_email.mjs";
 
 const required=name=>{
   const value=String(process.env[name]||"").trim();
   if(!value)throw new Error(`Missing ${name}`);
   return value;
 };
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const api=async(path,options={})=>{
   const base=required("SUPABASE_URL");
   const key=required("SUPABASE_SERVICE_ROLE_KEY");
@@ -37,11 +37,12 @@ const sendInvitation=async({participant,token,agreement})=>{
     <p>You choose what you agree to. Permission for paid advertising is a separate, optional choice and is never assumed from anything else you tick. Saying no to any of it does not affect your place, your price or your room.</p>
     <p>Robert<br>The Lewos Tavern</p>
   </div>`;
+  const tekst=`Your Filming & Media Agreement\n\nHi ${participant.fullName},\n\nYou are attending ${participant.weekendLabel}, The Lewos Tavern's professionally filmed First Edition. Every adult attending completes this agreement personally — nobody can complete it for you, and you cannot complete it for anyone else.\n\nThis link is yours alone. Please do not forward it:\n\n  ${link}\n\nIt applies to agreement version ${agreement.version} and stays open until ${deadline} (Spain time).\n\nYou choose what you agree to. Permission for paid advertising is a separate, optional choice and is never assumed from anything else you tick. Saying no to any of it does not affect your place, your price or your room.\n\nRobert\nThe Lewos Tavern`;
   const resendUrl=process.env.RESEND_API_URL||"https://api.resend.com/emails";
   const response=await fetch(resendUrl,{
     method:"POST",
     headers:{authorization:`Bearer ${resendKey}`,"content-type":"application/json","idempotency-key":`media-agreement-${participant.participantId}-${agreement.version}`},
-    body:JSON.stringify({from,to:[participant.email],reply_to:"lewos.co@gmail.com",subject:`Your Filming & Media Agreement for ${participant.weekendLabel}`,html})
+    body:JSON.stringify(resendPayload({from,to:[participant.email],subject:`Your Filming & Media Agreement for ${participant.weekendLabel}`,text:tekst,html}))
   });
   if(!response.ok)throw new Error(`Resend ${response.status}: ${await response.text()}`);
   const result=await response.json();

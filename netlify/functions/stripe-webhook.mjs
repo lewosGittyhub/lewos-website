@@ -1,5 +1,6 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {bookingDocuments} from "./_booking-config.mjs";
+import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -15,7 +16,6 @@ const validSignature=(rawBody,header,secret)=>{
   return signatures.some(actual=>actual.length===expected.length&&timingSafeEqual(Buffer.from(actual),Buffer.from(expected)));
 };
 
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const rpc=async(name,body)=>{
   const result=await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:"POST",headers:{apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,authorization:`Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,"content-type":"application/json"},body:JSON.stringify(body)});
   if(!result.ok)throw new Error(`${name}:${result.status}:${await result.text()}`);
@@ -38,7 +38,20 @@ const sendBookingEmail=async booking=>{
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Booking document attachment error",error);return null;}
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json","idempotency-key":`booking-confirmation-${booking.claimId}`},body:JSON.stringify({from:process.env.TAVERN_FROM_EMAIL,to:[booking.email],reply_to:"lewos.co@gmail.com",subject:`Your Lewos Tavern booking is confirmed`,html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${booking.seats} guest${booking.seats===1?"":"s"} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p><p><strong>Booking terms accepted:</strong> ${escapeHtml(booking.termsVersion||"not recorded")}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`,attachments})});
+  // De laatste mail vóór aankomst. Wie zijn allergie pas bij de checkout toevoegde, heeft
+  // hem nergens anders bevestigd gezien — de ontvangstbevestiging ging al bij de aanmelding
+  // de deur uit. Daarom staat hij hier, in beide formaten en met zijn regeleindes.
+  const genoteerd=labelledBlock(
+    [["Allergies",booking.allergies],["Dietary requirements",booking.dietary],["Anything else",booking.notes]],
+    "We have this on file for your weekend. If anything is wrong or missing, reply to this email."
+  );
+  const gasten=`${booking.seats} guest${booking.seats===1?"":"s"}`;
+  const termsVersie=booking.termsVersion||"not recorded";
+  const tekst=`Your party has a table.\n\nHi ${booking.name},\n\nPayment has been received for ${gasten} at ${booking.weekendLabel}. Your booking is confirmed.${genoteerd.text}\n\nBooking terms accepted: ${termsVersie}. Keep this email and its two PDF attachments with your booking records.\n\nWe will contact you with the guest details and everything you need before the weekend.\n\nRobert\nThe Lewos Tavern`;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json","idempotency-key":`booking-confirmation-${booking.claimId}`},body:JSON.stringify(resendPayload({
+    from:process.env.TAVERN_FROM_EMAIL,to:[booking.email],subject:`Your Lewos Tavern booking is confirmed`,text:tekst,attachments,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${gasten} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p>${genoteerd.html}<p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`
+  }))});
   if(!response.ok){console.error("Booking email error",response.status,await response.text());return null;}
   const result=await response.json();
   return result.id||"resend-accepted";

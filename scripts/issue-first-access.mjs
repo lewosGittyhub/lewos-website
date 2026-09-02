@@ -1,12 +1,12 @@
 import {createHash,randomBytes} from "node:crypto";
 import {paymentsAreEnabled} from "../netlify/functions/_booking-config.mjs";
+import {escapeHtml,resendPayload} from "../netlify/functions/_email.mjs";
 
 const required=name=>{
   const value=String(process.env[name]||"").trim();
   if(!value)throw new Error(`Missing ${name}`);
   return value;
 };
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const api=async(path,options={})=>{
   const base=required("SUPABASE_URL");
   const key=required("SUPABASE_SERVICE_ROLE_KEY");
@@ -30,11 +30,12 @@ const sendEmail=async({claim,token,tokenHash})=>{
     <p>If payment is not completed before the window closes, the seats are released before public booking opens.</p>
     <p>Robert<br>The Lewos Tavern</p>
   </div>`;
+  const tekst=`Your First Access seats are ready.\n\nHi ${claim.name},\n\nYour ${claim.seats} seat${claim.seats===1?" is":"s are"} set aside for ${claim.weekendLabel}. Your complete party stays together.\n\nYour private payment window is open for 24 hours. Complete payment before ${deadline} (Spain time):\n\n  ${checkoutUrl}\n\nIf payment is not completed before the window closes, the seats are released before public booking opens.\n\nRobert\nThe Lewos Tavern`;
   const resendUrl=process.env.RESEND_API_URL||"https://api.resend.com/emails";
   const response=await fetch(resendUrl,{
     method:"POST",
     headers:{authorization:`Bearer ${resendKey}`,"content-type":"application/json","idempotency-key":`first-access-${claim.claimId}-${tokenHash.slice(0,16)}`},
-    body:JSON.stringify({from,to:[claim.email],reply_to:"lewos.co@gmail.com",subject:"Your private booking window is open",html})
+    body:JSON.stringify(resendPayload({from,to:[claim.email],subject:"Your private booking window is open",text:tekst,html}))
   });
   if(!response.ok)throw new Error(`Resend ${response.status}: ${await response.text()}`);
   const result=await response.json();

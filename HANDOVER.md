@@ -355,6 +355,160 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-02 · Claude · Aparte velden voor allergie en dieet, en elke mail als tekst · TE CONTROLEREN
+
+**Afsluiting van de werkdag van 2 september 2026.** Dit item vervangt geen eerder item; het
+vat de hele dag samen zodat morgen niemand hoeft te reconstrueren wat er is gebeurd.
+
+## Branch, commit en git-status
+
+- Branch **`verwijder-dnd-merknaam`**, `origin/main` staat op `9013051` en is onaangeroerd.
+- Gecontroleerde commit bij aanvang van deze ronde:
+  **`d7c996c009129611f9a7a4950f397c8e04b84dc1`**.
+- `git status --short --branch` → `## verwijder-dnd-merknaam...origin/verwijder-dnd-merknaam [ahead 1]`.
+
+## Wat er vandaag is gecommit, en door wie
+
+| commit | tijd | van | bestanden |
+| --- | --- | --- | --- |
+| `9daa3b9` | 08:53 | **Claude** | `tests/booking-config.test.mjs`, `HANDOVER.md` |
+| `023b6d8` | 09:39 | **Codex** | `database/filming-consent.sql`, `HANDOVER.md` |
+| `f6d31f0` | 09:42 | **Codex** | `database/first-access.sql`, `HANDOVER.md` |
+| `d7c996c` | 16:17 | **Claude** | `operations/go-live-checklist.md`, `HANDOVER.md` |
+
+**Van Codex**: het opheffen van de statusweigering bij het opnieuw uitgeven van een medialink
+na intrekking, en het harden van de vijftien `SECURITY DEFINER`-functies in
+`database/first-access.sql` naar `set search_path=''`. Ik heb dat laatste nagerekend — 15 van
+15 gepind, nul ongekwalificeerde verwijzingen — maar **de bijbehorende databaseruns heb ik
+niet gezien en daar sta ik niet voor in.**
+
+**Van Claude**: het bewijs dat `PUBLIC_BOOKING_OPENS_AT` de betaalpoort niet kan openen, de
+correcties in de livegang-checklist, en al het ongecommitte werk hieronder.
+
+## Wat er nog ongecommit in de werkmap ligt — alles van Claude
+
+Alles hieronder is van vandaag en is **niet** door Codex aangeraakt.
+
+**Zichtbare lengtegrenzen, nergens meer stil afkappen.** `netlify/functions/_field-limits.mjs`
+draagt de getallen voor de server, `assets/field-limits.js` dezelfde voor de browser; een test
+valt om zodra ze uiteenlopen. Elk veld toont zijn grens met een teller (`120 / 2000`), weigert
+verzenden met een melding die het veld bij naam noemt, en de server dwingt hetzelfde af. De
+`.slice(0,2000)` in `first-access.mjs` is weg: te lang wordt geweigerd met `field_too_long`.
+
+**Allergieën en dieetwensen als eigen velden.** Twee nieuwe kolommen op `tavern_seat_claims`
+(`allergies`, `dietary_requirements`), allebei nullable zonder default met een `check` op 500
+tekens, idempotent toegevoegd achter een `pg_constraint`-guard. Alle **vier** de gastpaden
+sturen ze apart mee: `/tavern/`, `/tavern/private/`, `/tavern/book/` en `/tavern/checkout/`.
+`message` blijft bestaan voor overige opmerkingen en is niet aangeraakt.
+
+**Drie functies hebben een nieuwe signatuur, elk met een `drop` ervoor**:
+`register_tavern_interest`, `begin_tavern_checkout` en `begin_tavern_first_access_checkout`.
+
+**Vier bugs gevonden en hersteld tijdens de controle**, geen van alle door een test gevangen:
+
+1. **Een herhaalde aanmelding gooide nieuwe allergie-informatie stil weg.** Alle vier de
+   duplicaatpaden gaven meteen de bestaande claim terug. Wie terugkwam omdat hij zijn allergie
+   vergeten was, raakte die kwijt. Nu werken ze bij met `coalesce`, zodat een lege waarde
+   nooit kan wissen, en de pagina zegt dat er niets verloren is gegaan.
+2. **Een meerregelige allergielijst vloeide samen in de mail.** Opgelost met `escapeLines`:
+   eerst ontsnappen, dán de regeleindes omzetten.
+3. **Geen enkele Resend-payload had een tekstversie.** Alle vier waren HTML-only. Er is nu
+   `netlify/functions/_email.mjs` met `resendPayload()`, die een mail zonder tekstversie of
+   met een regeleinde in de onderwerpregel weigert te bouwen. `escapeHtml` stond viermaal los
+   in de repo en staat nu op één plek.
+4. **De betaalbevestiging noemde de allergie niet.** Wie hem pas bij de checkout toevoegde
+   kreeg daar nergens bevestiging van. `confirm_tavern_payment` geeft de drie velden nu terug
+   en de bevestiging herhaalt ze.
+
+**Twee dingen die alleen in een browser zichtbaar waren.** Op `/tavern/checkout/` liepen de
+tekstvelden twee pixels buiten beeld op 375px (`width:100%` met een rand, zonder `box-sizing`
+op die pagina), en `class="note"` had geen stijlregel. Allebei hersteld, allebei nu bewaakt
+door een test.
+
+**Eén opruiming die niet van mij was**: `class="weekend weekend--first"` op
+`tavern/index.html` gebruikte een klasse die nergens in CSS of JS bestaat. Stond al in `HEAD`.
+Verwijderd conform CLAUDE.md §2; **meld ik expliciet omdat het niet mijn code was.**
+
+**Operatorweergave**: nieuw `scripts/guest-details.mjs` — alleen-lezen, geen RPC, geen poort.
+Toont per boeking de drie velden met de regeleindes intact, en waarschuwt over aanvragen van
+vóór vandaag die alles nog in het oude berichtveld hebben staan.
+
+## Testresultaten, exact
+
+```
+node --test tests/*.test.mjs
+ℹ tests 236   ℹ pass 236   ℹ fail 0   ℹ duration_ms 510.255375
+
+node --check   32 bestanden, 0 fouten
+```
+
+Per bestand: booking-config 4 · checkout 33 · email 22 · field-limits 46 · filming 20 ·
+first-access-invitations 5 · first-access 15 · load 4 · media-consent 28 · media-database 21 ·
+site 38.
+
+Statisch geverifieerd op `database/first-access.sql`: 15 functies, 15× `search_path=''`, nul
+`=public`, nul ongekwalificeerde verwijzingen, 15 revokes naar `public, anon, authenticated`,
+14 grants uitsluitend naar `service_role`, RLS aan op drie tabellen met **nul policies** en
+nul table-grants.
+
+## Supabase-testresultaten en rollback
+
+**Er zijn er geen.** Ik heb de migratie niet gedraaid en kan dat niet: `supabase`, `psql` en
+`pg_dump` ontbreken op deze machine en er is geen Supabase-omgevingsvariabele — vandaag
+meermaals opnieuw nagegaan. **Er is dus ook geen rollback uitgevoerd en er zijn geen
+advisor-resultaten.** Ik verzin daar geen uitkomst van.
+
+Wat er klaarligt: `tests/database-integration.sql` bevat sinds vandaag proeven voor de drie
+velden op het registratiepad, de publieke checkout en het betaalvenster, plus de duplicaat-
+bijwerking. Het blok telt 2 `begin;`, 2 `rollback;` en **nul `commit;`**.
+`operations/supabase-migration-testplan.md` bevat de query die controleert dat er ná de
+migratie precies één versie van elk van de drie gewijzigde functies overblijft.
+
+## Openstaand
+
+1. **De migratie draaien op een tijdelijke database. Dit is veruit het grootste risico.**
+   `database/first-access.sql` draagt inmiddels drie signatuurwijzigingen met drops, twee
+   nieuwe kolommen en twee uitgebreide returns, en niets daarvan is ooit uitgevoerd. Blijft er
+   één oude overload staan, dan faalt PostgREST op ambiguïteit — en twee van die drie functies
+   zitten op het betaalpad.
+2. **`/tavern/book/` is nog steeds een checkoutformulier, geen aanmeldformulier.** Het post
+   naar `/api/checkout` en stuurt bij succes door naar Stripe. Door de dichte poort krijgt elke
+   inzending nu een 503 en gaan de gegevens nergens heen, terwijl de pagina prominent gelinkt
+   staat vanaf `tavern/index.html:688`. **Openstaand besluit van Robert.**
+3. De grens van 2000 tekens voor overige opmerkingen is een geërfd getal uit de oude `.slice`
+   en is nooit door iemand gekozen. De 500 voor allergie en dieet is wél onderbouwd.
+4. De tekstversies van de mails zijn niet in een echte mailclient bekeken, alleen als payload.
+5. `PUBLIC_BOOKING_OPENS_AT` blijft ongewijzigd tot er een verkoopdatum is. Of hij in Netlify
+   staat is hiervandaan niet te zien.
+
+## Wacht op ANBEN
+
+Fiscaal nummer (NIF/NIE) · volledig bedrijfsadres · telefoonnummer · toeristische
+registratiecode · gegevens van de RC- en insolventiegarantie · de bevoegde toezichthoudende
+instantie. Zonder deze zes blijven `/terms/`, `/travel-information/` en
+`/standard-information/` op harde 404 en blijft de betaalpoort dicht.
+
+## Wacht op Resend of een jurist
+
+- **Resend**: de verwerkersovereenkomst. Stroom 1 — de ontvangstbevestiging — draait al live
+  en stuurt naam en e-mailadres naar de Verenigde Staten. De vijftien vragen staan klaar in
+  `operations/resend-processor-agreement.md`; er is **niets aangevraagd en niets bevestigd**.
+- **Spaanse privacy- en mediajurist**: de Filming & Media Agreement, met de intrekkingsclausule
+  als eerste punt.
+
+## Productie
+
+**Er is vandaag niets naar productie gedeployed en niets naar productie gemigreerd.**
+`origin/main` staat op `9013051`. De feature-branch staat wel op de remote
+(`origin/verwijder-dnd-merknaam`), maar dat is geen deploy: die hangt aan de hoofdbranch.
+
+## De eerstvolgende stap voor morgen
+
+**De migratie op een tijdelijke Supabase-branch draaien, met rollback**, volgens
+`operations/supabase-migration-testplan.md`. Niets anders eerst: alle overige lagen zijn
+getest, deze ene is dat niet, en hij raakt het betaalpad. Faalt er iets, herstel dat vóór er
+verder gebouwd wordt.
+
 ### 2026-09-02 · Claude · Onafhankelijke controle op f6d31f0 · TE CONTROLEREN
 
 **Startpunt, zelf gecontroleerd.** `git status`: branch `verwijder-dnd-merknaam`, werkmap schoon.

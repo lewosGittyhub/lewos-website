@@ -347,6 +347,13 @@
     }
 
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+    /* Lengtegrenzen: de teller staat onder het veld, de tekstuele grens gaat naar de
+       schermlezer. Zie assets/field-limits.js. */
+    .field-count{display:block;margin-top:4px;font-size:.78rem;opacity:.72;text-align:right}
+    .field-count[data-state="near"]{opacity:1;font-weight:700}
+    .field-count[data-state="over"]{opacity:1;font-weight:700;color:#E5643A}
+    .field-count__sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
@@ -396,7 +403,7 @@
           <p><strong>On 30 October 2026 the Tavern opens for the first time.</strong> Six players, one weekend, one story that can only be told once. Other chapters follow.</p>
         </div>
         <div class="weekends">
-          <article class="weekend weekend--first">
+          <article class="weekend">
             <span class="weekend__number">Weekend 01</span>
             <h3>30 Oct to 2 Nov</h3>
             <p>Friday evening through Monday morning · Asturias · 2026</p>
@@ -653,8 +660,8 @@
         <form class="signup-form" name="tavern-signup" method="POST" action="/api/first-access" data-first-access-form>
           <input type="hidden" name="form-name" value="tavern-signup">
           <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
-          <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
-          <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+          <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
+          <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
           <div class="form-field">
             <div class="calendar" data-weekend-calendar aria-label="Pick a Tavern weekend">
               <div class="calendar__months" data-calendar-months></div>
@@ -675,7 +682,9 @@
             <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
             <div class="form-field"><label for="party-price">Total</label><output class="party__price" id="party-price" data-party-price for="people" data-empty>Enter a number</output></div>
           </div>
-          <div class="form-field"><label for="message">Anything we should know?</label><textarea id="message" name="message" placeholder="Allergies, dietary needs, anything that affects the weekend, or anything else you want to tell us."></textarea></div>
+          <div class="form-field"><label for="allergies">Allergies</label><textarea id="allergies" name="allergies" rows="2" data-limit="allergies" placeholder="List each allergy and how serious it is. Leave empty if you have none."></textarea></div>
+          <div class="form-field"><label for="dietary">Dietary requirements</label><textarea id="dietary" name="dietary" rows="2" data-limit="dietary" placeholder="Vegetarian, vegan, gluten-free, anything else we should cook around. Leave empty if you have none."></textarea></div>
+          <div class="form-field"><label for="message">Anything else we should know?</label><textarea id="message" name="message" data-limit="message" placeholder="Anything that affects the weekend, or anything else you want to tell us."></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
           <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
           <button class="button" type="submit" aria-describedby="booking-note">Hold my seats →</button>
@@ -786,6 +795,7 @@
       </div>
     </div>
   </footer>
+  <script src="/assets/field-limits.js" defer></script>
   <script src="first-access.js" defer></script>
   <script src="surroundings.js" defer></script>
   <script>

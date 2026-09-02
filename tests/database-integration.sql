@@ -119,6 +119,130 @@ begin
   end if;
 end $$;
 
+
+-- Allergieën en dieetwensen: eigen kolommen, niet in het bericht, niets afgekapt.
+-- Robert, 2 september 2026: belangrijke informatie mag niet verborgen raken in één
+-- algemeen berichtveld. Dit blok probeert dat echt uit in plaats van het na te lezen.
+do $$
+declare
+  dieet_weekend uuid;
+  dieet_claim jsonb;
+  bewaarde_allergie text;
+  bewaarde_dieet text;
+  bewaard_bericht text;
+  te_lang_geweigerd boolean:=false;
+begin
+  insert into public.tavern_weekends(slug,label,date_label,sort_order,capacity)
+    values('codex-test-diet','Test Diet','Test',900010,6);
+  select id into dieet_weekend from public.tavern_weekends where slug='codex-test-diet';
+
+  dieet_claim:=public.register_tavern_interest('Diet Guest','diet-test@example.invalid',1,'codex-test-diet',
+    'We arrive late on Friday.',now()+interval '1 hour',
+    'Severe peanut allergy, carries an EpiPen','Vegetarian, no dairy');
+  select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
+    from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
+  if bewaarde_allergie<>'Severe peanut allergy, carries an EpiPen' then
+    raise exception 'de_allergie_is_niet_bewaard_zoals_ingevuld';
+  end if;
+  if bewaarde_dieet<>'Vegetarian, no dairy' then
+    raise exception 'de_dieetwens_is_niet_bewaard_zoals_ingevuld';
+  end if;
+  if bewaard_bericht<>'We arrive late on Friday.' then
+    raise exception 'het_bericht_is_vervuild_met_de_andere_velden';
+  end if;
+  if position('peanut' in bewaard_bericht)>0 then
+    raise exception 'de_allergie_werd_alsnog_in_het_bericht_geplakt';
+  end if;
+
+  -- Een aanvraag zonder de twee nieuwe velden hoort gewoon te werken: bestaande
+  -- aanroepers mogen niet breken en de kolommen blijven dan leeg.
+  dieet_claim:=public.register_tavern_interest('Plain Guest','plain-test@example.invalid',1,'codex-test-diet',
+    null,now()+interval '1 hour');
+  select allergies,dietary_requirements into bewaarde_allergie,bewaarde_dieet
+    from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
+  if bewaarde_allergie is not null or bewaarde_dieet is not null then
+    raise exception 'een_aanvraag_zonder_de_nieuwe_velden_vulde_ze_toch';
+  end if;
+
+  -- Een herhaalde aanvraag mag nieuwe allergie-informatie niet weggooien, en een lege
+  -- inzending mag nooit wissen wat er al staat. Gevonden bij de eindcontrole van
+  -- 2 september 2026: dit ging eerst stil mis.
+  dieet_claim:=public.register_tavern_interest('Diet Guest','diet-test@example.invalid',1,'codex-test-diet',
+    null,now()+interval '1 hour','Severe peanut allergy, carries an EpiPen; also shellfish',null);
+  if (dieet_claim->>'duplicate')<>'true' then
+    raise exception 'de_tweede_aanvraag_gold_niet_als_duplicaat';
+  end if;
+  if (dieet_claim->>'detailsUpdated')<>'true' then
+    raise exception 'de_bijgewerkte_allergie_werd_niet_gemeld';
+  end if;
+  select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
+    from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
+  if bewaarde_allergie<>'Severe peanut allergy, carries an EpiPen; also shellfish' then
+    raise exception 'de_aangevulde_allergie_is_niet_opgeslagen';
+  end if;
+  if bewaarde_dieet<>'Vegetarian, no dairy' then
+    raise exception 'een_lege_inzending_wiste_de_bestaande_dieetwens';
+  end if;
+  if bewaard_bericht<>'We arrive late on Friday.' then
+    raise exception 'een_lege_inzending_wiste_het_bestaande_bericht';
+  end if;
+  -- Nog een keer met precies dezelfde gegevens: dan valt er niets bij te werken.
+  dieet_claim:=public.register_tavern_interest('Diet Guest','diet-test@example.invalid',1,'codex-test-diet',
+    null,now()+interval '1 hour','Severe peanut allergy, carries an EpiPen; also shellfish',null);
+  if (dieet_claim->>'detailsUpdated')<>'false' then
+    raise exception 'een_ongewijzigde_inzending_meldde_toch_een_bijwerking';
+  end if;
+  if (select count(*) from public.tavern_seat_claims where email='diet-test@example.invalid')<>1 then
+    raise exception 'er_ontstond_een_tweede_claim_voor_hetzelfde_adres';
+  end if;
+
+  -- Ook de publieke checkout bewaart de drie velden in hun eigen kolommen.
+  dieet_claim:=public.begin_tavern_checkout('Checkout Guest','checkout-diet@example.invalid',1,'codex-test-diet',
+    'ref-diet-1',true,true,'terms-test-v1',false,now()-interval '1 hour',40,
+    'Peanuts - severe','Vegetarian','We arrive late.');
+  if (dieet_claim->>'status')<>'payment_pending' then
+    raise exception 'de_checkout_gaf_geen_hold_terug';
+  end if;
+  select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
+    from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
+  if bewaarde_allergie<>'Peanuts - severe' or bewaarde_dieet<>'Vegetarian' or bewaard_bericht<>'We arrive late.' then
+    raise exception 'de_checkout_bewaarde_de_drie_velden_niet_apart';
+  end if;
+
+  -- Het First Access-betaalvenster vult aan en wist nooit. Dit is het pad waarop iemand
+  -- zijn vergeten allergie alsnog toevoegt, vlak voor hij betaalt.
+  update public.tavern_seat_claims set checkout_token_hash=repeat('c',64),invitation_expires_at=now()+interval '1 hour',
+    status='first_access_held',allergies='Peanuts',dietary_requirements='Vegetarian',message='Original note.'
+    where id=(dieet_claim->>'claimId')::uuid;
+  dieet_claim:=public.begin_tavern_first_access_checkout(repeat('c',64),'ref-fa-1',true,true,'terms-test-v1',false,40,
+    'Peanuts and shellfish',null,null);
+  if (dieet_claim->>'status')<>'payment_pending' then
+    raise exception 'het_betaalvenster_gaf_geen_hold_terug';
+  end if;
+  select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
+    from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
+  if bewaarde_allergie<>'Peanuts and shellfish' then
+    raise exception 'de_aangevulde_allergie_kwam_niet_aan_bij_de_checkout';
+  end if;
+  if bewaarde_dieet<>'Vegetarian' or bewaard_bericht<>'Original note.' then
+    raise exception 'een_leeg_veld_wiste_bestaande_gegevens_bij_de_checkout';
+  end if;
+
+  -- Te lang wordt geweigerd, niet stil afgekapt, en plaatst niemand.
+  begin
+    perform public.register_tavern_interest('Long Guest','long-test@example.invalid',1,'codex-test-diet',
+      null,now()+interval '1 hour',repeat('p',501),null);
+  exception when others then
+    if sqlerrm='invalid_allergies' then te_lang_geweigerd:=true; else raise; end if;
+  end;
+  if not te_lang_geweigerd then
+    raise exception 'een_allergie_van_501_tekens_werd_geaccepteerd';
+  end if;
+  if exists(select 1 from public.tavern_seat_claims where email='long-test@example.invalid') then
+    raise exception 'een_geweigerde_aanvraag_plaatste_toch_een_rij';
+  end if;
+end $$;
+
 rollback;
 
 -- Persoonlijke mediatoestemming. Draai dit blok alleen na `database/filming-consent.sql`,

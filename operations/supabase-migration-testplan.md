@@ -163,6 +163,49 @@ op de nieuwe tabellen. Meldt de advisor ze tóch, dan is dat een echte bevinding
 **Verwijder de tijdelijke branch of database meteen.** Die kost geld zolang hij bestaat, en
 er staan testgegevens in die nergens toe dienen.
 
+## Ook nieuw: `database/first-access.sql` is gewijzigd
+
+*Bijgewerkt 2 september 2026.* Dit plan ging tot nu toe alleen over de mediamigratie.
+`database/first-access.sql` is sindsdien twee keer gewijzigd en hoort er nu bij.
+
+1. **Alle vijftien `SECURITY DEFINER`-functies staan op `set search_path=''`** met volledig
+   gekwalificeerde verwijzingen. Net als bij de mediamigratie gaat dat pas stuk bij het
+   *aanroepen*, niet bij het aanmaken. **Roep daarom elke functie minstens één keer aan**;
+   `get_tavern_availability()` en `tavern_public_booking_ready()` kunnen los, de rest komt
+   langs in het integratieblok.
+2. **Twee nieuwe kolommen op `tavern_seat_claims`**: `allergies` en `dietary_requirements`,
+   allebei `text` zonder `not null` en zonder default, met een aparte `check` op 500 tekens
+   die via `pg_constraint` idempotent wordt toegevoegd. Draai de migratie twee keer en
+   controleer dat de tweede ronde geen fout geeft en geen dubbele constraint maakt.
+3. **Drie functies hebben een nieuwe signatuur, elk met een `drop` ervoor.** Naast
+   `register_tavern_interest` zijn dat `begin_tavern_checkout` en
+   `begin_tavern_first_access_checkout`; alle drie kregen `p_allergies`, `p_dietary` en
+   (bij de laatste twee) `p_message` als optionele parameters. **Controleer voor alle drie
+   dat er ná de migratie precies één versie overblijft** — twee overloads met dezelfde naam
+   laten PostgREST op ambiguïteit falen:
+
+```sql
+select oid::regprocedure from pg_proc
+ where proname in ('register_tavern_interest','begin_tavern_checkout','begin_tavern_first_access_checkout');
+-- verwacht: precies drie regels
+```
+
+4. **`register_tavern_interest` heeft een nieuwe signatuur** — er zijn twee optionele
+   parameters bij. De oude signatuur wordt met `drop function if exists ...(text,text,
+   integer,text,text,timestamptz)` opgeruimd. **Controleer op een database waar de oude
+   versie al stond dat die drop ook echt draait** en dat er daarna niet twee functies met
+   dezelfde naam naast elkaar staan:
+
+```sql
+select oid::regprocedure from pg_proc where proname='register_tavern_interest';
+-- verwacht: precies één regel, met acht parameters
+```
+
+Het integratieblok bevat sinds dezelfde datum een eigen proef hiervoor: de allergie en de
+dieetwens komen ongewijzigd in hun eigen kolom terecht, het berichtveld blijft schoon, een
+aanvraag zónder die twee velden werkt gewoon en laat ze `null`, en een allergie van 501
+tekens wordt geweigerd met `invalid_allergies` zonder een rij achter te laten.
+
 ## Wat er sinds het schrijven van dit plan is bijgekomen
 
 Robert koos op 1 september 2026 de operator-flow. Daardoor is de migratie op drie punten
