@@ -24,9 +24,29 @@ Eist dat artikel vervoer *"met tijden"* ook voor een transfer die wij zelf regel
 alleen voor lijnvluchten en treinen? Ik heb aankomst vanaf 16:00 en vertrek na het ontbijt
 toegevoegd omdat ik het eerste lees. Te ruim gelezen? Zeg het.
 
-**Wacht op Robert, niet op Codex.** `PUBLIC_BOOKING_OPENS_AT` staat op 2026-09-09T09:00:00Z
-en sluit het aanmeldformulier over elf dagen, zeven weken vóór het weekend van 30 oktober.
-En of `/tavern/book/` dicht moet tot de verkoop open mag.
+**➡️ Van Robert aan Codex, 2 september 2026 — dit is de enige volgende technische stap.**
+Voer `operations/supabase-migration-testplan.md` uit op een **tijdelijke of testdatabase**.
+Geen productiemigratie, geen push, geen merge, geen deploy. Er gaat voorlopig niets live.
+`database/filming-consent.sql` is sinds `b8e5ea5` drie keer gewijzigd zonder ooit tegen een
+echte database te zijn gehouden; dat is het grootste openstaande risico in dit dossier.
+Het plan bevat sinds `3a1b12a` ook de isolatieproef tussen twee deelnemers.
+
+**Beslist door Robert, 2 september 2026 — `PUBLIC_BOOKING_OPENS_AT` blijft ongewijzigd.**
+De variabele wacht op een definitieve verkoopdatum en wordt tot die tijd door niemand
+aangeraakt. Voorwaarde die Robert erbij stelde: *die datum mag de betaalpoort niet openen
+zolang de vereiste gegevens ontbreken.* Dat is nagelopen en vastgelegd — zie het logboek
+van 2 september. Kort: `publicBookingIsOpen()` leest de datum pas nádat `paymentsAreEnabled()`
+waar is, en die is onwaar zolang de drie constanten in `_booking-config.mjs` leeg zijn.
+**Let op:** de datum sluit wél het aanmeldformulier (`firstAccessClosesAt`). Staat de
+variabele in Netlify op 2026-09-09T09:00:00Z, dan stopt First Access op 9 september terwijl
+er nog niet betaald kan worden. Of de variabele daar echt zo staat kan ik niet zien.
+
+**Beslist door Robert, 2 september 2026 — de drie wettelijke routes blijven op harde 404.**
+`/terms/`, `/travel-information/` en `/standard-information/` blijven dicht. De bestanden
+blijven in de repo staan en worden niet verwijderd. Ze gaan pas open wanneer de teksten
+definitief zijn **en** de zes ANBEN-gegevens erin staan. Beide voorwaarden, niet één.
+
+**Nog open bij Robert:** of `/tavern/book/` dicht moet tot de verkoop open mag.
 
 **Bevestiging van Robert, 1 september 2026:** Weekend 02 wordt niet professioneel gefilmd.
 Lewos kan vooraf incidenteel vragen of een gast vrijwillig in een specifieke foto of korte
@@ -3312,3 +3332,47 @@ buiten de EER blijft terecht openstaan.
 
 Bij controle: zet `TE CONTROLEREN` om naar `GECONTROLEERD door <naam>, <datum>` en zet
 er direct onder wat je hebt nagelopen en wat de uitkomst was. Ook als alles klopte.
+
+## 2 september 2026 — Claude — de datum vastgezet en bewezen dat hij niets opent
+
+**Robert heeft drie dingen beslist en één voorwaarde gesteld.** Er gaat voorlopig niets
+live. `PUBLIC_BOOKING_OPENS_AT` blijft ongewijzigd tot er een definitieve verkoopdatum is.
+De drie wettelijke routes blijven op harde 404 met de bestanden bewaard. En de enige
+volgende technische stap is het testplan op een tijdelijke database, door Codex.
+
+**De voorwaarde was het enige echte werk.** *"Zorg dat deze datum de betaalpoort niet kan
+openen zolang de vereiste gegevens ontbreken."* Dat was al zo, maar het was niet bewezen.
+De keten is: `publicBookingIsOpen()` → `paymentsAreEnabled()` → `termsArePublished()` → de
+drie constanten `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
+`PUBLISHED_TRAVEL_DOCUMENT` in `netlify/functions/_booking-config.mjs`. Alle drie leeg. De
+datum wordt pas gelezen op regel 29, ná de poortcontrole op regel 28. Die volgorde is het
+hele slot — en er stond geen enkele test op.
+
+**Twee tests toegevoegd aan `tests/booking-config.test.mjs`.** De eerste zet een publieke
+deployment na (`URL=https://lewos.co`, `NODE_ENV=production`), zet alle vier de
+omgevingsvariabelen goed, en loopt dan zes datums langs: 1970, de 9-septemberdatum zelf,
+een seconde geleden, nú, een onzinstring en een lege waarde. Bij elk daarvan moeten
+`publicBookingIsOpen()` en `paymentsAreEnabled()` onwaar zijn. De tweede test houdt vast
+dat elk van de drie constanten leeg blijft.
+
+**Mutatieproef, vier van de vier betrapt.** De datumcontrole vóór de poortcontrole zetten ·
+`PUBLISHED_TERMS_VERSION` vullen · alle drie de constanten vullen · het lokale testluik
+(`localTestOverridesAllowed`) altijd open zetten. Elke breuk gaf een rode test; het bestand
+staat na afloop weer schoon (`git diff` leeg).
+
+**Aan de drie 404-routes is niets veranderd, want er was niets te veranderen.** Nagelopen:
+`_redirects` heeft voor alle drie een geforceerde `404!` op zowel `/naam` als `/naam/*` —
+zonder uitroepteken zou Netlify het bestaande bestand alsnog uitleveren, en dat ging op 29
+augustus al een keer mis. `robots.txt` verbiedt ze, de sitemap noemt ze niet, geen enkele
+uitgeleverde pagina linkt ernaartoe, en de twee vinkjes in `/tavern/book/` en
+`/tavern/checkout/` vragen niet langer om bevestiging van een document dat niet te lezen is.
+De drie `index.html`-bestanden staan er nog en worden door `tests/site.test.mjs` gelezen —
+wie ze weggooit, breekt de suite. Bewaakt in `tests/filming.test.mjs`.
+
+**Wat ik niet heb aangeraakt.** `PUBLIC_BOOKING_OPENS_AT` zelf — die staat in Netlify, niet
+in de repo, en blijft zoals hij is. `database/first-access.sql` houdt zijn oude
+`search_path=public`-zwakte (15 functies, ~55 ongekwalificeerde verwijzingen); dat wacht nog
+steeds op Roberts akkoord en is bewust ongemoeid gelaten.
+
+**Stand:** 163 tests, 0 fouten (was 161). Niets gepusht, gemerged, gedeployed of
+gemigreerd.
