@@ -355,6 +355,75 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-03 · Claude · Migratie tegen echte Supabase gedraaid; tabelrechten gedicht · TE CONTROLEREN
+
+**Wat ik heb gedaan.** Supabase-toegang geregeld via een tijdelijke persoonlijke token (inmiddels
+lokaal gewist; Robert trekt hem in het dashboard in). De migratie en het integratietestblok
+gedraaid tegen de preview-branch `rece-migratie-test`, en productie alleen uitgelezen.
+
+**Bewezen: welk project wat is.** Er is één project, `obnkmuhcpkfwqazvqawq` = Lewos Tavern,
+productie. `igggvbqmjicazqqmrixh` is de preview-branch, `is_default: false`, ouder wijst naar
+productie, `with_data: false`. Twee onafhankelijke bewijzen dat de branch geen productie is.
+
+**Gevonden en gedicht: 42 openstaande tabelrechten.** `anon` en `authenticated` hadden alle
+zeven rechten op alle drie de tavern-tabellen — Supabase' standaard voor nieuwe tabellen in
+`public`. Zes daarvan houdt RLS tegen. **TRUNCATE niet: dat valt buiten row-level security.**
+Praktisch moeilijk misbruikbaar (PostgREST kent geen truncate-route en `anon` kan niet
+inloggen), maar het is een open deur die niets kost om te sluiten. Drie `revoke all on table`
+toegevoegd aan de migratie, plus een test die ze bewaakt. Bewezen op de branch: `service_role`
+werkt nog, `anon` krijgt nu een harde `insufficient_privilege` in plaats van een leeg antwoord.
+
+**Waarom dit lokaal onzichtbaar was.** Kale PostgreSQL kent de Supabase-standaardrechten niet,
+dus de lokale controle telde nul. Dit is het soort verschil dat alleen tegen de echte omgeving
+bovenkomt.
+
+**Gevonden en gerepareerd: negen blinde assertions in de integratietest** (gecommit als
+`d76b4c3`). `bewaarde_allergie <> '...'` levert bij NULL de waarde NULL op, en `if NULL then`
+is onwaar — de proef was dus blind voor een veld dat helemaal wegvalt, precies het geval dat
+ze moest bewaken. Alle tien omgezet naar `is distinct from`. Vijf opzettelijke mutaties werden
+daarna alle vijf betrapt; vóór de reparatie werd de eerste gemist.
+
+**Stand van productie (alleen uitgelezen).** Oude versie: signaturen 6/11/7, nul nieuwe
+kolommen, geen lengte-constraints, dezelfde 42 tabelrechten. RLS staat wel aan op alle drie de
+tabellen, 0 policies, 0 onveilige functies. Twee claims, beide `cancelled`. De weekendrijen zijn
+identiek aan wat de seed zou schrijven, dus de `on conflict` wordt een no-op — er gaat niets
+verloren. `filming-consent.sql` staat óók niet in productie, dus de branch was een getrouwe kopie.
+
+**Nog niet gedaan: de productiemigratie zelf.** Alles is gecontroleerd en klaar, maar wacht op
+Roberts akkoord. Volgorde is dwingend: eerst migreren, dan pas deployen — de nieuwe parameters
+hebben `default null`, dus de nu-live site blijft werken na de migratie; andersom breekt het.
+
+**Drie correcties op dit dossier.**
+1. Het registratienummer was `ENT202610066637`; het justificante zegt **`ENT20261006637`**.
+   Hierboven gecorrigeerd.
+2. Beide polissen lopen vanaf **28-08-2026** tot 28-08-2027, niet vanaf 1 september.
+3. De bemiddelaar op de polis is **INTERMUNDIAL XXI, S.L.**, niet Grupo Anben. Anben is
+   vermoedelijk de tussenpersoon en Intermundial de gevolmachtigde — 🟡 aanname, niet bevestigd.
+
+**Bevestigd: verkopen mag vanaf indiening.** Het justificante noemt als onderwerp letterlijk
+*"Declaración responsable de inicio de actividad en la modalidad de empresa de intermediación
+turística"*. Daarop is *"habilita desde ese momento"* van toepassing. De eerdere voorwaarde
+"registratiecode ontvangen" in CLAUDE.md §5 is strenger dan de wet vraagt. Wat blijft gelden is
+de keerzijde uit hetzelfde decreet: een *omisión de carácter esencial* leidt tot annulering van
+de inschrijving. Het genormaliseerde formulier moet dus compleet zijn vóórdat er wordt verkocht.
+
+**Wat de verkoop nu nog blokkeert: één veld.** In `standard-information/index.html` staan twee
+open plekken. De garantiegever is compleet te vullen uit de caución-polis (verzekeraar, NIF,
+inschrijving, adres, telefoon, polisnummer, dekking €100.000). **Die waarden staan bewust niet in
+dit dossier** — ze staan in de PDF's buiten de repository. Wat ontbreekt is het postadres en
+e-mailadres van de bevoegde instantie: *Servicio de Ordenación, Innovación y Calidad*, destino
+468. Eén telefoontje naar 012 volstaat.
+
+**🟡 Twee open vragen voor morgen.**
+1. Richtlijn (EU) 2026/1024 van 29 april 2026 wijzigt Richtlijn 2015/2302. Raakt dat het
+   genormaliseerde formulier, en heeft Spanje het al omgezet? Zo ja, dan is het formulier
+   mogelijk verouderd voordat het gepubliceerd is.
+2. Reisbureaus moeten hun identificatiecode voeren in hun uitingen. Decreto 73/2022 kent een
+   uitzondering voor bureaus die uitsluitend online verkopen. Geldt die voor Lewos? Zo niet, dan
+   is de registratiecode tóch nodig vóór verkoop.
+
+**Niets gedeployed.** `origin/main` staat onveranderd op `9013051`.
+
 ### 2026-09-03 · Claude · RECE0033T06 ingediend; go-live-analyse met één blocker · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, commit `fac81a6`, werkmap schoon.
@@ -364,7 +433,7 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 
 | | |
 | --- | --- |
-| Registratienummer | **ENT202610066637** |
+| Registratienummer | **ENT20261006637** |
 | Datum | **03-09-2026** |
 | Status | **ingediend** |
 | Justificante | gedownload en bewaard **buiten de repository** |
