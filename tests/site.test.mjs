@@ -352,6 +352,12 @@ test("the party size sits next to a total that follows it",async()=>{
   assert.match(script,/'On request'/,"a weekend without a price must still say so instead of showing a total");
   // En nooit een bedrag voor een boeking die niet kan.
   assert.match(script,/if\(hasPrice&&fits\)\{[^}]*partyPrice\.textContent=money/,"a total may only appear when the party actually fits");
+  // De prijsberekening zit binnen paintCalendar, die stopt zodra er geen beschikbaarheid is.
+  // Zonder deze twee takken bleef het totaal daar hangen op zijn beginwaarde, wat de gast
+  // ook intikte: een dood vak zonder uitleg.
+  assert.match(script,/partyPrice\.textContent='Unavailable'/,"a failed availability call must say so instead of leaving a dead total");
+  assert.match(script,/data-ready'\)\)\{priceUnavailable\(\);return;\}/,"the early return must set the total before it bails out");
+  assert.match(script,/partyPrice\.textContent='Pick a weekend'/,"with no weekend chosen the total must say what is missing");
 });
 
 test("a deadline is judged on the clock, not on when the transaction started",async()=>{

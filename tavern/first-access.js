@@ -27,14 +27,27 @@
   const dated=()=>availability.filter(item=>asDate(item.startsOn)&&asDate(item.endsOn));
   const wantedSeats=()=>{const party=Number.parseInt(people.value,10);return Number.isInteger(party)&&party>0?party:1;};
 
+  // Zonder beschikbaarheid kan er geen bedrag berekend worden: de prijs komt uit de
+  // database, niet uit dit bestand. Zeg dat dan ook, in plaats van een streepje te laten
+  // staan dat nooit meer verandert. De gast kan nog wel gewoon een aanvraag versturen.
+  const priceUnavailable=()=>{
+    if(!partyPrice)return;
+    partyPrice.textContent='Unavailable';
+    partyPrice.setAttribute('data-empty','');
+  };
+
   const paintCalendar=()=>{
-    if(!calendar||!calendar.hasAttribute('data-ready'))return;
+    if(!calendar||!calendar.hasAttribute('data-ready')){priceUnavailable();return;}
     const chosen=weekend.value;
     calendar.querySelectorAll('.calday[data-slug]').forEach(cell=>{
       cell.classList.toggle('is-chosen',cell.dataset.slug===chosen&&!cell.classList.contains('is-full'));
     });
     const item=availability.find(entry=>entry.slug===chosen);
-    if(!item){calendarChosen.textContent='Pick a weekend in the calendar, or choose a private Tavern below.';return;}
+    if(!item){
+      calendarChosen.textContent='Pick a weekend in the calendar, or choose a private Tavern below.';
+      if(partyPrice){partyPrice.textContent='Pick a weekend';partyPrice.setAttribute('data-empty','');}
+      return;
+    }
     // De prijs komt uit de database, niet uit dit bestand: één plek waar hij staat.
     // Levert de API er geen, dan zwijgen we erover in plaats van te gokken.
     const cents=Number(item.priceCents);
