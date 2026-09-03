@@ -355,6 +355,77 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-03 · Claude · De twee AXA-polissen uitgelezen; twee van de vier verkoopvoorwaarden zijn rond · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, commit `5260373`, werkmap schoon.
+`origin/main` op `9013051`. Twee commits lokaal vóór op de remote, niet gepusht.
+
+**Deze ronde is inventarisatie.** Aan code, site, poort en database is niets gewijzigd; het
+enige nieuwe bestand is `operations/rece0033t06-aanvraag.md`.
+
+**Wat ik heb gedaan.** De twee AXA-PDF's in `~/Downloads` uitgelezen. Er staat geen
+pdftotext, poppler of pypdf op deze Mac, dus met een eigen extractor die de ToUnicode-CMap
+per font vertaalt — zonder die stap komt er hex-brij uit. Beide documenten volledig gelezen
+(2720 en 1530 regels). De extractie staat in de scratchpad, **niet in de repo**.
+
+**Wat de polissen aantonen.** Allebei AXA, allebei *Anual Renovable*, allebei ingaand op
+**28.08.2026** en aflopend 28.08.2027. De RC-polis staat op activiteit *"AGENCIA DE VIAJES"*
+met 600.000 EUR explotación en 300.000 EUR profesional. De caución-polis draagt letterlijk de
+titel *"Póliza de Seguro de Caución - Agencias de Viajes / Viajes Combinados. PRINCIPADO DE
+ASTURIAS"*, dekt 100.000,00 EUR, noemt dat bedrag ook als *"Garantía Individual mínima exigida
+por la Administración"*, en citeert als grondslag **Decreto 191/2019, de 17 de octubre,
+artículo 6 — Garantía en caso de insolvencia**.
+
+**Twee van de vier verkoopvoorwaarden uit CLAUDE.md §5.1 zijn daarmee bewijsbaar rond:** de
+RC-polis en de caución zijn actief. De andere twee niet: RECE0033T06 is niet ingediend en er
+is geen registratiecode, en de drie klantdocumenten staan nog op harde 404.
+
+**Vier dingen die Robert zelf moet nakijken.**
+1. De polissen lopen sinds **28 augustus**, niet sinds 1 september zoals `CLAUDE.md` §5 en dit
+   dossier noteerden. Ze zijn dus al actief.
+2. ⚠️ **Het NIF op elke pagina is dat van AXA, niet van Robert.** Precies het soort
+   verwisseling dat in een formulier onopgemerkt blijft. Robert neemt zijn eigen nummer over,
+   geen assistent.
+3. Dit zijn **pólizas, geen certificado de caución.** Of Turismo Asturias de polis accepteert
+   of een apart certificaat verlangt, staat niet in deze documenten en weet ik niet. Dit
+   blokkeert de indiening.
+4. De aangegeven omzet is **150.240,00 EUR** aan viajes combinados — bij €2.025 p.p. ongeveer
+   vijfenzeventig plaatsen. De polis herrekent de verzekerde som elk jaar op de werkelijke
+   omzet en beperkt de uitkering bij niet-melden. Klopt dat getal met het plan?
+
+**Wat er niet in de documenten staat, en dus nergens vandaan komt:** een registratiecode, de
+bevoegde instantie bij naam, en het formulier zelf. Ik heb daar niets voor ingevuld.
+
+**Over de declaración responsable.** De polis verwijst naar artikel 6, dat over de garantie
+gaat en niet over de procedure. Wat het dossier hierover bevat is een lezing van 29 augustus,
+🟡 en niet opnieuw geverifieerd. Wat hoe dan ook geldt en het belangrijkste is: **een
+declaración responsable vervangt geen ontbrekende voorwaarde.** Ze bevestigt dat de
+voorwaarden vervuld zijn; ze vervult ze niet. **Ik doe geen uitspraak over of er na indiening
+verkocht mag worden** — dat is een oordeel voor de gestor of Turismo.
+
+**Persoonsgegevens.** Fiscaal nummer, adres, telefoon, polisnummers en een bankrekening staan
+in de PDF's. **Geen daarvan staat in de repo, in een test, in een commitbericht of in dit
+dossier.** Nagerekend met een patroonzoeker over de hele repo: nul treffers. Het
+aanvraagoverzicht noemt de velden en hun status, nooit de waarden.
+
+**Betaalpoort, opnieuw gemeten en dicht.** De drie constanten staan leeg, en de checkout is
+tien keer aangeroepen met alle omgevingsvariabelen op "aan", vijf datums, beide modi:
+**tien keer `503 checkout_not_open`**. Aan `_redirects` is niets veranderd; de drie juridische
+routes staan nog op elf geforceerde `404!`-regels. Geen publieke juridische tekst aangeraakt,
+geen verkooproute geopend.
+
+**Tests.** `node --test tests/*.test.mjs` → **236 tests, 0 fouten.** `node --check` over
+**32 bestanden** schoon. Ongewijzigd ten opzichte van gisteren; deze ronde raakte geen code.
+
+**Niet gedaan en niet mogelijk.** Geen Supabase-migratie, geen productieactie, geen deploy,
+geen push. De migratie uit de rondes van 2 september is nog steeds nooit tegen een echte
+database gedraaid.
+
+**Wat nu volgt.** Robert: de identificerende gegevens zelf overnemen · de gestor vragen of de
+polissen volstaan of dat er een certificado nodig is · de omzet van 150.240 controleren · de
+bevoegde instantie en het formulier opzoeken. Daarnaast blijft de migratieproef op een
+tijdelijke database openstaan, en blijft `/tavern/book/` een onbeantwoorde vraag.
+
 ### 2026-09-02 · Claude · Aparte velden voor allergie en dieet, en elke mail als tekst · TE CONTROLEREN
 
 **Afsluiting van de werkdag van 2 september 2026.** Dit item vervangt geen eerder item; het
