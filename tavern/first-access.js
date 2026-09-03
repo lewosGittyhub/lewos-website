@@ -48,7 +48,15 @@
       partyPrice.textContent=money(cents*guests);
       partyPrice.removeAttribute('data-empty');
     }else{
-      partyPrice.textContent=hasPrice?'Enter a number':'On request';
+      // Drie gevallen, niet twee. Nog niets ingevuld: een streepje, want het label zegt al
+      // Total. Wel ingevuld maar de groep past niet: zeg hoeveel er vrij is, anders staart
+      // de gast naar een streepje zonder te weten waarom. Nooit een bedrag voor een boeking
+      // die niet kan.
+      const ingevuld=Number.isInteger(guests)&&guests>0;
+      partyPrice.textContent=!hasPrice?'On request'
+        :!ingevuld?'\u2014'
+        :item.remaining===0?'No seats left'
+        :`Only ${item.remaining} free`;
       partyPrice.setAttribute('data-empty','');
     }
   };

@@ -334,9 +334,24 @@ test("the party size sits next to a total that follows it",async()=>{
   // announce it when it changes, and it is never submitted as a form value.
   assert.match(html,/<output class="party__price"[^>]*data-party-price/);
   assert.doesNotMatch(html,/<output[^>]*name=/,"the total is a read-out, not a submitted field");
-  assert.match(html,/\.party \{[^}]*grid-template-columns: 112px 1fr/);
+  // Beide vakken even breed. Op 3 september 2026 bleek het omgekeerde: het uitleesvak was
+  // twee keer zo breed als het invoerveld en droeg dezelfde rand, achtergrond en de tekst
+  // "Enter a number". Het vak dat het meest op een invoerveld leek, was er geen.
+  assert.match(html,/\.party \{[^}]*grid-template-columns: 1fr 1fr/,"the two fields must be equally wide");
+  assert.doesNotMatch(html,/\.party \{[^}]*grid-template-columns: \d+px/,"a fixed first column makes the real input the smaller of the two");
+  // De lege toestand mag niet lezen als een instructie om daar te typen.
+  assert.doesNotMatch(html,/data-party-price[^>]*>Enter a number</,"the empty total must not invite typing into an output");
+  assert.doesNotMatch(script,/'Enter a number'/,"the empty total must not invite typing into an output");
   assert.match(script,/partyPrice\.textContent=money\(cents\*guests\)/);
   assert.match(script,/setAttribute\('data-empty',''\)/,"an unusable total must fall back to a neutral state");
+  // Drie gevallen, niet twee. "Enter a number" dekte er twee tegelijk en was fout zodra
+  // iemand wel een getal had ingevuld dat niet paste: die kreeg dezelfde tekst terug.
+  assert.match(script,/item\.remaining===0\?'No seats left'/,"a full weekend must say so in the total");
+  assert.match(script,/Only \$\{item\.remaining\} free/,"a party that does not fit must be told how many seats are free");
+  assert.match(script,/!ingevuld\?'\\u2014'/,"an empty total is a dash, not an instruction");
+  assert.match(script,/'On request'/,"a weekend without a price must still say so instead of showing a total");
+  // En nooit een bedrag voor een boeking die niet kan.
+  assert.match(script,/if\(hasPrice&&fits\)\{[^}]*partyPrice\.textContent=money/,"a total may only appear when the party actually fits");
 });
 
 test("a deadline is judged on the clock, not on when the transaction started",async()=>{
