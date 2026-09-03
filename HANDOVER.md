@@ -355,6 +355,93 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-03 · Claude · RECE0033T06 ingediend; go-live-analyse met één blocker · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, commit `fac81a6`, werkmap schoon.
+`origin/main` op `9013051`.
+
+## De aanvraag is ingediend
+
+| | |
+| --- | --- |
+| Registratienummer | **ENT202610066637** |
+| Datum | **03-09-2026** |
+| Status | **ingediend** |
+| Justificante | gedownload en bewaard **buiten de repository** |
+| Meegestuurd | geen bijlagen — de procedure eist ze niet bij indiening, alleen beschikbaar houden |
+
+Geen nieuwe indiening nodig; wachten op de officiële bevestiging van Asturias. **Geen NIF,
+adres, telefoon, bankgegeven of polisnummer in dit dossier.**
+
+## ⛔ Blocker voor vanavond live gaan
+
+**`database/first-access.sql` moet gemigreerd zijn vóórdat deze branch wordt gedeployed, en
+ik kan die migratie niet uitvoeren.** Grondig nagegaan op deze machine: geen `supabase`, geen
+`psql`, `pg_dump`, `pg_ctl`, `postgres` of `initdb`; geen `docker`, `podman`, `colima` of
+`brew`; niets luisterend op 5432 of 54322; nul Supabase-omgevingsvariabelen.
+
+**Waarom het een harde voorwaarde is — de volgorde is niet vrij.** De nieuwe functiecode
+stuurt `p_allergies` en `p_dietary` mee; de functies in productie kennen die parameters niet.
+Deployen zonder migreren betekent dus dat **elke** First Access-aanvraag en elke checkout
+meteen faalt op een PostgREST-fout, en de bezoeker leest *"Seat registration is temporarily
+unavailable"*. Het enige werkende formulier op de site ligt er dan uit.
+
+**Andersom is wél veilig.** De nieuwe functies hebben `default null` op de nieuwe parameters,
+dus de code die nu live staat blijft ná de migratie gewoon werken. Het venster tussen migreren
+en deployen is dus ongevaarlijk. **De volgorde is: eerst migreren, dan deployen.**
+
+## Wat ik statisch heb kunnen bewijzen
+
+**De PostgREST-ambiguïteit is afgedekt.** De drie gewijzigde functies zijn vergeleken met de
+vorm in `origin/main` — dat is de laatst gemigreerde staat:
+
+| functie | in productie | nu | drop aanwezig voor de oude vorm? |
+| --- | --- | --- | --- |
+| `register_tavern_interest` | 6 parameters | 8 | ✅ |
+| `begin_tavern_checkout` | 11 parameters | 14 | ✅ |
+| `begin_tavern_first_access_checkout` | 7 parameters | 10 | ✅ |
+
+**Drie van de drie hebben een `drop function if exists` op exact de signatuur die in productie
+staat.** Blijft er geen overload achter, dan is er geen ambiguïteit. Statisch bewezen; nog niet
+gedraaid.
+
+**Rechten en afscherming, ongewijzigd goed:** 15 functies, 15× `set search_path=''`, nul
+`=public`, nul ongekwalificeerde verwijzingen, 15 revokes naar `public, anon, authenticated`,
+14 grants uitsluitend naar `service_role`, RLS aan op drie tabellen met **nul policies** en nul
+table-grants.
+
+**De mediamigratie is géén voorwaarde.** `database/filming-consent.sql` staat nog helemaal niet
+in productie (388 regels nieuw), maar met de mediapoort dicht raakt die flow de database niet.
+Uitgevoerd met een onbereikbare database-URL: **503, nul databaseaanroepen.**
+
+**Eén benigne neveneffect om te weten.** Na de migratie werkt een herhaalde First
+Access-aanmelding het berichtveld bij als er een nieuwe, afwijkende tekst wordt meegestuurd.
+Dat gebeurt al vóór de deploy, met de code die nu live staat. Het kan niets wissen — `coalesce`
+laat een lege waarde staan — en het is een verbetering, maar het is een gedragswijziging.
+
+## Wat ik heb gecontroleerd en in orde bevonden
+
+- **Betaalpoort:** drie constanten leeg; tien aanroepen met alles op "aan", vijf datums, beide
+  modi → **tien keer `503 checkout_not_open`**.
+- **Drie juridische routes:** elf geforceerde `404!`-regels, ongewijzigd.
+- **`/tavern/book/`:** post naar `/api/checkout` en is prominent gelinkt — **maar dat is in
+  productie vandaag al precies zo.** Geen nieuwe regressie, wel een openstaand besluit.
+- **`/tavern/checkout/`:** `noindex`, niet in de sitemap, nergens gelinkt; alleen met een token
+  bereikbaar.
+- **Tests:** 236 tests, 0 fouten. `node --check` over 32 bestanden schoon.
+
+## De laatste stap om live te gaan
+
+1. **Migreer `database/first-access.sql` op een tijdelijke Supabase-branch**, draai het
+   integratieblok uit `tests/database-integration.sql`, controleer de rollback op nul rijen, en
+   controleer met `select oid::regprocedure from pg_proc where proname in (...)` dat er van elk
+   van de drie functies **precies één** versie overblijft.
+2. **Verwijder de tijdelijke branch.**
+3. **Migreer dezelfde file op productie.** De live site blijft dan werken.
+4. **Pas daarna** de branch naar `main` pushen; Netlify deployt.
+
+Stap 1 tot en met 3 kan ik niet uitvoeren. **Zonder stap 3 mag stap 4 niet.**
+
 ### 2026-09-03 · Claude · RECE0033T06 geverifieerd bij de officiële bron; beide polissen voldoen · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, commit `6e05696`, werkmap schoon.
