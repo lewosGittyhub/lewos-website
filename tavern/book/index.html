@@ -23,8 +23,18 @@
       <section>
         <p class="eyebrow">Six seats per weekend</p>
         <h1>Choose your table.</h1>
-        <p class="lead">Your complete party is held together for 40 minutes while we confirm your reservation. No payment is taken at this stage. If the group does not fit, no seats are taken.</p>
-        <p class="price"><strong>€2,025 per person</strong><br>Total price including taxes. Three nights, every meal, non-alcoholic drinks, transfers, the campaign and the professional Game Master. Travel to Asturias is not included. Payment details will be sent separately once the required arrangements are complete.</p>
+        <p class="lead">Your complete party is held together for 40 minutes while you pay. Payment is taken now, by card, through Stripe. Your seats are confirmed the moment the payment succeeds — not before. If the group does not fit, no seats are taken and nothing is charged.</p>
+        <p class="price"><strong>€2,025 per person</strong><br>Total price including taxes. Three nights, every meal, non-alcoholic drinks, transfers, the campaign and the professional Game Master. Travel to Asturias is not included.</p>
+          
+          <!-- JURIDISCHE COPY — CONCEPTVERSIE.
+               De drie documenten dragen nog hun eigen concept-aanduiding en gelden niet.
+               Zolang dat zo is vraagt deze pagina niemand om ze te aanvaarden. Worden ze
+               definitief, dan wordt dit blok in één bewerking vervangen door de bindende
+               formulering; de rest van de verkoopflow hoeft daar niet voor te veranderen.
+               Twee juridische vragen staan open: of Richtlijn (EU) 2026/1024 het
+               genormaliseerde formulier wijzigt, en of de toeristische registratiecode in
+               commerciële uitingen moet worden gevoerd. Beide zijn nog niet beantwoord. -->
+          <p><small>The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> are published as drafts and do not apply yet. The final versions are provided before any payment is requested. A weekend runs with a minimum of four players; if that minimum is not reached, you get every euro back.</small></p>
       </section>
       <form data-public-booking-form>
         <div><label for="name">Your name</label><input id="name" name="name" autocomplete="name" minlength="2" data-limit="name" required></div>
@@ -39,8 +49,8 @@
         <div class="check"><input id="adult" name="adultConfirmed" type="checkbox" required><label for="adult">I confirm that every guest included in this booking will be 18 or older when the weekend begins.</label></div>
         <div class="check"><input id="privacy" name="privacyAccepted" type="checkbox" required><label for="privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I understand that the full booking terms are provided before any payment is requested.</label></div>
         <p class="error" data-booking-error hidden></p>
-        <button type="submit">Secure my seats and continue →</button>
-        <small>No payment details are collected with this reservation. We will contact you before payment is requested.</small>
+        <button type="submit">Continue to payment →</button>
+        <small>The next screen is Stripe, where you pay by card. Lewos never sees your card details. Your seats are held for 40 minutes while you are there; if you do not finish, they are released and nothing is charged.</small>
       </form>
     </div>
   </main>

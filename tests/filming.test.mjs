@@ -174,46 +174,55 @@ test("no page a guest reads carries a word from our own preparation",async()=>{
   }
 });
 
-test("the unfinished sales documents are not served at all",async()=>{
-  // Robert, 1 september 2026: deze drie mogen voorlopig helemaal niet online leesbaar zijn.
-  // Ze missen de ANBEN-gegevens en zeggen op hun gezicht dat ze niet gelden. De inhoud
-  // blijft in de repo bewaard; alleen de route is dicht.
+test("the sales documents are served, but stay out of search while they are drafts",async()=>{
+  // Robert, 4 september 2026: de drie documenten mogen weer uitgeleverd worden, want de
+  // checkout moet ernaar kunnen verwijzen. Ze zijn nog concept, dus ze blijven uit Google
+  // en uit de sitemap, en ze houden hun eigen concept-aanduiding op de pagina zelf.
   const redirects=await read(path.join(root,"_redirects"));
   const robots=await read(path.join(root,"robots.txt"));
   const sitemap=await read(path.join(root,"sitemap.xml"));
-  // Netlify serveert een bestaand bestand vóór een gewone redirect. Zonder het uitroepteken
-  // krijgt de bezoeker de pagina alsnog te zien; dat ging op 29 augustus 2026 al een keer mis.
   const forced=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404!").map(parts=>parts[0]);
   for(const name of salesDocuments){
-    assert.ok(forced.includes(`/${name}`),`/${name} needs a forced 404 rule (404!) in _redirects`);
-    assert.ok(forced.includes(`/${name}/*`),`/${name}/* needs a forced 404 rule (404!) in _redirects`);
-    assert.ok(robots.includes(`Disallow: /${name}/`),`robots.txt must disallow /${name}/`);
-    assert.ok(!sitemap.includes(`/${name}`),`/${name} may not appear in the sitemap`);
+    assert.ok(!forced.includes(`/${name}`),`/${name} must no longer be forced to 404: the checkout links to it`);
+    assert.ok(!forced.includes(`/${name}/*`),`/${name}/* must no longer be forced to 404`);
+    assert.ok(robots.includes(`Disallow: /${name}/`),`robots.txt must still disallow /${name}/ while it is a draft`);
+    assert.ok(!sitemap.includes(`/${name}`),`/${name} may not appear in the sitemap while it is a draft`);
+    const html=await read(path.join(root,name,"index.html"));
+    assert.match(html,/noindex/,`/${name}/ keeps its noindex while it is a draft`);
+    assert.match(html,/[Dd]raft/,`/${name}/ must say on its face that it is a draft`);
   }
 });
 
-test("nothing on the site links to a blocked sales document",async()=>{
-  // Een link naar een route die 404 geeft is erger dan geen link. De drie documenten mogen
-  // onderling naar elkaar verwijzen — die bestanden worden immers niet uitgeleverd — maar
-  // geen enkele pagina die wél online staat mag ernaartoe wijzen.
-  const served=htmlFiles.filter(file=>!salesDocuments.some(name=>where(file).startsWith(`${name}${path.sep}`)));
+test("every sales document the site links to is actually served",async()=>{
+  // Een link naar een route die 404 geeft is erger dan geen link. Nu de drie routes open
+  // staan mag ernaar verwezen worden — maar dan moet elke verwijzing ook echt aankomen.
+  const redirects=await read(path.join(root,"_redirects"));
+  const forced=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404!").map(parts=>parts[0]);
+  const served=htmlFiles.filter(file=>!inSalesPath(file));
   for(const file of served){
     const html=await read(file);
     for(const name of salesDocuments){
-      assert.ok(!html.includes(`href="/${name}/"`)&&!html.includes(`href="../${name}/"`),
-        `${where(file)} links to /${name}/, which is not served while it is unfinished`);
+      if(!html.includes(`href="/${name}/"`))continue;
+      assert.ok(!forced.includes(`/${name}`)&&!forced.includes(`/${name}/*`),
+        `${where(file)} links to /${name}/, which is blocked in _redirects`);
     }
   }
 });
 
-test("a guest is never asked to confirm they read a document we do not serve",async()=>{
-  // De twee vinkjes verwezen naar /terms/. Zolang die route dicht is, kan die bevestiging
-  // niet waargemaakt worden en hoort ze er niet te staan.
-  for(const page of ["tavern/book/index.html","tavern/checkout/index.html"]){
-    const html=await read(path.join(root,page));
-    assert.doesNotMatch(html,/booking terms<\/a>/,`${page} still points a confirmation at the closed booking terms`);
-    assert.match(html,/full booking terms are provided before any payment is requested/,`${page} must say when the terms do arrive`);
+test("the checkout links to the sales documents without asking anyone to accept them",async()=>{
+  // Zolang de documenten concept zijn, mag een gast wel lezen maar niet aanvaarden. Dat
+  // onderscheid is het hele punt: een vinkje onder een conceptversie bindt niemand.
+  const html=await read(path.join(root,"tavern/book/index.html"));
+  for(const name of salesDocuments){
+    assert.ok(html.includes(`href="/${name}/"`),`the checkout must let a guest read /${name}/ before paying`);
   }
+  assert.match(html,/published as drafts and do not apply yet/,"the checkout must say the documents are drafts");
+  assert.doesNotMatch(html,/I accept the booking terms/,"a draft may never be presented as accepted");
+  assert.match(html,/full booking terms are provided before any payment is requested/,"the checkout must say when the final terms arrive");
+  // De twee openstaande juridische vragen staan als zodanig in het bestand genoteerd, zodat
+  // niemand ze per ongeluk als beantwoord behandelt.
+  assert.match(html,/2026\/1024/,"the open question about Directive (EU) 2026\/1024 must stay recorded");
+  assert.match(html,/registratiecode/,"the open question about the registration code must stay recorded");
 });
 
 test("the blocked documents are kept in the repository for later",async()=>{

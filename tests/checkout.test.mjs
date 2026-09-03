@@ -75,6 +75,35 @@ test("an existing First Access checkout resumes without creating another Stripe 
   const beginBody=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);assert.equal(beginBody.p_adult_confirmed,true);assert.equal(beginBody.p_privacy_accepted,true);
 });
 
+// Directe verkoop, 4 september 2026. Twee keer op betalen klikken mag geen tweede
+// stoelhold en geen tweede Stripe-sessie opleveren. Zonder de hervat-tak in
+// begin_tavern_checkout hield een bezoeker met drie kliks een heel weekend bezet.
+test("a second public checkout attempt resumes the same payment instead of taking more seats",async()=>{
+  holdResult={...holdResult,checkoutUrl:"https://checkout.stripe.test/existing",paymentReference:"ref-al-bezig"};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const invoer={mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,allergies:"Peanuts",dietary:"",message:""};
+  const result=await handler({httpMethod:"POST",body:JSON.stringify(invoer)});
+  const body=JSON.parse(result.body);
+  assert.equal(result.statusCode,200);
+  assert.equal(body.resumed,true,"a repeated attempt must be reported as a resume");
+  assert.equal(body.checkoutUrl,"https://checkout.stripe.test/existing","it must return the payment that is already open");
+  assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false,"a second Stripe session may never be created");
+  // De allergie die de bezoeker de tweede keer intikt gaat wél mee naar de database.
+  const beginBody=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body);
+  assert.equal(beginBody.p_allergies,"Peanuts");
+});
+
+test("a public checkout that the database refuses over an open invitation never reaches Stripe",async()=>{
+  // Een uitgegeven uitnodiging houdt zijn venster. De verkoop wordt dan geweigerd, en er
+  // mag geen betaalscherm openen dat daarna nergens heen kan.
+  holdResult={status:"first_access_windows_active"};
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:2,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
+  assert.equal(result.statusCode,409);
+  assert.equal(JSON.parse(result.body).error,"first_access_windows_active");
+  assert.equal(calls.some(call=>call.url==="/v1/checkout/sessions"),false);
+});
+
 test("a full weekend never creates a Stripe session",async()=>{
   holdResult={status:"not_available",remaining:2};
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");

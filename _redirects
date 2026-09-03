@@ -7,16 +7,8 @@
 /CLAUDE.md  /404.html  404!
 /operations/*  /404.html  404!
 /.internal/*  /404.html  404!
-# Tijdelijk dicht: deze drie wettelijke documenten zijn nog niet af. Ze missen de
-# ANBEN-gegevens (fiscaal nummer, adres, telefoon, toeristische registratie, garantie) en
-# zeggen daarom op hun gezicht dat ze niet gelden. Dat hoort een bezoeker niet te lezen.
-# De inhoud blijft in de repository staan; alleen de route is dicht. Haal deze zes regels
-# weg zodra de gegevens erin staan en de documenten definitief zijn — en zet dan ook de
-# link naar /terms/ terug in tavern/book/ en tavern/checkout/.
-/terms  /404.html  404!
-/terms/*  /404.html  404!
-/travel-information  /404.html  404!
-/travel-information/*  /404.html  404!
-/standard-information  /404.html  404!
-/standard-information/*  /404.html  404!
+# De drie verkoopdocumenten worden weer uitgeleverd. Ze dragen nog hun eigen
+# concept-aanduiding en gelden dus niet: pas als dat label eraf gaat zijn het de geldende
+# voorwaarden. Zolang dat zo is vraagt de checkout niemand om ze te aanvaarden, en houdt
+# PUBLISHED_TERMS_VERSION in netlify/functions/_booking-config.mjs de betaling dicht.
 https://lewos.netlify.app/*  https://lewos.co/:splat  301!

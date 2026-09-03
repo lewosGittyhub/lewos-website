@@ -297,11 +297,16 @@ create or replace function public.tavern_public_booking_ready()
 returns boolean language plpgsql security definer set search_path=''  as $$
 begin
   perform private.cleanup_tavern_claims();
+  -- First Access is per 4 september 2026 geen voorportaal meer: bezoekers kopen direct.
+  -- Een rij met status 'first_access_held' zonder uitnodiging is dus alleen nog vastgelegde
+  -- interesse en mag de verkoop niet tegenhouden; die stoelen tellen sowieso al mee in de
+  -- bezetting, dus overboeken kan er niet door ontstaan. Een uitnodiging die al de deur uit
+  -- is, houdt wel zijn venster: aan die gast is een termijn beloofd en die breken we niet.
   return not exists(
     select 1 from public.tavern_seat_claims where
-      (status='first_access_held' and checkout_token_hash is null)
-      or
-      (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>clock_timestamp())
+      status in('first_access_held','payment_pending')
+      and checkout_token_hash is not null
+      and invitation_expires_at>clock_timestamp()
   );
 end; $$;
 revoke all on function public.tavern_public_booking_ready() from public, anon, authenticated;
@@ -333,7 +338,7 @@ drop function if exists public.begin_tavern_checkout(text,text,integer,text,text
 drop function if exists public.begin_tavern_checkout(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer);
 create or replace function public.begin_tavern_checkout(p_name text,p_email text,p_party_size integer,p_weekend_slug text,p_payment_reference text,p_adult_confirmed boolean,p_privacy_accepted boolean,p_terms_version text,p_filming_consent boolean,p_public_booking_opens_at timestamptz,p_hold_minutes integer default 30,p_allergies text default null,p_dietary text default null,p_message text default null)
 returns jsonb language plpgsql security definer set search_path=''  as $$
-declare requested public.tavern_weekends%rowtype; occupied integer; claim_id uuid; expires_at timestamptz;
+declare requested public.tavern_weekends%rowtype; occupied integer; claim_id uuid; expires_at timestamptz; lopend public.tavern_seat_claims%rowtype;
 begin
   if p_party_size < 1 or p_party_size > 6 then raise exception 'invalid_party_size'; end if;
   if char_length(coalesce(p_allergies,'')) > 500 then raise exception 'invalid_allergies'; end if;
@@ -346,11 +351,34 @@ begin
   perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
   perform private.cleanup_tavern_claims();
   if p_public_booking_opens_at is null or clock_timestamp()<p_public_booking_opens_at then return jsonb_build_object('status','booking_not_open'); end if;
+  -- Zelfde regel als in tavern_public_booking_ready(): alleen een lopende uitnodiging
+  -- houdt de publieke verkoop nog tegen. Losse interesse niet meer.
   if exists(select 1 from public.tavern_seat_claims where
-    (status='first_access_held' and checkout_token_hash is null)
-    or
-    (status in('first_access_held','payment_pending') and checkout_token_hash is not null and invitation_expires_at>clock_timestamp()))
+    status in('first_access_held','payment_pending')
+    and checkout_token_hash is not null
+    and invitation_expires_at>clock_timestamp())
   then return jsonb_build_object('status','first_access_windows_active'); end if;
+  -- Twee keer op betalen klikken mag geen tweede stoelhold opleveren. Zonder deze tak hield
+  -- één bezoeker met drie kliks een heel weekend van zes stoelen bezet, veertig minuten lang,
+  -- en kon niemand anders meer kopen. Een lopende poging voor hetzelfde adres en hetzelfde
+  -- weekend wordt daarom hervat, met de Stripe-sessie die er al is. Dezelfde aanpak als bij
+  -- begin_tavern_first_access_checkout.
+  select * into lopend from public.tavern_seat_claims
+    where lower(email)=lower(trim(p_email)) and assigned_weekend_id=requested.id
+      and status='payment_pending' and hold_expires_at>clock_timestamp()
+    order by created_at desc limit 1;
+  if found then
+    update public.tavern_seat_claims set
+      allergies=coalesce(nullif(trim(p_allergies),''),allergies),
+      dietary_requirements=coalesce(nullif(trim(p_dietary),''),dietary_requirements),
+      message=coalesce(nullif(trim(p_message),''),message)
+      where id=lopend.id;
+    return jsonb_build_object('status','payment_pending','claimId',lopend.id,'seats',lopend.party_size,
+      'priceCents',coalesce(lopend.price_cents,requested.price_cents),'holdExpiresAt',lopend.hold_expires_at,
+      'paymentReference',lopend.payment_reference,'checkoutUrl',lopend.checkout_session_url,
+      'remaining',greatest(requested.capacity-coalesce((select sum(party_size)::integer from public.tavern_seat_claims
+        where assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid')),0),0));
+  end if;
   select coalesce(sum(party_size),0)::integer into occupied from public.tavern_seat_claims
     where assigned_weekend_id=requested.id and status in('first_access_held','payment_pending','paid');
   if requested.capacity-occupied < p_party_size then

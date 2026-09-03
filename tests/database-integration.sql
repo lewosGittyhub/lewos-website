@@ -54,13 +54,23 @@ begin
     raise exception 'payment_pending_invite_gate_failed';
   end if;
   update public.tavern_seat_claims set status='expired' where email='invite-gate@example.invalid';
+  -- Sinds 4 september 2026 verkoopt de site rechtstreeks. Een claim zonder uitnodiging is
+  -- alleen nog vastgelegde interesse en houdt de verkoop niet meer tegen; die stoelen tellen
+  -- wel mee in de bezetting, dus overboeken kan er niet door ontstaan. Alleen een uitnodiging
+  -- die al de deur uit is houdt zijn venster, want daaraan is een termijn beloofd.
   insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
     values('Uninvited Guest','uninvited-gate@example.invalid',1,next_weekend,'first_access_held',now());
-  if public.tavern_public_booking_ready() is not false then
-    raise exception 'uninvited_gate_failed';
+  if public.tavern_public_booking_ready() is not true then
+    raise exception 'losse_interesse_hield_de_verkoop_nog_tegen';
   end if;
-  if (public.begin_tavern_checkout('Public Guest','public-test@example.invalid',1,'codex-test-next','public-test-reference',true,true,'test-terms',false,now()-interval '1 minute',30)->>'status')<>'first_access_windows_active' then
-    raise exception 'atomic_public_gate_failed';
+  -- Dit weekend is op dit punt vol, dus de verkoop wordt geweigerd wegens stoelen. Het
+  -- gaat er hier om dat de reden is veranderd: niet meer 'first_access_windows_active',
+  -- maar gewoon 'not_available'. De poort is weg, de bezetting beschermt nog steeds.
+  if (public.begin_tavern_checkout('Public Guest','public-test@example.invalid',1,'codex-test-next','public-test-reference',true,true,'test-terms',false,now()-interval '1 minute',30)->>'status')<>'not_available' then
+    raise exception 'een_vol_weekend_gaf_niet_de_juiste_weigering';
+  end if;
+  if (public.begin_tavern_checkout('Public Guest','public-test2@example.invalid',1,'codex-test-next','public-test-reference-2',true,true,'test-terms',false,now()-interval '1 minute',30)->>'status')='first_access_windows_active' then
+    raise exception 'losse_interesse_hield_de_verkoop_nog_tegen_via_de_poort';
   end if;
   begin
     perform public.register_tavern_interest('Late Guest','late-test@example.invalid',1,'codex-test-next',null,now()-interval '1 minute');
@@ -247,6 +257,81 @@ begin
   end if;
   if exists(select 1 from public.tavern_seat_claims where email='long-test@example.invalid') then
     raise exception 'een_geweigerde_aanvraag_plaatste_toch_een_rij';
+  end if;
+end $$;
+
+
+-- Directe verkoop, ingevoerd op 4 september 2026. First Access is geen voorportaal meer:
+-- bezoekers kopen rechtstreeks. Deze vier controles leggen vast wat daarbij mag en niet mag.
+do $$
+declare vk uuid; uitkomst jsonb; eerste jsonb; tweede jsonb; a text; d text;
+begin
+  insert into public.tavern_weekends(slug,label,date_label,sort_order,capacity)
+    values('codex-test-verkoop','Verkoop','Test',900011,6);
+  select id into vk from public.tavern_weekends where slug='codex-test-verkoop';
+
+  -- Eerdere proeven in dit blok laten een lopende uitnodiging achter, en die houdt de
+  -- publieke verkoop terecht tegen. Die sluiten we eerst: deze vier controles gaan over de
+  -- directe verkoop, niet over het venster van een genodigde.
+  update public.tavern_seat_claims set invitation_expires_at=now()-interval '1 minute'
+    where checkout_token_hash is not null and invitation_expires_at>now();
+
+  -- 1. Losse interesse houdt de verkoop niet meer tegen. Die stoelen tellen wel mee in de
+  --    bezetting, dus overboeken kan er niet door ontstaan.
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
+    values('Interesse','verkoop-interesse@example.invalid',1,vk,'first_access_held',now());
+  if public.tavern_public_booking_ready() is not true then
+    raise exception 'losse_interesse_blokkeert_de_verkoop_nog_steeds';
+  end if;
+  uitkomst:=public.begin_tavern_checkout('Koper Een','verkoop-een@example.invalid',2,'codex-test-verkoop',
+    'verkoop-ref-1',true,true,'terms-test-v1',false,now()-interval '1 hour',40,
+    'Peanuts','Vegetarian','Arriving late.');
+  if (uitkomst->>'status')<>'payment_pending' then
+    raise exception 'de_directe_verkoop_kwam_niet_door';
+  end if;
+  select allergies,dietary_requirements into a,d from public.tavern_seat_claims where id=(uitkomst->>'claimId')::uuid;
+  if a is distinct from 'Peanuts' or d is distinct from 'Vegetarian' then
+    raise exception 'de_directe_verkoop_bewaarde_allergie_of_dieet_niet';
+  end if;
+
+  -- 2. Twee keer klikken hervat dezelfde poging en pakt geen extra stoelen.
+  eerste:=public.begin_tavern_checkout('Koper Twee','verkoop-twee@example.invalid',2,'codex-test-verkoop',
+    'verkoop-ref-2',true,true,'terms-test-v1',false,now()-interval '1 hour',40,null,null,null);
+  tweede:=public.begin_tavern_checkout('Koper Twee','verkoop-twee@example.invalid',2,'codex-test-verkoop',
+    'verkoop-ref-3',true,true,'terms-test-v1',false,now()-interval '1 hour',40,
+    'Shellfish',null,null);
+  if (tweede->>'claimId')<>(eerste->>'claimId') then
+    raise exception 'een_tweede_klik_maakte_een_tweede_stoelhold';
+  end if;
+  if (select count(*) from public.tavern_seat_claims where email='verkoop-twee@example.invalid')<>1 then
+    raise exception 'een_tweede_klik_maakte_een_tweede_claim';
+  end if;
+  -- De hervatting mag nieuwe allergie-informatie niet weggooien.
+  select allergies into a from public.tavern_seat_claims where id=(eerste->>'claimId')::uuid;
+  if a is distinct from 'Shellfish' then
+    raise exception 'de_hervatting_liet_de_nieuwe_allergie_vallen';
+  end if;
+
+  -- 3. Vol is vol: vier stoelen bezet, een groep van drie past niet meer.
+  uitkomst:=public.begin_tavern_checkout('Koper Drie','verkoop-drie@example.invalid',3,'codex-test-verkoop',
+    'verkoop-ref-4',true,true,'terms-test-v1',false,now()-interval '1 hour',40,null,null,null);
+  if (uitkomst->>'status')<>'not_available' then
+    raise exception 'een_te_grote_groep_kreeg_toch_stoelen';
+  end if;
+  if (uitkomst->>'remaining')::integer<>1 then
+    raise exception 'het_aantal_vrije_stoelen_klopt_niet_in_de_weigering';
+  end if;
+
+  -- 4. Een uitgegeven uitnodiging houdt zijn venster: daaraan is een termijn beloofd.
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at,checkout_token_hash,invitation_expires_at)
+    values('Genodigde','verkoop-genodigde@example.invalid',1,vk,'first_access_held',now(),repeat('f',64),now()+interval '2 hours');
+  if public.tavern_public_booking_ready() is not false then
+    raise exception 'een_lopende_uitnodiging_hield_de_verkoop_niet_tegen';
+  end if;
+  uitkomst:=public.begin_tavern_checkout('Koper Vier','verkoop-vier@example.invalid',1,'codex-test-verkoop',
+    'verkoop-ref-5',true,true,'terms-test-v1',false,now()-interval '1 hour',40,null,null,null);
+  if (uitkomst->>'status')<>'first_access_windows_active' then
+    raise exception 'de_verkoop_liep_door_langs_een_lopende_uitnodiging';
   end if;
 end $$;
 
