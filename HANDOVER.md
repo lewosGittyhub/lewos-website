@@ -355,6 +355,77 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-03 · Claude · RECE0033T06 geverifieerd bij de officiële bron; beide polissen voldoen · TE CONTROLEREN
+
+**Startpunt.** Branch `verwijder-dnd-merknaam`, commit `6e05696`, werkmap schoon.
+`origin/main` op `9013051`. Aan code, site, poort en database is niets gewijzigd; alleen
+`operations/rece0033t06-aanvraag.md` en dit dossier.
+
+**Bronnen, alle drie officieel.**
+- Procedure RECE0033T06: <https://miprincipado.asturias.es/-/dboid-6269000162102509007573>
+- Register: <https://www.asturias.es/temas/turismo/ordenacion-y-turismo-sostenible/inscripciones-y-modificaciones-registro>
+- Decreto 4/2026, BOPA 11-II-2026: <https://miprincipado.asturias.es/bopa/2026/02/11/2026-01087.pdf>
+
+**Bewezen: de RC-polis voldoet aan alle drie de blokken.** De procedure eist 150.253,03 EUR
+per blok voor *"Responsabilidad civil de explotación del negocio. Responsabilidad civil
+indirecta o subsidiaria. Responsabilidad por daños patrimoniales primarios."* De polis noemt
+exact diezelfde drie, met 600.000 / 600.000 / 300.000 EUR. **Woordelijke match, alle drie ruim
+boven het minimum.** Ik had de tweede eerst gemist en dacht dat er alleen een smalle
+voertuigdekking was; regel 207 van de polis noemt het algemene blok wel degelijk.
+
+**Bewezen: de caución voldoet, en mijn zorg van gisteren was onnodig.** *"Garantía individual:
+mediante un seguro, un aval u otra garantía financiera. Durante el primer año de actividad,
+importe mínimo de 100.000 €."* Een verzekering is dus uitdrukkelijk een aanvaarde vorm, en de
+polis dekt precies dat minimum. **Correctie op mijn eigen notitie van gisteren:** ik schreef
+dat de aangegeven omzet van 150.240 EUR nagekeken moest worden omdat de garantie erop wordt
+herrekend. Voor de wettelijke ondergrens klopt dat niet — 5 % daarvan is 7.512 EUR, ver onder
+de 100.000 EUR die hoe dan ook geldt. De eis stijgt pas boven 100.000 bij een omzet boven
+2.000.000 EUR. Het blijft nuttig om te controleren voor de premie, maar het is **geen
+blokkade voor de registratie.**
+
+**Bewezen: wat er werkelijk moet worden ingediend.** Slechts twee documenten: bewijs van
+vertegenwoordiging indien van toepassing, en een identiteitsdocument alleen in beperkte
+gevallen. De polissen, de garantie, het betaalbewijs en de rest hoeven **niet meegestuurd** te
+worden maar moeten beschikbaar zijn voor controle. Indiening is verplicht elektronisch via de
+link *Tramitación Registro Electrónico* op de procedurepagina. **Geen tasa vermeld.**
+
+**Bewezen: de bevoegde instantie.** *"Órgano gestor: Servicio de Ordenación, Innovación y
+Calidad Turística."* *"Efecto del silencio administrativo: No procede."*
+
+**Bewezen: wat indiening doet, met de grens erbij.** *"La presentación de la declaración
+responsable de inicio de la actividad debidamente suscrita habilita desde ese momento, excepto
+en los casos en que se requiera normativamente una autorización administrativa previa, para el
+desarrollo de la actividad"*, en *"sin perjuicio del cumplimiento de otras obligaciones
+exigidas en otras normas"*. Daarnaast: *"La constatación de la existencia de alguna
+inexactitud, falsedad u omisión de carácter esencial… implicará la imposibilidad de continuar
+con el ejercicio de la actividad turística, así como la cancelación de la inscripción."*
+**Bevoegdheid vanaf indiening, mits correct ondertekend en mits er geen voorafgaande
+vergunning geldt — en de verklaring vervult geen ontbrekende voorwaarde.**
+
+**Bewezen negatief: Decreto 4/2026 raakt dit niet.** Dat decreet wijzigt Decreto 48/2016 over
+vakantiewoningen, niet Decreto 191/2019. Volledig uitgelezen en gecontroleerd.
+
+**🟡 Nog te bevestigen door gestor of Turismo, vijf punten.** Volstaat de póliza zelf als
+*documento acreditativo* of wil men een apart certificaat · geldt hier een voorafgaande
+vergunning · welke van de "beschikbaar houden"-documenten gelden voor een bedrijf zonder vast
+lokaal · zijn de betaalbewijzen van beide polissen voorhanden · is er formeel bewijs nodig van
+handelsnaam en internetdomein. **Geen van deze vijf heb ik ingevuld of geraden.**
+
+**Persoonsgegevens.** Opnieuw nagerekend over de hele repo: **nul treffers** op polisnummers,
+adres, telefoon, NIF of bankgegevens. Het aanvraagoverzicht noemt uitsluitend veldnamen,
+statussen, bedragen en wetsartikelen.
+
+**Site en poort onaangeroerd.** De drie constanten staan leeg; de drie juridische routes staan
+op elf geforceerde `404!`-regels. Geen publieke tekst aangeraakt, geen verkooproute geopend,
+geen Supabase-migratie, geen deploy, geen push.
+
+**Tests.** `node --test tests/*.test.mjs` → **236 tests, 0 fouten.** `node --check` over **32
+bestanden** schoon. Ongewijzigd; deze ronde raakte geen code.
+
+**Wat nu volgt.** Robert: de vijf 🟡-punten bij de gestor · de identificerende gegevens zelf
+overnemen · de procedurepagina openen en elektronisch indienen. Onveranderd openstaand: de
+migratieproef op een tijdelijke database, en de vraag wat `/tavern/book/` moet worden.
+
 ### 2026-09-03 · Claude · De twee AXA-polissen uitgelezen; twee van de vier verkoopvoorwaarden zijn rond · TE CONTROLEREN
 
 **Startpunt.** Branch `verwijder-dnd-merknaam`, commit `5260373`, werkmap schoon.
