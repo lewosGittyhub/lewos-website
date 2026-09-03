@@ -99,6 +99,14 @@ alter table public.tavern_weekends enable row level security;
 alter table public.tavern_seat_claims enable row level security;
 alter table public.tavern_request_limits enable row level security;
 
+-- RLS houdt anon en authenticated weg bij de rijen, maar TRUNCATE valt buiten row-level
+-- security. Supabase geeft nieuwe tabellen in public standaard alle rechten aan die twee
+-- rollen, dus trekken we ze hier expliciet in. service_role en de eigenaar houden hun
+-- rechten; de website loopt via service_role en via de SECURITY DEFINER-functies.
+revoke all on table public.tavern_weekends       from public, anon, authenticated;
+revoke all on table public.tavern_seat_claims    from public, anon, authenticated;
+revoke all on table public.tavern_request_limits from public, anon, authenticated;
+
 insert into public.tavern_weekends (slug, label, date_label, sort_order, starts_on, ends_on)
 values ('weekend-01', 'Weekend 01', '30 Oct to 2 Nov 2026', 1, date '2026-10-30', date '2026-11-02'),
        ('weekend-02', 'Weekend 02', '6 to 9 Nov 2026', 2, date '2026-11-06', date '2026-11-09')

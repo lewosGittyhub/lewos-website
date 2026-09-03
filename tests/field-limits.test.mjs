@@ -292,6 +292,24 @@ test("de rechten op de nieuwe signatuur staan nog steeds alleen op service_role"
   assert.doesNotMatch(migratie,/grant execute on function public\.register_tavern_interest[^;]*to (anon|authenticated|public)/);
 });
 
+// Gevonden op 3 september 2026, bij het draaien van de migratie tegen een echte Supabase-
+// branch. Lokaal was dit onzichtbaar: kale PostgreSQL kent de Supabase-standaardrechten
+// niet, dus daar stond de teller op nul. Op Supabase hadden anon en authenticated alle
+// zeven rechten op alle drie de tabellen. Zes daarvan houdt RLS tegen; TRUNCATE niet,
+// want TRUNCATE valt buiten row-level security.
+test("anon en authenticated hebben geen rechten op de tavern-tabellen",async()=>{
+  const migratie=await lees("database/first-access.sql");
+  for(const tabel of ["tavern_weekends","tavern_seat_claims","tavern_request_limits"]){
+    assert.match(migratie,new RegExp("revoke all on table public\\."+tabel+"\\s+from public, anon, authenticated;"),
+      `de tabelrechten op ${tabel} moeten expliciet worden ingetrokken; RLS dekt TRUNCATE niet af`);
+    assert.doesNotMatch(migratie,new RegExp("grant [^;]*on table public\\."+tabel+"[^;]*to (anon|authenticated|public)"),
+      `${tabel} mag nooit rechten teruggeven aan anon of authenticated`);
+  }
+  // De intrekking moet ná het aanmaken van de tabellen komen, anders heeft ze geen effect.
+  assert.ok(migratie.indexOf("revoke all on table public.tavern_seat_claims")>migratie.indexOf("create table if not exists public.tavern_seat_claims"),
+    "de intrekking staat vóór het aanmaken van de tabel en doet dan niets");
+});
+
 // ── 9. Een herhaalde aanvraag mag nieuwe allergie-informatie niet weggooien ───
 // Gevonden bij de eindcontrole van 2 september 2026: `register_tavern_interest` gaf bij
 // een duplicaat meteen de bestaande claim terug en negeerde de meegestuurde velden. Wie
