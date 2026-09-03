@@ -492,13 +492,22 @@ test("no page says where the food comes from or how it is made",async()=>{
   assert.match(tavern,/Every meal/);
 });
 
-test("the standard information form stays a draft until it can name its guarantor",async()=>{
+test("the standard information form names its guarantor and the competent authority",async()=>{
   const form=await read(path.join(root,"standard-information/index.html"));
-  // The statutory form is only valid once it names who refunds the traveller if Lewos
-  // fails, and which authority to turn to. Until then it must say so on its face.
+  // Filled in on 3 September 2026 from the caution policy itself and from the authority
+  // named on the RECE0033T06 procedure page. The statutory form is only valid once it says
+  // who refunds the traveller if Lewos fails, and which authority to turn to.
   assert.match(form,/noindex/);
-  assert.match(form,/not complete and cannot be used yet/);
-  assert.match(form,/to be inserted/,"the missing fields must be visible as missing");
+  assert.doesNotMatch(form,/to be inserted|por completar/,"no placeholder may survive in a statutory form");
+  assert.doesNotMatch(form,/not complete and cannot be used yet/);
+  // The guarantor, in both language versions, with the details a traveller needs to claim.
+  for(const deel of [/AXA Seguros Generales, S\.A\. de Seguros y Reaseguros/,/NIF A60917978/,/7751-86694929/,/aperturas\.empresas@axa\.es/]){
+    assert.ok((form.match(new RegExp(deel,"g"))||[]).length>=2,`${deel} must appear in both the English and the Spanish version`);
+  }
+  // The competent authority is a public body, never the insurer.
+  for(const deel of [/Servicio de Ordenaci&oacute;n, Innovaci&oacute;n y Calidad Tur&iacute;stica/,/33006 Oviedo/,/985 27 91 00/]){
+    assert.ok((form.match(new RegExp(deel,"g"))||[]).length>=2,`${deel} must appear in both language versions`);
+  }
   // The Spanish wording is the one the law sets out; the English must not quietly replace it.
   assert.match(form,/lang="es"/);
   assert.match(form,/the Spanish text is the one that applies/);
