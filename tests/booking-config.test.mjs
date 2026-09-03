@@ -61,3 +61,55 @@ test("de drie constanten in _booking-config staan nog steeds leeg",async()=>{
     assert.match(config,new RegExp(`export const ${constant}="";`),`${constant} is niet meer leeg`);
   }
 });
+
+// ── Voorverkoopfase, 4 september 2026 ─────────────────────────────────────────
+// Robert: de site staat tijdelijk in voorverkoop. Er wordt niets verkocht, er gaat geen
+// Stripe open, en er worden geen stoelen definitief vastgelegd. Deze vier controles leggen
+// die toestand vast, en koppelen haar aan de betaalpoort zodat ze niet uit de pas kan lopen.
+
+test("de aankooppagina en de betaalpoort gaan samen open en samen dicht",async()=>{
+  // /tavern/book/ zegt op haar gezicht dat er nu betaald wordt. Met een gesloten poort is
+  // dat onwaar: de bezoeker vult alles in en loopt dan op een 503 die hij niet kan plaatsen.
+  const config=await readFile(new URL("../netlify/functions/_booking-config.mjs",import.meta.url),"utf8");
+  const redirects=await readFile(new URL("../_redirects",import.meta.url),"utf8");
+  const forced=redirects.split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>parts[2]==="404!").map(parts=>parts[0]);
+  const poortDicht=/export const PUBLISHED_TERMS_VERSION="";/.test(config);
+  const routeDicht=forced.includes("/tavern/book")&&forced.includes("/tavern/book/*");
+  assert.equal(routeDicht,poortDicht,
+    poortDicht
+      ? "de betaalpoort is dicht, dus /tavern/book/ moet ook op 404 staan"
+      : "de betaalpoort is open, dus /tavern/book/ moet weer uitgeleverd worden");
+});
+
+test("het interesseformulier zegt dat er niet betaald wordt en wanneer de voorwaarden komen",async()=>{
+  const html=await readFile(new URL("../tavern/index.html",import.meta.url),"utf8");
+  assert.match(html,/No payment is taken here/,"het formulier moet zeggen dat er hier niet betaald wordt");
+  assert.match(html,/Final terms are provided before any payment is requested/,"de melding over de definitieve voorwaarden is verplicht in deze fase");
+  // De melding staat vóór de knop, niet erna: wie hem pas na het versturen leest heeft niets aan hem.
+  assert.ok(html.indexOf("Final terms are provided before any payment is requested")<html.indexOf("Hold my seats"),
+    "de melding hoort vóór de verstuurknop te staan");
+});
+
+test("het interesseformulier start geen betaling",async()=>{
+  const script=await readFile(new URL("../tavern/first-access.js",import.meta.url),"utf8");
+  const functie=await readFile(new URL("../netlify/functions/first-access.mjs",import.meta.url),"utf8");
+  for(const [naam,bron] of [["tavern/first-access.js",script],["netlify/functions/first-access.mjs",functie]]){
+    assert.doesNotMatch(bron,/api\/checkout/,`${naam} mag geen checkout aanroepen in de voorverkoopfase`);
+    assert.doesNotMatch(bron,/stripe/i,`${naam} mag Stripe nergens aanraken`);
+    assert.doesNotMatch(bron,/begin_tavern_checkout/,`${naam} mag geen betaalhold aanmaken`);
+  }
+  // Het formulier legt interesse vast, geen betaalde stoel.
+  assert.match(functie,/register_tavern_interest/,"de aanmelding hoort via register_tavern_interest te lopen");
+});
+
+test("geen enkele zichtbare pagina meldt een bevestigde boeking of betaling",async()=>{
+  // De Stripe-retourpagina's blijven staan voor als de verkoop opengaat, maar zijn zonder
+  // Stripe niet te bereiken. Wat een bezoeker nu wél kan zien, mag niets bevestigen.
+  const zichtbaar=["tavern/index.html","index.html","thanks/index.html"];
+  for(const pagina of zichtbaar){
+    const html=await readFile(new URL(`../${pagina}`,import.meta.url),"utf8");
+    for(const belofte of ["Your payment has been received","booking is confirmed","payment has been confirmed"]){
+      assert.ok(!html.includes(belofte),`${pagina} mag geen betaling of boeking bevestigen in de voorverkoopfase`);
+    }
+  }
+});

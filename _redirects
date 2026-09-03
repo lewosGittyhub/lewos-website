@@ -6,6 +6,15 @@
 /AGENTS.md  /404.html  404!
 /CLAUDE.md  /404.html  404!
 /operations/*  /404.html  404!
+
+# Voorverkoopfase, 4 september 2026. Er wordt niets verkocht: PUBLISHED_TERMS_VERSION in
+# netlify/functions/_booking-config.mjs is leeg, dus /api/checkout antwoordt 503. Deze pagina
+# zegt op haar gezicht dat er nu betaald wordt, en dat is dus onwaar. Ze blijft in de
+# repository staan; alleen de route is dicht. Haal deze twee regels weg op hetzelfde moment
+# dat de betaalpoort opengaat — een test in tests/filming.test.mjs bewaakt dat die twee
+# altijd samen gaan.
+/tavern/book  /404.html  404!
+/tavern/book/*  /404.html  404!
 /.internal/*  /404.html  404!
 # De drie verkoopdocumenten worden weer uitgeleverd. Ze dragen nog hun eigen
 # concept-aanduiding en gelden dus niet: pas als dat label eraf gaat zijn het de geldende

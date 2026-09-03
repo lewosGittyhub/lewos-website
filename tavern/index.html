@@ -271,6 +271,7 @@
     .booking-result[data-type="alternative"] { border-color: var(--orange); }
     .booking-result[data-type="error"] { border-color: #f4a285; }
     .booking__micro { max-width: 690px; margin: -5px 0 0; color: rgba(237,230,218,.72); font-size: .8rem; }
+    .booking__terms { max-width: 690px; margin: 0; padding: 12px 14px; border-left: 3px solid var(--orange); background: rgba(247,243,236,.07); color: var(--cream); font-size: .88rem; }
     .bot-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
     .faq { padding: 110px 0; background: var(--cream); }
@@ -687,7 +688,8 @@
           <div class="form-field"><label for="message">Anything else we should know?</label><textarea id="message" name="message" data-limit="message" placeholder="Anything that affects the weekend, or anything else you want to tell us."></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
           <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
-          <button class="button" type="submit" aria-describedby="booking-note">Hold my seats →</button>
+          <p class="booking__terms" id="booking-terms-note"><strong>No payment is taken here.</strong> This form records your interest and holds seats for your chosen weekend. Final terms are provided before any payment is requested.</p>
+          <button class="button" type="submit" aria-describedby="booking-terms-note booking-note">Hold my seats →</button>
           <p class="booking__micro" id="booking-note">No payment is due today. If your full party fits, we hold your seats for your chosen weekend. When booking opens, First Access guests get 24 hours to complete payment before the weekend goes public — we email you before that window starts. Seats that are not paid for within those 24 hours are released, and from then on it is first come, first served. Groups stay together.</p>
         </form>
         <div class="signup-form" data-public-booking-open hidden>
