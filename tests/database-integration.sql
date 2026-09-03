@@ -78,7 +78,7 @@ begin
     raise exception 'checkout_price_did_not_come_from_weekend';
   end if;
   select price_cents into stored_price from public.tavern_seat_claims where payment_reference='price-test-reference';
-  if stored_price<>234567 then raise exception 'checkout_price_snapshot_was_not_stored'; end if;
+  if stored_price is distinct from 234567 then raise exception 'checkout_price_snapshot_was_not_stored'; end if;
 end $$;
 
 -- Waarom de fasechecks clock_timestamp() gebruiken en niet now(). Binnen één transactie
@@ -141,13 +141,13 @@ begin
     'Severe peanut allergy, carries an EpiPen','Vegetarian, no dairy');
   select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
     from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
-  if bewaarde_allergie<>'Severe peanut allergy, carries an EpiPen' then
+  if bewaarde_allergie is distinct from 'Severe peanut allergy, carries an EpiPen' then
     raise exception 'de_allergie_is_niet_bewaard_zoals_ingevuld';
   end if;
-  if bewaarde_dieet<>'Vegetarian, no dairy' then
+  if bewaarde_dieet is distinct from 'Vegetarian, no dairy' then
     raise exception 'de_dieetwens_is_niet_bewaard_zoals_ingevuld';
   end if;
-  if bewaard_bericht<>'We arrive late on Friday.' then
+  if bewaard_bericht is distinct from 'We arrive late on Friday.' then
     raise exception 'het_bericht_is_vervuild_met_de_andere_velden';
   end if;
   if position('peanut' in bewaard_bericht)>0 then
@@ -177,13 +177,13 @@ begin
   end if;
   select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
     from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
-  if bewaarde_allergie<>'Severe peanut allergy, carries an EpiPen; also shellfish' then
+  if bewaarde_allergie is distinct from 'Severe peanut allergy, carries an EpiPen; also shellfish' then
     raise exception 'de_aangevulde_allergie_is_niet_opgeslagen';
   end if;
-  if bewaarde_dieet<>'Vegetarian, no dairy' then
+  if bewaarde_dieet is distinct from 'Vegetarian, no dairy' then
     raise exception 'een_lege_inzending_wiste_de_bestaande_dieetwens';
   end if;
-  if bewaard_bericht<>'We arrive late on Friday.' then
+  if bewaard_bericht is distinct from 'We arrive late on Friday.' then
     raise exception 'een_lege_inzending_wiste_het_bestaande_bericht';
   end if;
   -- Nog een keer met precies dezelfde gegevens: dan valt er niets bij te werken.
@@ -196,6 +196,13 @@ begin
     raise exception 'er_ontstond_een_tweede_claim_voor_hetzelfde_adres';
   end if;
 
+  -- De publieke checkout gaat pas open als er nergens nog een First Access-venster
+  -- openstaat. Die poort is bewust globaal, zonder weekendfilter, en staat identiek in
+  -- tavern_public_booking_ready(). De twee claims hierboven houden hem dicht, dus die
+  -- sluiten we eerst -- net als bij de poortproef eerder in dit blok.
+  update public.tavern_seat_claims set status='expired'
+    where email in('diet-test@example.invalid','plain-test@example.invalid');
+
   -- Ook de publieke checkout bewaart de drie velden in hun eigen kolommen.
   dieet_claim:=public.begin_tavern_checkout('Checkout Guest','checkout-diet@example.invalid',1,'codex-test-diet',
     'ref-diet-1',true,true,'terms-test-v1',false,now()-interval '1 hour',40,
@@ -205,7 +212,7 @@ begin
   end if;
   select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
     from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
-  if bewaarde_allergie<>'Peanuts - severe' or bewaarde_dieet<>'Vegetarian' or bewaard_bericht<>'We arrive late.' then
+  if bewaarde_allergie is distinct from 'Peanuts - severe' or bewaarde_dieet is distinct from 'Vegetarian' or bewaard_bericht is distinct from 'We arrive late.' then
     raise exception 'de_checkout_bewaarde_de_drie_velden_niet_apart';
   end if;
 
@@ -221,10 +228,10 @@ begin
   end if;
   select allergies,dietary_requirements,message into bewaarde_allergie,bewaarde_dieet,bewaard_bericht
     from public.tavern_seat_claims where id=(dieet_claim->>'claimId')::uuid;
-  if bewaarde_allergie<>'Peanuts and shellfish' then
+  if bewaarde_allergie is distinct from 'Peanuts and shellfish' then
     raise exception 'de_aangevulde_allergie_kwam_niet_aan_bij_de_checkout';
   end if;
-  if bewaarde_dieet<>'Vegetarian' or bewaard_bericht<>'Original note.' then
+  if bewaarde_dieet is distinct from 'Vegetarian' or bewaard_bericht is distinct from 'Original note.' then
     raise exception 'een_leeg_veld_wiste_bestaande_gegevens_bij_de_checkout';
   end if;
 
