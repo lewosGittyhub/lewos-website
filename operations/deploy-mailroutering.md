@@ -122,6 +122,7 @@ tekst en voor de ene vraag die bij de gestor hoort.
 ## Afvinklijst
 
 - [ ] `LEWOS_GENERAL_EMAIL=lewos.co@gmail.com` staat in Netlify, scope Functions, alle contexts.
+- [ ] `LEWOS_CALENDAR_ID` en `LEWOS_ACCOMMODATION_EMAILS` staan erin. **Let op de volgorde:** ze doen pas iets zodra deze branch gedeployd is; `origin/main` kent geen agendacode.
 - [ ] Het Gmail-account van Fontecha bestaat, en het adres staat als
       `FONTECHA_ACCOMMODATION_EMAIL` in Netlify — **vóór de betaalpoort opengaat**.
 - [ ] `netlify env:list` toont beide, en ze zijn niet aan elkaar gelijk. (De code weigert twee
@@ -142,7 +143,7 @@ Nagelopen tegen de code, niet tegen het Netlify-dashboard — **dat kan ik niet 
 hier staat is wat de functies nodig hebben; of het ingesteld staat kan alleen Robert
 nakijken. **Geen enkele waarde staat hieronder**, ook geen gedeeltelijke.
 
-### Negen die deze branch nieuw nodig heeft
+### Tien die deze branch nieuw nodig heeft
 
 | Sleutel | Waarvoor | Zonder deze variabele |
 | --- | --- | --- |
@@ -151,6 +152,7 @@ nakijken. **Geen enkele waarde staat hieronder**, ook geen gedeeltelijke.
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Google Agenda | de agenda-stap wordt overgeslagen en gelogd; de boeking loopt door |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | idem | idem. Let op de regeleindes: als `\n` opslaan |
 | `LEWOS_CALENDAR_ID` | idem | idem |
+| `LEWOS_ACCOMMODATION_EMAILS` | herkennen welke agenda-afspraken van de accommodatie komen | de koppeling valt terug op streng gedrag: **elke** vreemde afspraak in de agenda blokkeert nachten, ook een privénotitie. Veilig, maar je verliest verkoop |
 | `TAVERN_TIMEZONE` | tijdzone van de afspraken | valt terug op `Europe/Madrid` |
 | `LEWOS_ADMIN_EMAILS` | wie de beheeromgeving in mag | **niemand komt binnen** — ook Robert niet |
 | `SUPABASE_JWT_SECRET` | het inlogtoken controleren | de beheeromgeving weigert elk token (401) |
