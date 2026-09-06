@@ -26,7 +26,19 @@ const DATUM=/^\d{4}-\d{2}-\d{2}$/;
 // minuten is kort genoeg dat een boeking van Nadine snel doorkomt, en lang genoeg dat een
 // drukke pagina niet elke keer belt.
 const CACHE_MS=5*60*1000;
+// **De cache geldt alleen voor wat de bezoeker grijs ziet.** De controle bij het opslaan
+// van een aanvraag leest de agenda rechtstreeks — zie `houseNightsFree` in `_stay.mjs`.
+// Anders zou een boeking van Nadine vijf minuten lang onzichtbaar zijn voor de grens die
+// er echt toe doet.
+//
+// Een Map die alleen maar groeit is in een langlevend proces een lek; elk nieuw
+// datumbereik zou een regel achterlaten. Vandaar een dak erop.
+const CACHE_MAX=64;
 const cache=new Map();
+const onthoud=(sleutel,waarde)=>{
+  cache.set(sleutel,waarde);
+  while(cache.size>CACHE_MAX)cache.delete(cache.keys().next().value);
+};
 
 export const handler=async event=>{
   if(event.httpMethod!=="GET")return json(405,{error:"method_not_allowed"},0);
@@ -49,7 +61,7 @@ export const handler=async event=>{
   try{
     const afspraken=await listEvents(config,{from,to});
     const nachten=[...busyNights(afspraken)].sort();
-    cache.set(sleutel,{tijd:Date.now(),nachten});
+    onthoud(sleutel,{tijd:Date.now(),nachten});
     return json(200,{configured:true,from,to,busyNights:nachten});
   }catch(error){
     console.error("Calendar availability error",error);

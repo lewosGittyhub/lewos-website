@@ -197,6 +197,18 @@ blokkeert standaard één nacht te veel. `tests/house-calendar.test.mjs` bewaakt
 3. **Eén keer `scripts/sync-weekend-blocks.mjs --dry-run`** draaien om te zien wat er zou
    komen, en pas daarna zonder `--dry-run`.
 
+## Hoe snel een boeking van Nadine doorkomt
+
+Twee verschillende snelheden, en dat is met opzet:
+
+- **Wat de bezoeker grijs ziet** komt uit een eindpunt dat vijf minuten onthoudt. Een
+  boeking van Nadine kan dus tot vijf minuten later pas grijs worden op de site.
+- **De controle bij het opslaan van een aanvraag leest de agenda rechtstreeks.** Geen cache.
+  Zou die wél cachen, dan kon er vijf minuten lang een nacht doorheen glippen die zij net
+  had geboekt — precies het venster waarin je dubbel verkoopt.
+
+Dus: het beeld kan even achterlopen, de grens nooit.
+
 ## Wat er niet automatisch gebeurt
 
 Een agenda-item verandert **nooit** een boeking, een betaling of een stoel. Botst er iets —

@@ -154,3 +154,31 @@ test("de site laat een weekend los dat Nadine heeft geboekt",async()=>{
     assert.match(html,/\.calday\.is-taken\s*\{/,`${pagina} geeft een weggeboekt weekend geen eigen opmaak`);
   }
 });
+
+// ── Wat ik zelf verkeerd had ────────────────────────────────────────────────
+// Gevonden op 6 september 2026 bij het nalopen van mijn eigen beweringen.
+
+test("de cache geldt alleen voor het beeld, niet voor de grens",async()=>{
+  // Het publieke eindpunt onthoudt vijf minuten. Zou de controle bij het opslaan diezelfde
+  // cache gebruiken, dan kon een boeking van Nadine vijf minuten lang genegeerd worden —
+  // precies in het venster waarin je een nacht dubbel verkoopt.
+  const publiek=await lees("netlify/functions/house-availability.mjs");
+  assert.match(publiek,/CACHE_MS/);
+  const grens=await lees("netlify/functions/_stay.mjs");
+  assert.doesNotMatch(grens,/cache/i,"de servercontrole leest niet rechtstreeks");
+  assert.match(grens,/await listEvents\(config,\{from:van,to:tot\}\)/,
+    "de servercontrole gaat niet zelf naar de agenda");
+});
+
+test("de cache groeit niet onbeperkt",async()=>{
+  const bron=await lees("netlify/functions/house-availability.mjs");
+  assert.match(bron,/CACHE_MAX/,"elk nieuw datumbereik laat een regel achter in een langlevend proces");
+  assert.match(bron,/while\(cache\.size>CACHE_MAX\)/);
+});
+
+test("boekingen zonder datums leveren geen aanroep met undefined op",async()=>{
+  const bron=await lees("netlify/functions/admin-bookings.mjs");
+  const blok=bron.slice(bron.indexOf("const agendaBotsingen"),bron.indexOf("export const handler"));
+  assert.match(blok,/if\(!datums\.length\)return \[\];/,
+    "een leeg bereik zou met undefined naar Google bellen");
+});

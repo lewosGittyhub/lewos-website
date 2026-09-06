@@ -44,6 +44,9 @@ const agendaBotsingen=async boekingen=>{
     const config=calendarConfig();
     if(!config)return [];
     const datums=boekingen.flatMap(b=>[b.arrival,b.departure]).filter(Boolean).sort();
+    // Boekingen zonder datums leveren een leeg bereik op, en dan zou `listEvents` met
+    // `undefined` naar Google bellen. Dan liever niets controleren.
+    if(!datums.length)return [];
     const afspraken=await listEvents(config,{from:datums[0],to:datums[datums.length-1]});
     const botsingen=[];
     for(const afspraak of afspraken){
