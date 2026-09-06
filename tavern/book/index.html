@@ -28,16 +28,10 @@
     .calday.is-weekend{border-color:rgba(247,243,236,.42);background:rgba(247,243,236,.12);color:var(--cream);font-weight:700;cursor:pointer}
     .calday.is-low{border-color:rgba(217,162,59,.75);background:rgba(217,162,59,.22)}
     .calday.is-chosen{border-color:var(--orange);background:var(--orange);color:#fff}
-    .calday.is-full{border-color:rgba(247,243,236,.16);background:repeating-linear-gradient(135deg,rgba(247,243,236,.06),rgba(247,243,236,.06) 4px,transparent 4px,transparent 8px);color:rgba(247,243,236,.42);cursor:not-allowed}
-    .calday.is-full .calday__n{text-decoration:line-through}
-    .calday.is-past{opacity:.32}
-    /* Buiten het venster: zichtbaar, niet te kiezen. Zoals een volgeboekte dag. */
-    .calday.is-outside{opacity:.3}
-    /* Het huis is die nacht al verhuurd, uit de gedeelde agenda. */
-    .calday.is-busy{opacity:.55;text-decoration:line-through}
-    /* Een heel weekend dat is weggeboekt. */
-    .calday.is-taken{border-color:rgba(247,243,236,.2);background:repeating-linear-gradient(135deg,rgba(247,243,236,.05),rgba(247,243,236,.05) 4px,transparent 4px,transparent 8px);color:rgba(247,243,236,.4);cursor:not-allowed}
-    .calday.is-taken .calday__n{text-decoration:line-through}
+    /* Eén beeld voor "dit kan niet": vijf redenen, één uiterlijk. De reden staat in het
+       voorleeslabel en de tooltip, dus er gaat niets verloren behalve het geraas. */
+    .calday.is-past,.calday.is-outside,.calday.is-busy,.calday.is-full,.calday.is-taken{border-color:transparent;background:none;color:rgba(247,243,236,.28);font-weight:400;cursor:not-allowed;text-decoration:none}
+    .calday.is-past .calday__n,.calday.is-outside .calday__n,.calday.is-busy .calday__n,.calday.is-full .calday__n,.calday.is-taken .calday__n{text-decoration:none}
        en goud in plaats van vol oranje. Wij weten niet of die nacht vrij is, dus mag het
        vakje dat ook niet suggereren. */
     /* Een dag die je kúnt aanklikken draagt geen rand: vijfenveertig vakjes die tegelijk
@@ -61,6 +55,7 @@
     .callegend__swatch{width:15px;height:15px;border:1px solid rgba(247,243,236,.42);border-radius:4px}
     .callegend__swatch.is-chosen{border-color:var(--orange);background:var(--orange)}
     .callegend__swatch.is-requested{border-color:var(--orange);background:rgba(239,101,59,.5)}
+    .callegend__swatch.is-unavailable{border-color:rgba(247,243,236,.2);background:none}
     .callegend__clear{width:auto;min-height:38px;padding:7px 13px;border:1px solid rgba(247,243,236,.42);border-radius:10px;background:transparent;color:var(--cream);font:inherit;font-size:.8rem;cursor:pointer;justify-self:auto}
     .calendar__hint{margin:0;font-size:.85rem;color:rgba(247,243,236,.78)}
     /* Zonder deze regel wordt de link standaard browserblauw op donkergroen. */

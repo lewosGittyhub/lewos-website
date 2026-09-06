@@ -239,10 +239,22 @@
     .calday { aspect-ratio: 1; min-width: 0; display: grid; place-items: center; padding: 3px 4px; margin: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: rgba(237,230,218,.45); font: inherit; font-size: .78rem; line-height: 1.1; }
     .calday.is-weekend { border-color: rgba(237,230,218,.42); background: rgba(247,243,236,.12); color: var(--cream); font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s; }
     .calday.is-low { border-color: rgba(217,162,59,.75); background: rgba(217,162,59,.22); }
-    .calday.is-hot { border-color: var(--orange); background: rgba(229,100,58,.32); }
     .calday.is-chosen { border-color: var(--orange); background: var(--orange); color: var(--white); }
-    .calday.is-full { border-color: rgba(237,230,218,.16); background: repeating-linear-gradient(135deg, rgba(247,243,236,.06), rgba(247,243,236,.06) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.42); cursor: not-allowed; }
-    .calday.is-full .calday__n { text-decoration: line-through; }
+    /* **Eén beeld voor "dit kan niet".** Er waren vijf uiterlijken voor vijf redenen —
+       geen stoelen, huis weg, verleden, buiten het venster, nacht verhuurd — en niemand
+       kan het verschil zien tussen 30% en 32% doorzichtig. Voor een gast betekenen ze
+       allemaal hetzelfde. De reden staat nog gewoon in het voorleeslabel en de tooltip,
+       dus er gaat geen informatie verloren; alleen het geraas is weg. */
+    .calday.is-past,
+    .calday.is-outside,
+    .calday.is-busy,
+    .calday.is-full,
+    .calday.is-taken { border-color: transparent; background: none; color: rgba(237,230,218,.28); font-weight: 400; cursor: not-allowed; text-decoration: none; }
+    .calday.is-past .calday__n,
+    .calday.is-outside .calday__n,
+    .calday.is-busy .calday__n,
+    .calday.is-full .calday__n,
+    .calday.is-taken .calday__n { text-decoration: none; }
     .calday:focus-visible { outline: 3px solid #f4a285; outline-offset: 2px; }
     /* De maandnavigatie. Er zit geen bovengrens op het aantal extra nachten, dus er zit
        ook geen bovengrens op hoe ver je vooruit kunt bladeren. Terug kan niet verder dan
@@ -252,16 +264,6 @@
     .calnav__btn { min-width: 44px; min-height: 44px; padding: 0 12px; border: 1px solid rgba(237,230,218,.42); border-radius: var(--radius-small); background: rgba(247,243,236,.1); color: var(--cream); font: inherit; cursor: pointer; }
     .calnav__btn:hover:not([disabled]) { border-color: var(--orange); }
     .calnav__btn[disabled] { opacity: .32; cursor: not-allowed; }
-    .calday.is-past { opacity: .32; }
-    /* Buiten het venster dat op deze pagina staat beschreven: zichtbaar, niet te kiezen.
-       Zoals een volgeboekte dag bij een hotel. Wat je dan wél kunt doen staat eronder. */
-    .calday.is-outside { opacity: .3; }
-    /* Het huis is die nacht al verhuurd — uit de gedeelde agenda. Zichtbaar, niet te
-       kiezen, met een streep erdoor zodat het niet met "buiten het venster" te verwarren is. */
-    .calday.is-busy { opacity: .55; text-decoration: line-through; }
-    /* Een heel weekend dat is weggeboekt. Geen dichte deur: eronder staat dat je kunt vragen. */
-    .calday.is-taken { border-color: rgba(237,230,218,.2); background: repeating-linear-gradient(135deg, rgba(247,243,236,.05), rgba(247,243,236,.05) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.4); cursor: not-allowed; }
-    .calday.is-taken .calday__n { text-decoration: line-through; }
     /* Een dag die je kúnt aanklikken draagt geen rand. Stond die er wel, dan vroegen er
        vijfenveertig vakjes tegelijk om aandacht en was je eigen weekend niet meer te
        vinden. Hij laat zich zien zodra je hem aanwijst. */
@@ -285,6 +287,7 @@
     .callegend__swatch { width: 15px; height: 15px; border: 1px solid rgba(237,230,218,.42); border-radius: 4px; }
     .callegend__swatch.is-chosen { border-color: var(--orange); background: var(--orange); }
     .callegend__swatch.is-requested { border-color: var(--orange); background: rgba(229,100,58,.5); }
+    .callegend__swatch.is-unavailable { border-color: rgba(237,230,218,.2); background: none; }
     .callegend__clear { min-height: 38px; padding: 7px 13px; border: 1px solid rgba(237,230,218,.42); border-radius: var(--radius-small); background: transparent; color: var(--cream); font: inherit; font-size: .8rem; cursor: pointer; }
     .callegend__clear:hover { border-color: var(--orange); }
     .calendar__hint { margin: 0; color: var(--beige); font-size: .85rem; }

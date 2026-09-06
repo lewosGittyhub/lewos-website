@@ -22,6 +22,11 @@ import {fileURLToPath} from "node:url";
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const lees=p=>readFile(path.join(root,p),"utf8");
 
+// Heeft deze toestand ergens opmaak die op hem slaat? Kijkt naar de selector, niet naar de
+// vorm — vijf toestanden mogen prima één regel delen, en dat doen ze sinds 6 september 2026.
+const heeftOpmaak=(html,klasse)=>
+  [...html.matchAll(/([^{}]+)\{[^}]*\}/g)].some(m=>new RegExp(`\\.calday\\.${klasse}(?![a-z-])`).test(m[1]));
+
 const {nightsOf,busyNights,weekendBlockEvent,weekendBlockIdFor,LEWOS_MARKER,bookingEvent}
   =await import("../netlify/functions/_calendar.mjs");
 
@@ -150,8 +155,8 @@ test("de site laat een weekend los dat Nadine heeft geboekt",async()=>{
   assert.match(component,/ask us about other possibilities/i,"een weggeboekt weekend wordt een dichte deur");
   for(const pagina of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(pagina);
-    assert.match(html,/\.calday\.is-busy\s*\{/,`${pagina} geeft een bezette nacht geen eigen opmaak`);
-    assert.match(html,/\.calday\.is-taken\s*\{/,`${pagina} geeft een weggeboekt weekend geen eigen opmaak`);
+    assert.ok(heeftOpmaak(html,"is-busy"),`${pagina} geeft een bezette nacht geen opmaak`);
+    assert.ok(heeftOpmaak(html,"is-taken"),`${pagina} geeft een weggeboekt weekend geen opmaak`);
   }
 });
 
@@ -181,4 +186,33 @@ test("boekingen zonder datums leveren geen aanroep met undefined op",async()=>{
   const blok=bron.slice(bron.indexOf("const agendaBotsingen"),bron.indexOf("export const handler"));
   assert.match(blok,/if\(!datums\.length\)return \[\];/,
     "een leeg bereik zou met undefined naar Google bellen");
+});
+
+test("dit-kan-niet heeft één beeld, geen vijf",async()=>{
+  // Er waren vijf uiterlijken voor vijf redenen die voor een gast hetzelfde betekenen.
+  // Niemand ziet het verschil tussen 30% en 32% doorzichtig; dat was ruis die ik zelf had
+  // ingebouwd. De reden blijft in het voorleeslabel staan, dus er gaat niets verloren.
+  const redenen=["is-past","is-outside","is-busy","is-full","is-taken"];
+  for(const pagina of ["tavern/index.html","tavern/book/index.html"]){
+    const html=await lees(pagina);
+    const regels=[...html.matchAll(/([^{}]+)\{([^}]*)\}/g)];
+    const uiterlijken=new Set();
+    for(const klasse of redenen){
+      const raak=regels.filter(m=>new RegExp(`\\.calday\\.${klasse}(?![a-z-])`).test(m[1])
+        &&!/calday__n/.test(m[1]));
+      assert.ok(raak.length,`${pagina}: ${klasse} heeft geen opmaak`);
+      uiterlijken.add(raak.map(m=>m[2].replace(/\s+/g,"")).join("|"));
+    }
+    assert.equal(uiterlijken.size,1,
+      `${pagina}: de vijf redenen om niet te kunnen boeken zien er nog ${uiterlijken.size} verschillende manieren uit`);
+  }
+});
+
+test("de dode hover-klasse van de oude kalender is opgeruimd",async()=>{
+  // `is-hot` kwam uit de kalender van vóór het gedeelde onderdeel en werd nergens meer
+  // gezet — alleen de CSS stond er nog.
+  const component=await lees("assets/weekend-calendar.js");
+  assert.doesNotMatch(component,/is-hot/);
+  for(const pagina of ["tavern/index.html","tavern/book/index.html"])
+    assert.doesNotMatch(await lees(pagina),/is-hot/,`${pagina} draagt nog dode opmaak`);
 });

@@ -112,7 +112,7 @@ test("de kalender laat alleen kiezen wat de pagina belooft",async()=>{
   assert.match(component,/href="\/contact\/"/,"er staat geen weg naar Robert bij");
   for(const paginaPad of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(paginaPad);
-    assert.match(html,/\.calday\.is-outside\s*\{/,`${paginaPad} geeft een dag buiten het venster geen eigen opmaak`);
+    assert.match(html,/\.calday\.is-outside(?![a-z-])/,`${paginaPad} geeft een dag buiten het venster geen opmaak`);
     // De link naar Robert moet leesbaar zijn. Zonder eigen regel wordt hij standaard
     // browserblauw op een donkergroene achtergrond — gevonden op 5 september 2026.
     assert.match(html,/\.calendar__hint a\s*\{[^}]*color/,

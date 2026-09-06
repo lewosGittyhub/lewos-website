@@ -245,6 +245,7 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     return `<div class="callegend">`
       +`<span class="callegend__item"><span class="callegend__swatch is-chosen"></span>Your weekend &mdash; included</span>`
       +`<span class="callegend__item"><span class="callegend__swatch is-requested"></span>Extra night &mdash; on request, not confirmed</span>`
+      +`<span class="callegend__item"><span class="callegend__swatch is-unavailable"></span>Not available</span>`
       +(verblijf.extraNights?`<button type="button" class="callegend__clear" data-clear>Only the weekend</button>`:"")
       +`</div>`+ruimte;
   };
