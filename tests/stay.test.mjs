@@ -108,7 +108,8 @@ test("de kalender laat alleen kiezen wat de pagina belooft",async()=>{
   assert.match(rekenwerk,/if\(aStart>=eind&&aStart<tot\)tot=aStart;/,
     "het venster wordt niet afgeknipt op het volgende weekend");
   // Wie langer wil, loopt niet dood: er staat wat je dan wél kunt doen, met de weg ernaartoe.
-  assert.match(component,/Staying longer, or joining two Tavern weekends\?/);
+  // De bewaakte garantie is dat er een wég is voor wie meer wil — niet de precieze zin.
+  assert.match(component,/join two Tavern weekends\?/);
   assert.match(component,/href="\/contact\/"/,"er staat geen weg naar Robert bij");
   for(const paginaPad of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(paginaPad);

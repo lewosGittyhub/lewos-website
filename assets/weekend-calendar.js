@@ -236,11 +236,15 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
   const legenda=verblijf=>{
     if(!verblijf?.valid)return `<p class="calendar__hint">Pick a weekend first. You can add nights before or after once a weekend is chosen.</p>`;
     const grens=venster();
-    // Wat er buiten het venster ligt is geen fout van de gast en geen dood einde: het is
-    // een vraag aan Robert. Dat hoort er te staan, met de weg ernaartoe.
-    const ruimte=grens
-      ? `<p class="calendar__hint">You can arrive from ${shortDate(grens.from)} and leave by ${shortDate(grens.to)}. `
-        +`Staying longer, or joining two Tavern weekends? <a href="/contact/">Ask us</a> &mdash; special arrangements may be possible.</p>`
+    // **Pas zeggen wanneer het waar wordt.** Deze regel gaat over de grenzen van een
+    // aanvraag; iemand die alleen het weekend boekt heeft er niets aan en leest hem toch.
+    // Zodra er één nacht is aangeklikt, is het een antwoord op een vraag die net gesteld is.
+    // Welke dagen je kunt kiezen laat de kalender zelf zien; dat hoeft er niet ook nog in
+    // datums onder te staan. Wat je daar níét kunt zien is dat er een weg is voor wie meer
+    // wil — en dát is het enige dat deze regel hoeft te zeggen.
+    const ruimte=grens&&verblijf.extraNights
+      ? `<p class="calendar__hint">Want to stay longer, or join two Tavern weekends? `
+        +`<a href="/contact/">Ask us</a> &mdash; special arrangements may be possible.</p>`
       : "";
     return `<div class="callegend">`
       +`<span class="callegend__item"><span class="callegend__swatch is-chosen"></span>Your weekend &mdash; included</span>`

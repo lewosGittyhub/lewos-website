@@ -81,8 +81,10 @@ const onthoudVerblijf=stand=>{
   const heeftExtra=Boolean(stand?.valid&&stand.extraNights>0);
   if(aankomstVeld)aankomstVeld.value=heeftExtra?stand.arrival:"";
   if(vertrekVeld)vertrekVeld.value=heeftExtra?stand.departure:"";
-  if(verblijfHint)verblijfHint.hidden=!stand?.valid;
-  if(verblijfRegel)verblijfRegel.hidden=!stand?.valid;
+  // De weekendregel noemt de datums al. Deze regel verschijnt pas als je verblijf daarvan
+  // afwijkt — dan zegt hij iets nieuws in plaats van hetzelfde nog een keer.
+  if(verblijfHint)verblijfHint.hidden=!heeftExtra;
+  if(verblijfRegel)verblijfRegel.hidden=!heeftExtra;
   tekenSamenvatting(stand);
 };
 
@@ -104,7 +106,9 @@ const kiesWeekend=slug=>{
   // Zonder gekozen weekend zegt de kalender zelf al wat er moet gebeuren. Twee regels
   // die hetzelfde vragen, leest als twee dingen die je moet doen.
   gekozenRegel.hidden=!item||!(kalender&&kalender.ready());
-  if(item)gekozenRegel.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.`;
+  // De kalender laat in oranje al zien welk weekend het is; dat hoeft er niet nog eens
+  // in woorden bij.
+  if(item)gekozenRegel.textContent=`${item.label} · ${item.dateLabel} · ${item.remaining} of ${item.capacity} seats free`;
 };
 
 // De gedeelde agenda: welke nachten is het huis al kwijt? Lukt dit niet, dan blokkeert de

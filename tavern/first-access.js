@@ -59,7 +59,12 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     const cents=Number(item.priceCents);
     const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100);
     const hasPrice=Number.isFinite(cents)&&cents>0;
-    if(calendarChosen)calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${hasPrice?` ${money(cents)} per person, including taxes.`:''}`;
+    // Geen "Selected weekend:" ervoor: de kalender laat in oranje al zien welk weekend het
+    // is. Wat hier hoort te staan is wat je dáár niet kunt zien — hoeveel plek er nog is,
+    // en wat het kost. **"including taxes" blijft staan**: elke prijs op de site hoort een
+    // totaalprijs te zijn, en dat is een consumenteneis, geen opmaak. `tests/site.test.mjs`
+    // ving het meteen toen ik het wegliet.
+    if(calendarChosen)calendarChosen.textContent=`${item.label} · ${item.dateLabel} · ${item.remaining} of ${item.capacity} seats free${hasPrice?` · ${money(cents)} per person, including taxes`:''}`;
     if(!partyPrice)return;
     const guests=Number.parseInt(people.value,10);
     const fits=Number.isInteger(guests)&&guests>0&&guests<=Math.min(item.capacity,item.remaining);
@@ -89,8 +94,10 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     // blijven de velden leeg — anders zou elke boeking als "extra nachten" binnenkomen.
     if(arrivalInput)arrivalInput.value=heeftExtra?stand.arrival:'';
     if(departureInput)departureInput.value=heeftExtra?stand.departure:'';
-    if(stayHint)stayHint.hidden=!stand?.valid;
-    if(stayLine)stayLine.hidden=!stand?.valid;
+    // De weekendregel noemt de datums al. Deze regel verschijnt pas als je verblijf
+    // daarvan afwijkt — dan zegt hij iets nieuws in plaats van hetzelfde nog een keer.
+    if(stayHint)stayHint.hidden=!heeftExtra;
+    if(stayLine)stayLine.hidden=!heeftExtra;
   };
 
 
