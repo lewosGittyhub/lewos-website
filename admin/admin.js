@@ -218,6 +218,21 @@ const tekenWeekends=()=>{
 };
 
 // ── Detail ──────────────────────────────────────────────────────────────────
+// Botsingen met de gedeelde agenda. Bovenaan, want dit is het soort probleem dat je wilt
+// zien vóórdat je iets anders doet: iemand heeft het huis verhuurd over een boeking heen.
+const toonBotsingen=lijst=>{
+  const vak=$("[data-conflicts]");
+  if(!vak)return;
+  if(!lijst||!lijst.length){vak.hidden=true;vak.replaceChildren();return;}
+  vak.hidden=false;
+  vak.replaceChildren(el("h3",{textContent:`Calendar conflicts — ${lijst.length}`}),
+    el("p",{className:"why",textContent:
+      "Something in the shared calendar overlaps a Tavern booking. Nothing has been changed automatically. Check the calendar and decide what happens."}),
+    ...lijst.map(c=>el("div",{className:"row"},
+      el("span",{},el("span",{className:"nm",textContent:c.summary||"(untitled calendar entry)"}),
+        el("div",{className:"meta",textContent:`overlaps ${c.name} · ${c.weekendLabel||""} · ${c.nights.join(", ")}`})))));
+};
+
 const paar=(kop,waarde)=>[el("dt",{textContent:kop}),el("dd",{},waarde??"—")];
 
 // Eén beheeractie uitvoeren. De server beslist of het mag; wij tonen alleen wat hij zegt.
@@ -437,6 +452,7 @@ const laad=async()=>{
   boekingen=data.bookings||[];
   weekends=data.weekends||[];
   tekenKalender();tekenWeekends();tekenWeek();tekenDag();
+  toonBotsingen(data.calendarConflicts);
 };
 
 const start=async()=>{

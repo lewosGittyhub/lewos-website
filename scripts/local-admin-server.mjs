@@ -19,7 +19,7 @@
 // Er wordt niets verstuurd, niets betaald, geen agenda-afspraak gemaakt en geen
 // productiegegeven aangeraakt. Het luistert alleen op 127.0.0.1.
 
-import {createHmac,randomBytes,randomUUID} from "node:crypto";
+import {createHmac,generateKeyPairSync,randomBytes,randomUUID} from "node:crypto";
 import {stayWindow} from "../assets/stay.js";
 import {existsSync,mkdirSync,readFileSync,rmSync,writeFileSync} from "node:fs";
 import {extname,join,normalize} from "node:path";
@@ -588,9 +588,66 @@ const start=async()=>{
   process.env.RESEND_API_KEY="local-test-resend-key";
   process.env.TAVERN_FROM_EMAIL="The Lewos Tavern <test@example.invalid>";
   process.env.LEWOS_GENERAL_EMAIL="lewos.co@gmail.com";
+  // Een nagebootste Google-agenda. **Jouw echte agenda wordt hier nooit aangeraakt.**
+  // De afspraken staan in .local-data/calendar.json; daarin zet je met de hand een
+  // "boeking van Nadine" om te zien wat de site daarmee doet.
+  process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL="lokaal-test@example.invalid";
+  // Een echte, weggooibare RSA-sleutel. Niet omdat de nagebootste agenda hem nodig heeft,
+  // maar omdat de productiecode er écht mee ondertekent — met een neptekst zou die stap
+  // worden overgeslagen en dan test je hem niet.
+  const {privateKey:testSleutel}=generateKeyPairSync("rsa",{modulusLength:2048,
+    privateKeyEncoding:{type:"pkcs8",format:"pem"},publicKeyEncoding:{type:"spki",format:"pem"}});
+  process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=testSleutel;
+  process.env.LEWOS_CALENDAR_ID="lokale-testagenda";
+  const AGENDA=join(DATA,"calendar.json");
+  const leesAgenda=()=>{try{return JSON.parse(readFileSync(AGENDA,"utf8"));}catch{return {items:[]};}};
+  const schrijfAgenda=d=>writeFileSync(AGENDA,JSON.stringify(d,null,2));
+  if(!existsSync(AGENDA))schrijfAgenda({items:[{
+    id:"nadine-voorbeeld",summary:"TEST — Familie Jansen (boeking van Nadine)",
+    start:{date:"2026-11-10"},end:{date:"2026-11-13"}
+  }]});
+
   const echteFetch=globalThis.fetch;
   globalThis.fetch=async(invoer,opties)=>{
     const url=String(invoer?.url||invoer||"");
+    // Het token voor Google. Niets echts: de nagebootste agenda vraagt er niet naar.
+    if(url.startsWith("https://oauth2.googleapis.com/token"))
+      return new Response(JSON.stringify({access_token:"lokaal-test-token",expires_in:3600}),
+        {status:200,headers:{"content-type":"application/json"}});
+    if(url.startsWith("https://www.googleapis.com/calendar/v3")){
+      const pad=new URL(url);
+      const methode=(opties?.method||"GET").toUpperCase();
+      const data=leesAgenda();
+      const isLijst=/\/events$/.test(pad.pathname);
+      if(methode==="GET"&&isLijst)
+        return new Response(JSON.stringify({items:data.items,summary:"Lokale testagenda",timeZone:"Europe/Madrid",accessRole:"writer"}),
+          {status:200,headers:{"content-type":"application/json"}});
+      const id=decodeURIComponent(pad.pathname.split("/events/")[1]||"");
+      if(methode==="GET"&&id){
+        const gevonden=data.items.find(i=>i.id===id);
+        return new Response(JSON.stringify(gevonden||{error:"not_found"}),{status:gevonden?200:404,
+          headers:{"content-type":"application/json"}});
+      }
+      if(methode==="POST"&&isLijst){
+        const nieuw=JSON.parse(opties?.body||"{}");
+        if(data.items.some(i=>i.id===nieuw.id))
+          return new Response(JSON.stringify({error:"duplicate"}),{status:409,headers:{"content-type":"application/json"}});
+        data.items.push(nieuw);schrijfAgenda(data);
+        console.log(`  agenda: aangemaakt "${nieuw.summary}"`);
+        return new Response(JSON.stringify(nieuw),{status:200,headers:{"content-type":"application/json"}});
+      }
+      if(methode==="PUT"&&id){
+        const nieuw=JSON.parse(opties?.body||"{}");
+        data.items=data.items.map(i=>i.id===id?nieuw:i);schrijfAgenda(data);
+        return new Response(JSON.stringify(nieuw),{status:200,headers:{"content-type":"application/json"}});
+      }
+      if(methode==="DELETE"&&id){
+        const voor=data.items.length;
+        data.items=data.items.filter(i=>i.id!==id);schrijfAgenda(data);
+        return new Response("",{status:voor===data.items.length?404:204});
+      }
+      return new Response(JSON.stringify({error:"unsupported"}),{status:400,headers:{"content-type":"application/json"}});
+    }
     if(url.startsWith("https://api.resend.com")){
       let mail={};
       try{mail=JSON.parse(opties?.body||"{}");}catch{}
@@ -635,6 +692,13 @@ const start=async()=>{
     // vastgehouden, want dat is voor de beheeromgeving.
     // Het contactformulier loopt sinds 5 september 2026 langs een eigen functie in plaats
     // van Netlify Forms. Hier draait diezelfde functie, met de postbus als bestemming.
+    if(url.pathname==="/api/house-availability"){
+      const {handler:h}=await import("../netlify/functions/house-availability.mjs");
+      const r=await h({httpMethod:request.method,path:url.pathname,headers:{...request.headers},
+        queryStringParameters:Object.fromEntries(url.searchParams)});
+      return stuur(r.statusCode,r.body);
+    }
+
     if(url.pathname==="/api/contact"){
       const {handler:contactHandler}=await import("../netlify/functions/contact.mjs");
       let body="";if(request.method!=="GET")for await(const c of request)body+=c;
@@ -656,11 +720,25 @@ const start=async()=>{
     }
 
     if(url.pathname.startsWith("/api/hold")){
+      // Na een boeking de weekendblokkades gelijkzetten, net als het script dat in
+      // productie zou draaien. Zo is lokaal te zien wat Nadine in haar agenda krijgt.
+      const naBoeking=async()=>{
+        try{
+          const {calendarConfig,syncWeekendBlocks}=await import("../netlify/functions/_calendar.mjs");
+          const config=calendarConfig();
+          if(!config)return;
+          const data=db();
+          await syncWeekendBlocks(config,data.weekends.map(w=>({
+            slug:w.slug,label:w.label,startsOn:w.starts_on,endsOn:w.ends_on,
+            capacity:CAPACITEIT,seatsBooked:bezet(data,w.slug)})));
+        }catch(error){console.error("  agenda: blokkades bijwerken mislukt",error.message);}
+      };
       const {handler:holdHandler}=await import("../netlify/functions/seat-hold.mjs");
       let body="";if(request.method!=="GET")for await(const c of request)body+=c;
       const r=await holdHandler({httpMethod:request.method,path:url.pathname,
         headers:{...request.headers,"x-forwarded-for":request.socket.remoteAddress||"127.0.0.1"},
         queryStringParameters:Object.fromEntries(url.searchParams),body});
+      if(request.method==="POST")await naBoeking();
       return stuur(r.statusCode,r.body);
     }
 

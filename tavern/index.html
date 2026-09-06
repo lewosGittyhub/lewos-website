@@ -256,6 +256,12 @@
     /* Buiten het venster dat op deze pagina staat beschreven: zichtbaar, niet te kiezen.
        Zoals een volgeboekte dag bij een hotel. Wat je dan wél kunt doen staat eronder. */
     .calday.is-outside { opacity: .3; }
+    /* Het huis is die nacht al verhuurd — uit de gedeelde agenda. Zichtbaar, niet te
+       kiezen, met een streep erdoor zodat het niet met "buiten het venster" te verwarren is. */
+    .calday.is-busy { opacity: .55; text-decoration: line-through; }
+    /* Een heel weekend dat is weggeboekt. Geen dichte deur: eronder staat dat je kunt vragen. */
+    .calday.is-taken { border-color: rgba(237,230,218,.2); background: repeating-linear-gradient(135deg, rgba(247,243,236,.05), rgba(247,243,236,.05) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.4); cursor: not-allowed; }
+    .calday.is-taken .calday__n { text-decoration: line-through; }
     /* Een dag die je kúnt aanklikken draagt geen rand. Stond die er wel, dan vroegen er
        vijfenveertig vakjes tegelijk om aandacht en was je eigen weekend niet meer te
        vinden. Hij laat zich zien zodra je hem aanwijst. */

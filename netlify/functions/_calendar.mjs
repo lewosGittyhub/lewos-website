@@ -17,6 +17,7 @@
 // dat mag ook agenda's aanmaken en verwijderen.
 
 import {createHash,createSign} from "node:crypto";
+import {parseDay,formatDay,addDays} from "../../assets/stay.js";
 
 const TOKEN_URL="https://oauth2.googleapis.com/token";
 const API="https://www.googleapis.com/calendar/v3";
@@ -158,4 +159,165 @@ export const bookingEvent=({claimId,name,seats,weekendLabel,arrivalDate,departur
     startDateTime:`${arrivalDate}T${ARRIVAL_TIME}:00`,
     endDateTime:`${departureDate}T${DEPARTURE_TIME}:00`
   };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  De agenda lezen: wat is er bezet, en door wie?
+// ═══════════════════════════════════════════════════════════════════════════
+//
+//  Afgesproken met Robert op 6 september 2026. Er is **één agenda**, eigendom van Lewos en
+//  gedeeld met Nadine. Zij zet haar eigen verhuur er rechtstreeks in; hij ziet dat in zijn
+//  eigen Google Calendar, en de site leest dezelfde lijst. Geen synchronisatie tussen twee
+//  agenda's — die loopt vroeg of laat uit de pas, en juist op dat moment verkoop je een
+//  weekend twee keer.
+//
+//  Het onderscheid is simpel en betrouwbaar: **alles wat wij schrijven draagt
+//  `extendedProperties.private.lewosSource = "tavern-booking"`. Alles zonder dat merkteken
+//  is van Nadine en betekent: die nachten zijn bezet.**
+//
+//  Wie het eerst boekt, heeft het. Boekt Nadine een weekend vol, dan gaat dat weekend van
+//  de site af. Boekt er een gast, dan blokkeert de site het hele weekend — zie
+//  `weekendBlockEvent` verderop.
+
+export const LEWOS_MARKER="tavern-booking";
+
+// Een afspraak wordt uitgedrukt in **nachten**, niet in dagen. Dat is het enige dat telt:
+// een gast slaapt er of niet. Het maakt de wisseldag vanzelf goed — wie om 09:30 vertrekt
+// en wie om 16:00 aankomt, delen een datum maar geen nacht.
+//
+// Een nacht N is bezet als de afspraak het moment `N om 23:00` overlapt.
+export const nightsOf=event=>{
+  if(!event||event.status==="cancelled")return [];
+  // Een afspraak die als "vrij" in de agenda staat, blokkeert niets. Zo kan Nadine er een
+  // notitie in zetten zonder dat de site denkt dat het huis vol zit.
+  if(event.transparency==="transparent")return [];
+
+  const heleDag=Boolean(event.start?.date);
+  const nachten=[];
+  if(heleDag){
+    // Google geeft bij een hele-dagafspraak een einddatum die er níét bij hoort.
+    const van=parseDay(event.start.date),tot=parseDay(event.end?.date);
+    if(!van||!tot)return [];
+    for(let d=van;d<tot;d=addDays(d,1))nachten.push(formatDay(d));
+    return nachten;
+  }
+  const van=new Date(event.start?.dateTime||""),tot=new Date(event.end?.dateTime||"");
+  if(Number.isNaN(van.getTime())||Number.isNaN(tot.getTime()))return [];
+  // Loop de datums langs en kijk of 23:00 van die dag binnen de afspraak valt.
+  const eersteDag=parseDay(String(event.start.dateTime).slice(0,10));
+  const laatsteDag=parseDay(String(event.end.dateTime).slice(0,10));
+  if(!eersteDag||!laatsteDag)return [];
+  for(let d=eersteDag;d<=laatsteDag;d=addDays(d,1)){
+    const nacht=new Date(`${formatDay(d)}T23:00:00`);
+    if(nacht>=van&&nacht<tot)nachten.push(formatDay(d));
+  }
+  return nachten;
+};
+
+// De afspraken in een periode. `singleEvents` zet herhalingen om in losse afspraken, zodat
+// een wekelijkse blokkade van Nadine ook echt elke week telt.
+export const listEvents=async(config,{from,to})=>{
+  const token=await accessToken(config);
+  const parameters=new URLSearchParams({
+    timeMin:`${from}T00:00:00Z`,timeMax:`${to}T23:59:59Z`,
+    singleEvents:"true",orderBy:"startTime",maxResults:"2500",showDeleted:"false"
+  });
+  const {ok,status,body}=await call(token,`/calendars/${encodeURIComponent(config.calendarId)}/events?${parameters}`);
+  if(!ok)throw new Error(`calendar_list:${status}:${JSON.stringify(body).slice(0,300)}`);
+  return (body.items||[]).map(item=>({
+    id:item.id,
+    summary:item.summary||"",
+    ours:item.extendedProperties?.private?.lewosSource===LEWOS_MARKER,
+    claimId:item.extendedProperties?.private?.lewosClaimId||null,
+    weekendSlug:item.extendedProperties?.private?.lewosWeekendSlug||null,
+    nights:nightsOf(item)
+  }));
+};
+
+// Welke nachten zijn bezet door iemand anders dan wij? Onze eigen afspraken tellen hier
+// niet mee: die staan al in onze eigen administratie, en dubbel tellen zou een weekend
+// blokkeren tegen zijn eigen boeking.
+export const busyNights=events=>{
+  const bezet=new Set();
+  for(const e of events||[]){
+    if(e.ours)continue;
+    for(const nacht of e.nights||[])bezet.add(nacht);
+  }
+  return bezet;
+};
+
+// ── De weekendblokkade ─────────────────────────────────────────────────────
+//
+// Zodra er één stoel geboekt is, is dat weekend uit Nadine's markt. Dat moet ze kúnnen
+// zien, anders verhuurt ze het huis eroverheen en staan er zes gasten zonder bed. Vandaar
+// één afspraak over het hele weekend, los van de afspraken per boeking.
+//
+// Waarom niet gewoon de boekingsafspraken laten volstaan: die lopen van aankomst tot
+// vertrek van díé gast. Eén gast die alleen het weekend zelf boekt, dekt de hele periode
+// niet, en een leeg weekend heeft helemaal geen afspraak. Deze blokkade is expliciet.
+export const weekendBlockIdFor=slug=>createHash("sha256").update(`lewos-tavern-weekend|${slug}`).digest("hex");
+
+export const weekendBlockEvent=({slug,label,startsOn,endsOn,seatsBooked,capacity})=>{
+  if(!startsOn||!endsOn)throw new Error("calendar_weekend_dates_missing");
+  return {
+    slug,
+    id:weekendBlockIdFor(slug),
+    summary:`The Lewos Tavern — ${label||slug} — house reserved`,
+    description:[
+      "The Tavern has bookings for this weekend, so the house is not available for other guests.",
+      `Seats booked: ${seatsBooked}${capacity?` of ${capacity}`:""}`,
+      "Written automatically by lewos.co. Do not delete: the website relies on it.",
+      "Questions go to Robert."
+    ].join("\n"),
+    startDateTime:`${startsOn}T${ARRIVAL_TIME}:00`,
+    endDateTime:`${endsOn}T${DEPARTURE_TIME}:00`
+  };
+};
+
+export const upsertWeekendBlock=async(config,blok)=>{
+  const token=await accessToken(config);
+  const event={
+    id:blok.id,summary:blok.summary,description:blok.description,
+    start:{dateTime:blok.startDateTime,timeZone:config.timeZone},
+    end:{dateTime:blok.endDateTime,timeZone:config.timeZone},
+    transparency:"opaque",
+    extendedProperties:{private:{lewosSource:LEWOS_MARKER,lewosWeekendSlug:String(blok.slug)}}
+  };
+  const aangemaakt=await call(token,`/calendars/${encodeURIComponent(config.calendarId)}/events?sendUpdates=none`,{method:"POST",body:JSON.stringify(event)});
+  if(aangemaakt.ok)return {status:"created",event:aangemaakt.body};
+  if(aangemaakt.status===409){
+    const bijgewerkt=await call(token,`/calendars/${encodeURIComponent(config.calendarId)}/events/${blok.id}?sendUpdates=none`,{method:"PUT",body:JSON.stringify(event)});
+    if(!bijgewerkt.ok)throw new Error(`calendar_weekend_update:${bijgewerkt.status}`);
+    return {status:"updated",event:bijgewerkt.body};
+  }
+  throw new Error(`calendar_weekend_insert:${aangemaakt.status}:${JSON.stringify(aangemaakt.body).slice(0,300)}`);
+};
+
+// Geen boekingen meer op dat weekend? Dan hoort de blokkade weg, anders houdt de site een
+// huis bezet dat niemand nodig heeft — en dat is precies waar Nadine niet aan meedoet.
+export const removeWeekendBlock=async(config,slug)=>{
+  const token=await accessToken(config);
+  const {ok,status}=await call(token,`/calendars/${encodeURIComponent(config.calendarId)}/events/${weekendBlockIdFor(slug)}?sendUpdates=none`,{method:"DELETE"});
+  if(ok||status===404||status===410)return {status:ok?"deleted":"absent"};
+  throw new Error(`calendar_weekend_delete:${status}`);
+};
+
+// Alle weekendblokkades in één keer gelijkzetten. Een weekend met minstens één geboekte
+// stoel krijgt een blokkade; een weekend zonder boekingen verliest hem weer — anders houdt
+// de site een huis bezet dat niemand nodig heeft, en daar doet Nadine niet aan mee.
+export const syncWeekendBlocks=async(config,weekends)=>{
+  const uitkomst=[];
+  for(const week of weekends||[]){
+    if(!week?.slug||!week.startsOn||!week.endsOn){uitkomst.push({slug:week?.slug,status:"skipped_no_dates"});continue;}
+    try{
+      if(Number(week.seatsBooked)>0){
+        const {status}=await upsertWeekendBlock(config,weekendBlockEvent(week));
+        uitkomst.push({slug:week.slug,status});
+      }else{
+        const {status}=await removeWeekendBlock(config,week.slug);
+        uitkomst.push({slug:week.slug,status});
+      }
+    }catch(error){uitkomst.push({slug:week.slug,status:"error",message:String(error.message||error)});}
+  }
+  return uitkomst;
 };

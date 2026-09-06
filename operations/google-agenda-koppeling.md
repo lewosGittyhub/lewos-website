@@ -135,3 +135,81 @@ Let op: die tijden zijn op de site vastgelegd voor een aankomst op **vrijdag** e
 vertrek op **maandag**. Robert heeft op 5 september 2026 bevestigd dat ze ook gelden voor
 de testboeking van donderdag tot dinsdag. Komt er ooit een boeking met een ander patroon,
 dan is dit de plek om erover na te denken in plaats van de tijden stil te hergebruiken.
+
+---
+
+# Eén agenda, twee mensen (6 september 2026)
+
+Afgesproken met Robert. Er komt **geen tweede agenda en geen synchronisatie**. Er is één
+agenda, eigendom van `lewos.co@gmail.com`, gedeeld met Nadine. Zij ziet hem in haar eigen
+Google Calendar, hij in de zijne, en de site leest en schrijft dezelfde lijst.
+
+Twee agenda's die elkaar bijhouden lopen vroeg of laat uit de pas, en juist op dát moment
+verkoop je een weekend twee keer.
+
+## De regel
+
+**Wie het eerst boekt, heeft het.** Boekt Nadine een weekend vol, dan gaat dat weekend van
+de site af. Boekt er een gast, dan is dat weekend uit haar markt.
+
+Robert is niet de eigenaar van het huis. Een aangekondigd weekend is een voornemen, geen
+gereserveerd huis — tot er geboekt is.
+
+## Hoe de site weet wat van wie is
+
+Alles wat de site schrijft draagt een merkteken:
+
+```
+extendedProperties.private.lewosSource = "tavern-booking"
+```
+
+**Alles zonder dat merkteken is van Nadine en betekent: die nachten zijn bezet.** Meer
+logica is er niet, en dat is met opzet. Kamers tellen of titels uitlezen gaat een keer fout
+op een manier die niemand merkt.
+
+## Wat er in de agenda komt
+
+| Afspraak | Wanneer | Waarom |
+| --- | --- | --- |
+| Eén per bevestigde boeking | bij betaling | Nadine ziet wie er komt en met hoeveel |
+| **Eén blokkade per weekend met minstens één geboekte stoel** | `scripts/sync-weekend-blocks.mjs` | Zonder deze staat een weekend met één boeking maar deels in de agenda, en een leeg weekend helemaal niet. Dan verhuurt Nadine het huis eroverheen |
+
+De blokkade verdwijnt weer als er geen boekingen meer zijn. Het script is idempotent:
+tweemaal draaien verandert niets.
+
+## Nachten, niet dagen
+
+Alles rekent in **nachten**. Een vertrekdag is de ochtend waarop je weggaat en telt zelf
+niet mee. Daardoor klopt de wisseldag vanzelf: Nadine's gast vertrekt vrijdag om 09:30, de
+Tavern komt vrijdag om 16:00 — dezelfde datum, geen gedeeld bed.
+
+Een hele-dagafspraak in Google eindigt op een datum die er níét bij hoort. Wie dat mist,
+blokkeert standaard één nacht te veel. `tests/house-calendar.test.mjs` bewaakt dat.
+
+## Wat Robert nog moet doen
+
+1. **Controleer welk Calendar ID er staat.** `c_...@group.calendar.google.com` is een eigen
+   agenda; `lewos.co@gmail.com` is je **persoonlijke** agenda. In dat tweede geval ziet
+   Nadine straks al je afspraken en kan ze erin schrijven. Maak dan een aparte agenda
+   *Lewos — Tavern & huis* en zet dat ID in `LEWOS_CALENDAR_ID`.
+2. **Nadine schrijfrechten geven**: *Wijzigingen aanbrengen in afspraken*. Niet
+   *Wijzigingen aanbrengen en delen beheren* — dan kan ze de agenda ook weggeven.
+3. **Eén keer `scripts/sync-weekend-blocks.mjs --dry-run`** draaien om te zien wat er zou
+   komen, en pas daarna zonder `--dry-run`.
+
+## Wat er niet automatisch gebeurt
+
+Een agenda-item verandert **nooit** een boeking, een betaling of een stoel. Botst er iets —
+Nadine boekt over een verkocht weekend heen — dan komt dat als **waarschuwing** bovenaan in
+de beheeromgeving te staan, met de titel van haar afspraak en de nachten die botsen. Een
+mens lost dat op.
+
+Kan de agenda niet gelezen worden, dan blokkeert de site niets en belooft ze niets: extra
+nachten blijven op aanvraag, zoals vóór deze koppeling. **Onbekend is nooit "vrij".**
+
+## Lokaal proberen
+
+`scripts/local-admin-server.mjs` bootst Google na, met de afspraken in
+`.local-data/calendar.json`. Zet daar met de hand een "boeking van Nadine" in en ververs de
+site: die nachten worden grijs, en een weekend dat zij helemaal heeft geboekt verdwijnt.
+De echte agenda wordt daarbij nooit aangeraakt.

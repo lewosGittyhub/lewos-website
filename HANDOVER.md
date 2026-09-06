@@ -355,6 +355,62 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-06 · Claude · Eén gedeelde agenda: wie het eerst boekt, heeft het · TE CONTROLEREN
+
+**Wat.** Robert en Nadine delen één Google-agenda. Zij is eigenaar van Fontecha en zet haar
+eigen verhuur er rechtstreeks in; hij ziet dat in zijn eigen Google Calendar, en de site
+leest en schrijft dezelfde lijst. Geen tweede agenda, geen synchronisatie — twee agenda's
+die elkaar bijhouden lopen uit de pas, en juist dan verkoop je een weekend twee keer.
+
+**De regel: wie het eerst boekt, heeft het.** Robert is niet de eigenaar van het huis. Een
+aangekondigd weekend is een voornemen tot er geboekt is.
+
+- `netlify/functions/_calendar.mjs`: `listEvents`, `nightsOf`, `busyNights`, plus de
+  weekendblokkade (`weekendBlockEvent`, `upsertWeekendBlock`, `removeWeekendBlock`,
+  `syncWeekendBlocks`). Alles wat wij schrijven draagt `lewosSource = "tavern-booking"`;
+  **alles zonder dat merkteken is van Nadine en betekent bezet.**
+- Nieuw: `netlify/functions/house-availability.mjs` — publiek, **alleen kale datums**. Haar
+  afspraken dragen de namen van háár gasten; die horen niet in een antwoord dat iedereen
+  kan opvragen. De beheeromgeving mag de titels wél zien, achter de controle.
+- `assets/weekend-calendar.js`: bezette nachten grijs en onklikbaar, en een weekend dat zij
+  heeft geboekt verdwijnt van de site — met *"ask us about other possibilities"*, geen
+  dichte deur.
+- `netlify/functions/_stay.mjs`: `houseNightsFree()`. De grens staat ook aan de serverkant;
+  een verzoek dat de pagina omzeilt komt hier alsnog tegen. Botst het, dan wordt de aanvraag
+  meteen weer ingetrokken en zegt het antwoord welke nachten weg zijn.
+- Nieuw: `scripts/sync-weekend-blocks.mjs`. Een weekend met minstens één geboekte stoel
+  krijgt één blokkade in de agenda, zodat Nadine ziet dat het huis weg is. Zonder boekingen
+  verdwijnt de blokkade weer — de site houdt geen huis bezet dat niemand nodig heeft.
+- `admin/`: botsingen bovenaan, met de titel van haar afspraak en de nachten die botsen.
+  **Er verandert nooit iets automatisch.**
+
+**Nachten, niet dagen.** Een vertrekdag is de ochtend waarop je weggaat en telt niet als
+nacht. Daardoor klopt de wisseldag vanzelf: haar gast vertrekt vrijdag 09:30, de Tavern komt
+vrijdag 16:00 — dezelfde datum, geen gedeeld bed. Een hele-dagafspraak in Google eindigt op
+een datum die er níét bij hoort; wie dat mist blokkeert standaard één nacht te veel.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 408 tests, 408 groen. Nieuw:
+`tests/house-calendar.test.mjs` (14 tests). Lokaal doorlopen met een nagebootste Google-
+agenda in `scripts/local-admin-server.mjs`: een boeking van Nadine op 10–12 november maakte
+die nachten grijs, een boeking dwars over Weekend 02 haalde dat weekend van de site, de
+server weigerde een aanvraag over 11 november en meldde welke nachten weg waren, en de
+beheeromgeving toonde twee botsingen met naam en nachten. **De echte agenda is niet
+aangeraakt.**
+
+**Niet geverifieerd — voor Codex.**
+
+1. De echte Google-agenda. Alles hierboven liep tegen een nabootsing; de productiecode
+   ondertekent daarbij wél echt (de testserver maakt een weggooibare RSA-sleutel), maar
+   Google zelf heeft dit niet gezien.
+2. Of `LEWOS_CALENDAR_ID` naar een eigen agenda wijst of naar Roberts **persoonlijke**
+   agenda. In dat tweede geval ziet Nadine straks al zijn afspraken. Staat als eerste punt
+   in `operations/google-agenda-koppeling.md`.
+3. Nadine heeft nog geen schrijfrechten op die agenda.
+
+**Openstaand voor Robert en Nadine.** Neemt de eerste geboekte stoel het hele weekend? En
+wat gebeurt er als het minimum van vier niet gehaald wordt? Beide staan in
+`operations/openstaande-punten.md`.
+
 ### 2026-09-06 · Claude · Migraties eindelijk tegen een echte database; vrijdagochtend hersteld · TE CONTROLEREN
 
 **Het belangrijkste eerst: de SQL is niet langer ongetest.** Er staat op deze Mac geen

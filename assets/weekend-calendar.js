@@ -58,8 +58,22 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
   let aankomst=null,vertrek=null; // ISO-datums, of null = de weekendgrens zelf
   let gewenst=1;              // aantal stoelen, bepaalt of een weekend nog past
   let eersteMaand=null;       // linkerkolom van de zichtbare maanden
+  // Nachten die het huis al kwijt is, uit de gedeelde agenda. Leeg betekent "wij weten het
+  // niet" — dan blokkeert de kalender niets en blijven extra nachten gewoon op aanvraag.
+  let bezet=new Set();
 
   const dated=()=>weekends.filter(w=>parseDay(w.startsOn)&&parseDay(w.endsOn));
+
+  // De nachten van een weekend: aankomstdag tot en met de dag vóór vertrek.
+  const nachtenVan=week=>{
+    const uit=[],eind=parseDay(week.endsOn);
+    for(let d=parseDay(week.startsOn);d<eind;d=addDays(d,1))uit.push(formatDay(d));
+    return uit;
+  };
+  // **Wie het eerst boekt, heeft het.** Staat er een boeking van Nadine over dit weekend,
+  // dan is het huis weg en gaat het weekend van de site af — niet als dichte deur, maar
+  // met de vraag om contact op te nemen.
+  const weekendBezet=week=>nachtenVan(week).some(n=>bezet.has(n));
   const huidig=()=>dated().find(w=>w.slug===gekozen)||null;
 
   // Van wanneer tot wanneer je mag kiezen. Het rekenwerk staat in `stay.js`, zodat de
@@ -109,7 +123,8 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     const isVerleden=datum<vandaag();
 
     if(blok){
-      const past=blok.remaining>=gewenst;
+      const huisWeg=weekendBezet(blok);
+      const past=blok.remaining>=gewenst&&!huisWeg;
       const isGekozen=week&&blok.slug===week.slug;
       // **Een wisseldag.** Deze dag hoort bij een ánder weekend, maar is voor jou een
       // geldige aankomst- of vertrekdag: je vertrekt om 09:30 en de volgende gasten komen
@@ -133,9 +148,11 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
       }
       const klassen=["calday","is-weekend"];
       if(isGekozen)klassen.push("is-chosen");
+      else if(huisWeg)klassen.push("is-taken");
       else if(!past)klassen.push("is-full");
       else if(blok.remaining<=2)klassen.push("is-low");
-      const zitplaatsen=blok.remaining===0?"no seats left"
+      const zitplaatsen=huisWeg?"the house is booked for these dates — ask us about other possibilities"
+        :blok.remaining===0?"no seats left"
         :!past?`only ${blok.remaining} of ${blok.capacity} seats free, not enough for ${gewenst}`
         :`${blok.remaining} of ${blok.capacity} seats free`;
       const label=isGekozen?`${blok.label}, ${blok.dateLabel} — your chosen weekend, included`
@@ -159,6 +176,10 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     const grens=venster();
     if(grens&&(iso<grens.from||iso>grens.to))
       return `<div class="calday is-outside"><span class="calday__n">${dagnummer}</span></div>`;
+    // Het huis is die nacht al verhuurd. Zichtbaar, niet te kiezen — net als bij een hotel.
+    if(bezet.has(iso))
+      return `<div class="calday is-busy" title="The house is booked for this night."`
+        +` aria-label="${iso} — the house is already booked for this night."><span class="calday__n">${dagnummer}</span></div>`;
 
     const inAanvraag=verblijf?.valid
       &&((voor&&iso>=verblijf.arrival)||(na&&iso<=verblijf.departure));
@@ -287,6 +308,15 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     // De opmaak alleen is geen grens. Deze controle is de grens.
     const grens=venster();
     if(grens&&(dag<grens.from||dag>grens.to))return;
+    if(bezet.has(dag))return;
+    // Ook geen bereik dat over een bezette nacht heen springt: elke nacht ertussen moet
+    // vrij zijn, anders vraag je een verblijf aan met een gat erin.
+    const verblijfNu=stand();
+    if(verblijfNu?.valid){
+      const van=knop.dataset.extra==="arrival"?dag:verblijfNu.weekendEnd;
+      const tot=knop.dataset.extra==="arrival"?verblijfNu.weekendStart:dag;
+      for(let d=parseDay(van);formatDay(d)<tot;d=addDays(d,1))if(bezet.has(formatDay(d)))return;
+    }
     if(knop.dataset.extra==="arrival")aankomst=(verblijf.arrival===dag)?null:dag;
     else vertrek=(verblijf.departure===dag)?null:dag;
     teken();
@@ -296,6 +326,9 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
   return {
     element:mount,
     setWeekends(lijst){weekends=Array.isArray(lijst)?lijst:[];teken();},
+    // De bezette nachten uit de gedeelde agenda. Niets doorgeven betekent "onbekend", en
+    // dan blokkeert de kalender niets — een storing mag nooit een nacht vrij verklaren.
+    setBusyNights(nachten){bezet=new Set(Array.isArray(nachten)?nachten:[]);teken();},
     setWantedSeats(aantal){
       gewenst=Number.isInteger(aantal)&&aantal>0?aantal:1;
       // Past de eerder gekozen datum niet meer bij een groter gezelschap, laat hem los

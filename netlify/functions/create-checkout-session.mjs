@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from "node:crypto";
 import {mergeLegacyDietary} from "./_dietary.mjs";
-import {readStayRequest,STAY_ERRORS} from "./_stay.mjs";
+import {readStayRequest,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 
@@ -139,8 +139,16 @@ export const handler=async event=>{
   // te betalen; een vraag over accommodatie mag dat niet omgooien. Lukt het niet, dan
   // staat de boeking er gewoon en ontbreekt alleen de aanvraag.
   if(hold.claimId&&(stayRequest.arrival||stayRequest.departure)){
-    try{await rpc("set_tavern_stay_request",{p_claim_id:hold.claimId,p_arrival:stayRequest.arrival,p_departure:stayRequest.departure});}
-    catch(error){console.error("Stay request error",error);}
+    try{
+      const opgeslagen=await rpc("set_tavern_stay_request",{p_claim_id:hold.claimId,p_arrival:stayRequest.arrival,p_departure:stayRequest.departure});
+      // Het huis kan die nachten al verhuurd zijn. Dan de aanvraag meteen weer intrekken.
+      if(opgeslagen?.status==="ok"){
+        const vrij=await houseNightsFree({arrival:opgeslagen.requestedArrival,departure:opgeslagen.requestedDeparture,
+          weekendStart:opgeslagen.weekendStart,weekendEnd:opgeslagen.weekendEnd});
+        if(vrij.known&&vrij.conflicts.length)
+          await rpc("set_tavern_stay_request",{p_claim_id:hold.claimId,p_arrival:null,p_departure:null});
+      }
+    }catch(error){console.error("Stay request error",error);}
   }
   const unitAmount=priceFromHold(hold);
   if(unitAmount===null){

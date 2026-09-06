@@ -107,6 +107,21 @@ const kiesWeekend=slug=>{
   if(item)gekozenRegel.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.`;
 };
 
+// De gedeelde agenda: welke nachten is het huis al kwijt? Lukt dit niet, dan blokkeert de
+// kalender niets — extra nachten blijven dan gewoon op aanvraag, zoals voorheen.
+const haalBezetteNachten=async(kalender,lijst)=>{
+  if(!kalender||!lijst.length)return;
+  const datums=lijst.flatMap(w=>[w.startsOn,w.endsOn]).filter(Boolean).sort();
+  const marge=(datum,dagen)=>{const d=new Date(`${datum}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+dagen);return d.toISOString().slice(0,10);};
+  try{
+    const antwoord=await fetch(`/api/house-availability?from=${marge(datums[0],-40)}&to=${marge(datums[datums.length-1],40)}`,
+      {headers:{accept:"application/json"}});
+    if(!antwoord.ok)return;
+    const gegevens=await antwoord.json();
+    if(gegevens.configured&&Array.isArray(gegevens.busyNights))kalender.setBusyNights(gegevens.busyNights);
+  }catch{/* Onbekend is niet hetzelfde als vrij: we blokkeren dan niets en beloven niets. */}
+};
+
 const bouwKalender=()=>{
   if(!kalenderVak)return;
   if(!kalender){
@@ -128,6 +143,7 @@ const bouwKalender=()=>{
   if(weekend.value)kalender.select(weekend.value);
   kiesWeekend(weekend.value);
   toonWeekendVeld();
+  haalBezetteNachten(kalender,weekends);
 };
 
 mensen?.addEventListener("input",()=>{if(kalender)kalender.setWantedSeats(Number.parseInt(mensen.value,10)||1);});

@@ -1,6 +1,6 @@
 import {createHash} from "node:crypto";
 import {mergeLegacyDietary} from "./_dietary.mjs";
-import {readStayRequest,stayRequestText,describeStay,STAY_ERRORS} from "./_stay.mjs";
+import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
@@ -198,6 +198,7 @@ export const handler=async event=>{
   // zijn plaats kosten. Lukt het niet, dan staat dat in de mail aan Robert en kan hij
   // bellen — beter dan een boeking die afketst op een nacht die toch al niet vaststond.
   let stayStored=null;
+  let bezetteNachten=[];
   if(result.claimId&&(stayRequest.arrival||stayRequest.departure)){
     try{
       const opgeslagen=await fetch(`${supabaseUrl}/rest/v1/rpc/set_tavern_stay_request`,{method:"POST",
@@ -207,6 +208,21 @@ export const handler=async event=>{
       else console.error("Stay request database error",opgeslagen.status,await opgeslagen.text());
     }catch(error){console.error("Stay request connection error",error);}
   }
+  // Is het huis die nachten al verhuurd? Pas nu de weekenddatums bekend zijn, is de reeks
+  // nachten te bepalen. Botst het, dan trekken we de aanvraag meteen weer in.
+  if(stayStored?.status==="ok"){
+    const vrij=await houseNightsFree({arrival:stayStored.requestedArrival,departure:stayStored.requestedDeparture,
+      weekendStart:stayStored.weekendStart,weekendEnd:stayStored.weekendEnd});
+    if(vrij.known&&vrij.conflicts.length){
+      bezetteNachten=vrij.conflicts;
+      try{await fetch(`${supabaseUrl}/rest/v1/rpc/set_tavern_stay_request`,{method:"POST",
+        headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},
+        body:JSON.stringify({p_claim_id:result.claimId,p_arrival:null,p_departure:null})});}
+      catch(error){console.error("Stay rollback error",error);}
+      stayStored=null;
+    }
+  }
+
   // De regel voor de accommodatie, opgebouwd uit de datums die daadwerkelijk zijn
   // opgeslagen. Is er niets opgeslagen, dan valt hij terug op wat de gast zelf schreef.
   const stayNote=stayStored?.status==="ok"
@@ -238,7 +254,8 @@ export const handler=async event=>{
     catch(error){console.error("Operator notification connection error",error);}
   }
   if(header(event,"accept").includes("application/json")) return json(200,{...result,emailSent,operatorNotified,
-    extraNightsStatus:stayStored?.extraNightsStatus||"none",extraNightsStored:stayStored?.status==="ok"});
+    extraNightsStatus:stayStored?.extraNightsStatus||"none",extraNightsStored:stayStored?.status==="ok",
+    ...(bezetteNachten.length?{houseUnavailableNights:bezetteNachten}:{})});
   if(result.status==="first_access_held") return redirect(`/thanks/?status=held&weekend=${encodeURIComponent(result.weekendLabel)}&seats=${result.seats}`);
   if(result.status==="private_inquiry") return redirect("/contact-thanks/");
   if(result.status==="alternative_offered") return redirect(`/tavern/?status=alternative&offered=${encodeURIComponent(result.offeredWeekend)}&label=${encodeURIComponent(result.offeredWeekendLabel)}&seats=${result.seats}#book`);

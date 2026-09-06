@@ -33,6 +33,11 @@
     .calday.is-past{opacity:.32}
     /* Buiten het venster: zichtbaar, niet te kiezen. Zoals een volgeboekte dag. */
     .calday.is-outside{opacity:.3}
+    /* Het huis is die nacht al verhuurd, uit de gedeelde agenda. */
+    .calday.is-busy{opacity:.55;text-decoration:line-through}
+    /* Een heel weekend dat is weggeboekt. */
+    .calday.is-taken{border-color:rgba(247,243,236,.2);background:repeating-linear-gradient(135deg,rgba(247,243,236,.05),rgba(247,243,236,.05) 4px,transparent 4px,transparent 8px);color:rgba(247,243,236,.4);cursor:not-allowed}
+    .calday.is-taken .calday__n{text-decoration:line-through}
        en goud in plaats van vol oranje. Wij weten niet of die nacht vrij is, dus mag het
        vakje dat ook niet suggereren. */
     /* Een dag die je kúnt aanklikken draagt geen rand: vijfenveertig vakjes die tegelijk

@@ -35,6 +35,31 @@ const rpc=async(naam,body)=>{
   return inhoud;
 };
 
+// Wat er in de gedeelde agenda staat en botst met wat wij verkocht hebben. Dit verandert
+// niets — het maakt zichtbaar. Een agenda-item mag nooit stilzwijgend een boeking omgooien.
+const agendaBotsingen=async boekingen=>{
+  if(!boekingen.length)return [];
+  try{
+    const {calendarConfig,listEvents,nightsOf}=await import("./_calendar.mjs");
+    const config=calendarConfig();
+    if(!config)return [];
+    const datums=boekingen.flatMap(b=>[b.arrival,b.departure]).filter(Boolean).sort();
+    const afspraken=await listEvents(config,{from:datums[0],to:datums[datums.length-1]});
+    const botsingen=[];
+    for(const afspraak of afspraken){
+      if(afspraak.ours)continue;
+      for(const boeking of boekingen){
+        // De nachten van een boeking: aankomst tot en met de dag vóór vertrek.
+        const raakt=(afspraak.nights||[]).filter(n=>n>=boeking.arrival&&n<boeking.departure);
+        if(!raakt.length)continue;
+        botsingen.push({eventId:afspraak.id,summary:afspraak.summary,
+          claimId:boeking.claimId,name:boeking.name,weekendLabel:boeking.weekendLabel,nights:raakt});
+      }
+    }
+    return botsingen;
+  }catch(error){console.error("Calendar conflict check error",error);return [];}
+};
+
 export const handler=async event=>{
   // Lezen mag met GET. Er is één schrijfhandeling: het oordeel van de accommodatie over
   // aangevraagde extra nachten. Die staat hier en niet bij de deelnemersacties, omdat hij
@@ -90,7 +115,11 @@ export const handler=async event=>{
     if(!DATUM.test(from)||!DATUM.test(to))return json(400,{error:"invalid_range"});
     if(from>to)return json(400,{error:"invalid_range"});
     const overzicht=await rpc("admin_bookings_in_range",{p_email:beheerder.email,p_from:from,p_to:to});
-    return json(200,overzicht||{bookings:[]});
+    // Botsingen met de gedeelde agenda. **Hier mag dit wél de titels tonen**: dit antwoord
+    // zit achter de beheerderscontrole, en zonder de naam van de afspraak kan niemand
+    // uitzoeken wat er aan de hand is. Het publieke eindpunt geeft alleen kale datums.
+    const conflicten=await agendaBotsingen(overzicht?.bookings||[]);
+    return json(200,{...(overzicht||{bookings:[]}),calendarConflicts:conflicten});
   }catch(error){
     // De database controleert het adres nóg een keer. Zegt zij nee, dan is dat een 403 —
     // ook als deze functie het adres wél goedkeurde. De strengste van de twee wint.

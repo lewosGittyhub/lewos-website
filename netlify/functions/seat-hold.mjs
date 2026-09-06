@@ -22,7 +22,7 @@
 
 import {createHash} from "node:crypto";
 import {mergeLegacyDietary} from "./_dietary.mjs";
-import {readStayRequest,stayRequestText,describeStay,STAY_ERRORS} from "./_stay.mjs";
+import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {FILLING_WINDOW_MINUTES,holdState,HOLD_PHASES} from "./_seat-hold.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 
@@ -151,16 +151,34 @@ export const handler=async event=>{
       // vast en de betaallinks gaan zo de deur uit — een vraag over accommodatie mag dat
       // niet meer omgooien. Lukt het niet, dan zegt het antwoord dat eerlijk.
       let stayStored=null;
+      let bezetteNachten=[];
       if(uitkomst.claimId&&(stayRequest.arrival||stayRequest.departure)){
         try{stayStored=await rpc("set_tavern_stay_request",
           {p_claim_id:uitkomst.claimId,p_arrival:stayRequest.arrival,p_departure:stayRequest.departure});}
         catch(error){console.error("Stay request error",error);}
+      }
+      // Het huis kan die nachten al verhuurd zijn — Nadine zet haar eigen verhuur in
+      // dezelfde agenda. Nu de database de weekenddatums heeft teruggegeven, is de reeks
+      // nachten bekend en kan hij getoetst worden. Botst het, dan trekken we de aanvraag
+      // meteen weer in: beter een gast die andere nachten kiest dan een aanvraag die nooit kan.
+      if(stayStored?.status==="ok"){
+        const vrij=await houseNightsFree({arrival:stayStored.requestedArrival,departure:stayStored.requestedDeparture,
+          weekendStart:stayStored.weekendStart,weekendEnd:stayStored.weekendEnd});
+        if(vrij.known&&vrij.conflicts.length){
+          bezetteNachten=vrij.conflicts;
+          try{await rpc("set_tavern_stay_request",{p_claim_id:uitkomst.claimId,p_arrival:null,p_departure:null});}
+          catch(error){console.error("Stay rollback error",error);}
+          stayStored=null;
+        }
       }
       const stayNote=stayStored?.status==="ok"
         ?stayRequestText(describeStay({weekendStart:stayStored.weekendStart,weekendEnd:stayStored.weekendEnd,
            arrival:stayStored.requestedArrival,departure:stayStored.requestedDeparture}))
         :"";
       return json(200,{...uitkomst,
+        // Zijn er nachten weggeboekt, dan zegt het antwoord dat — de boeking zelf staat er
+        // gewoon, alleen de extra nachten zijn niet opgeslagen.
+        ...(bezetteNachten.length?{houseUnavailableNights:bezetteNachten}:{}),
         extraNightsStatus:stayStored?.extraNightsStatus||"none",
         extraNightsStored:(stayRequest.arrival||stayRequest.departure)?stayStored?.status==="ok":null,
         extraNightsRequest:stayNote});
