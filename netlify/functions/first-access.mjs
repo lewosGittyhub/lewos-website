@@ -1,7 +1,10 @@
 import {createHash} from "node:crypto";
+import {mergeLegacyDietary} from "./_dietary.mjs";
+import {readStayRequest,stayRequestText,describeStay,STAY_ERRORS} from "./_stay.mjs";
 import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
+import {readRecipients} from "./_recipients.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const redirect=location=>({statusCode:303,headers:{location,"cache-control":"no-store"},body:""});
@@ -9,7 +12,7 @@ const header=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.t
 const parseBody=event=>header(event,"content-type").includes("application/json")?JSON.parse(event.body||"{}"):Object.fromEntries(new URLSearchParams(event.body||""));
 const clientAddress=event=>header(event,"x-nf-client-connection-ip")||header(event,"x-forwarded-for").split(",")[0].trim()||"unknown";
 const rateKey=value=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${value}`).digest("hex");
-const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","invalid_allergies","invalid_dietary","email_claim_limit","first_access_closed"]);
+const knownInputErrors=new Set(["party_too_large","private_party_too_small","unknown_weekend","invalid_name","invalid_email","invalid_party_size","invalid_allergies","invalid_dietary","invalid_dietary_notes","email_claim_limit","first_access_closed"]);
 const firstAccessClosesAt=()=>{
   const value=Date.parse(process.env.PUBLIC_BOOKING_OPENS_AT||"");
   return Number.isFinite(value)?value:null;
@@ -27,7 +30,7 @@ const databasePublicBookingReady=async({supabaseUrl,serviceKey})=>{
   return await response.json()===true;
 };
 
-const sendGuestEmail=async({email,name,people,result,allergies,dietary,notes})=>{
+const sendGuestEmail=async({email,name,people,result,dietaryNotes,notes})=>{
   const apiKey=process.env.RESEND_API_KEY;
   const from=process.env.TAVERN_FROM_EMAIL;
   if(!apiKey||!from)return null;
@@ -49,7 +52,7 @@ const sendGuestEmail=async({email,name,people,result,allergies,dietary,notes})=>
   // Terugkoppelen wat de gast heeft ingevuld. Wie een allergie doorgeeft moet in zijn
   // eigen postvak kunnen nalezen dat hij goed is aangekomen, en een fout kunnen melden.
   const genoteerd=labelledBlock(
-    [["Allergies",allergies],["Dietary requirements",dietary],["Anything else",notes]],
+    [["Allergies & dietary requirements",dietaryNotes],["Anything else",notes]],
     "We have noted the following. If anything here is wrong or incomplete, reply to this email and we will correct it."
   );
   const tekst=`Hi ${name},\n\n${message}${genoteerd.text}\n\nThe first story can only be told once.\n\nRobert\nThe Lewos Tavern`;
@@ -58,6 +61,53 @@ const sendGuestEmail=async({email,name,people,result,allergies,dietary,notes})=>
     html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Hi ${escapeHtml(name)},</h1><p>${escapeHtml(message)}</p>${genoteerd.html}<p>The first story can only be told once.</p><p>Robert<br>The Lewos Tavern</p></div>`
   }))});
   if(!response.ok){console.error("First Access email error",response.status,await response.text());return null;}
+  const delivery=await response.json();
+  return delivery.id||"resend-accepted";
+};
+
+// Naar Lewos, en nooit naar de accommodatie. Dit formulier levert geen bevestigde
+// boeking op — het houdt stoelen vast of registreert een aanvraag — dus Fontecha heeft
+// hier niets te ontvangen. Wat hier wél binnenkomt is precies het soort bericht dat op
+// het adres van Lewos hoort: een aanvraag voor een private Tavern, een allergie, een
+// dieetwens, een vraag over toegankelijkheid.
+//
+// Zonder deze mail stond zo'n bericht alleen in Supabase en moest Robert er zelf naar
+// gaan zoeken. Een allergie die niemand ziet, is een allergie die niet is doorgegeven.
+//
+// Faalt hij, dan blijft dat bij een regel in het log. De gast heeft zijn ontvangst-
+// bevestiging al en zijn stoelen staan vast; die mag niet alsnog een foutmelding
+// krijgen omdat ons eigen postvak onbereikbaar is.
+const sendOperatorEmail=async({email,name,people,weekend,result,dietaryNotes,extraNights,stayFailed=false,notes})=>{
+  const apiKey=process.env.RESEND_API_KEY;
+  const from=process.env.TAVERN_FROM_EMAIL;
+  if(!apiKey||!from)return null;
+  const bijzonderheden=labelledBlock(
+    [["Allergies & dietary requirements",dietaryNotes],["Extra nights requested",extraNights],
+     // Staat deze regel er, dan heeft de gast wél nachten aangeklikt maar is de aanvraag
+     // niet opgeslagen. Dan moet iemand hem bellen in plaats van erop te vertrouwen.
+     ["Needs a call",stayFailed?"The guest asked for extra nights but the request could not be stored. Ask them which nights they meant.":""],
+     ["Anything else",notes]],
+    "What they told us:"
+  );
+  // Een private Tavern is altijd een gesprek. De rest alleen wanneer er iets te melden is.
+  if(result.status!=="private_inquiry"&&!bijzonderheden.text)return "nothing_to_report";
+  const {general}=readRecipients();
+  const soort=result.status==="private_inquiry"?"A private Tavern request":"A Tavern registration";
+  const aanvraag=labelledBlock([
+    ["Name",name],
+    ["Email",email],
+    ["Party size",String(people)],
+    ["Requested weekend",weekend],
+    ["Assigned weekend",result.weekendLabel],
+    ["Status",result.status],
+    ["Reference",result.claimId]
+  ],"Request:");
+  const tekst=`${soort} came in through lewos.co.${aanvraag.text}${bijzonderheden.text}\n\nThe Lewos Tavern`;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${apiKey}`,"content-type":"application/json","idempotency-key":`first-access-operator-${result.claimId}`},body:JSON.stringify(resendPayload({
+    from,to:[general],subject:`${soort} — ${name}`,text:tekst,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:24px">${escapeHtml(soort)} came in through lewos.co.</h1>${aanvraag.html}${bijzonderheden.html}<p>The Lewos Tavern</p></div>`
+  }))});
+  if(!response.ok){console.error("Operator notification error",response.status,await response.text());return null;}
   const delivery=await response.json();
   return delivery.id||"resend-accepted";
 };
@@ -88,9 +138,24 @@ export const handler=async event=>{
   // betekende dat een gast dacht dat hij iets had doorgegeven wat nooit is aangekomen.
   // Te lang wordt nu geweigerd, met het veld en het aantal tekens erbij.
   const message=String(input.message||"").trim();
+  // Eén veld sinds 5 september 2026. `allergies` en `dietary` worden nog aangenomen van
+  // oudere clients — een tabblad dat al openstond mag niet stilzwijgend zijn allergie
+  // kwijtraken — en worden dan samengevoegd tot dezelfde ene tekst.
   const allergies=String(input.allergies||"").trim();
   const dietary=String(input.dietary||"").trim();
-  const teLang=tooLongFields({name,email,allergies,dietary,message});
+  const dietaryNotes=String(input.dietaryNotes||"").trim()||mergeLegacyDietary(allergies,dietary);
+  // Extra nachten voor of na het weekend. Het enige veld op dit formulier dat over de
+  // accommodatie gaat en niet over de tafel; het reist mee naar Supabase zodat het bij een
+  // bevestigde boeking mee kan naar Fontecha.
+  // Extra nachten komen als datums binnen, niet als tekst. De zin die de accommodatie
+  // straks leest wordt hieruit afgeleid — zie `_stay.mjs` en `assets/stay.js`. Oudere
+  // clients die nog vrije tekst sturen worden niet stilzwijgend genegeerd: die tekst gaat
+  // gewoon mee als wat hij is, de eigen woorden van de gast.
+  let stayRequest;
+  try{stayRequest=readStayRequest(input);}
+  catch(error){return json(422,{error:error.message,message:STAY_ERRORS[error.message]||"We could not read those dates."});}
+  const extraNights=String(input.extraNights||"").trim();
+  const teLang=tooLongFields({name,email,dietaryNotes,allergies,dietary,extraNights,message});
   if(teLang.length) return json(400,{error:"field_too_long",fields:teLang});
   if(name.length<NAME_MIN||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(people)||people<1||people>12||!input.consent) return json(400,{error:"invalid_details"});
   if(!["weekend-01","weekend-02","private"].includes(weekend)) return json(400,{error:"invalid_weekend"});
@@ -119,7 +184,7 @@ export const handler=async event=>{
   }catch(error){console.error("Rate limit connection error",error);return json(503,{error:"booking_service_unavailable"});}
   let result;
   try{
-    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message,p_allergies:allergies,p_dietary:dietary,p_first_access_closes_at:weekend==="private"?null:new Date(closesAt).toISOString()})});
+    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/register_tavern_interest`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:JSON.stringify({p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_message:message,p_allergies:allergies,p_dietary:dietary,p_dietary_notes:dietaryNotes,p_extra_nights:extraNights,p_first_access_closes_at:weekend==="private"?null:new Date(closesAt).toISOString()})});
     if(!response.ok){
       const inputError=await databaseError(response);
       if(inputError)return json(422,{error:inputError});
@@ -128,10 +193,32 @@ export const handler=async event=>{
     }
     result=await response.json();
   }catch(error){console.error("First Access connection error",error);return json(503,{error:"booking_service_unavailable"});}
+  // De aanvraag voor extra nachten, apart weggeschreven. **Bewust ná de registratie en
+  // bewust niet blokkerend**: een optionele vraag over accommodatie mag een gast nooit
+  // zijn plaats kosten. Lukt het niet, dan staat dat in de mail aan Robert en kan hij
+  // bellen — beter dan een boeking die afketst op een nacht die toch al niet vaststond.
+  let stayStored=null;
+  if(result.claimId&&(stayRequest.arrival||stayRequest.departure)){
+    try{
+      const opgeslagen=await fetch(`${supabaseUrl}/rest/v1/rpc/set_tavern_stay_request`,{method:"POST",
+        headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},
+        body:JSON.stringify({p_claim_id:result.claimId,p_arrival:stayRequest.arrival,p_departure:stayRequest.departure})});
+      if(opgeslagen.ok)stayStored=await opgeslagen.json();
+      else console.error("Stay request database error",opgeslagen.status,await opgeslagen.text());
+    }catch(error){console.error("Stay request connection error",error);}
+  }
+  // De regel voor de accommodatie, opgebouwd uit de datums die daadwerkelijk zijn
+  // opgeslagen. Is er niets opgeslagen, dan valt hij terug op wat de gast zelf schreef.
+  const stayNote=stayStored?.status==="ok"
+    ?stayRequestText(describeStay({weekendStart:stayStored.weekendStart,weekendEnd:stayStored.weekendEnd,
+       arrival:stayStored.requestedArrival,departure:stayStored.requestedDeparture}))
+    :"";
+  const stayFailed=Boolean((stayRequest.arrival||stayRequest.departure)&&stayStored?.status!=="ok");
+
   let emailSent=result.receiptEmailSent===true;
   if(!emailSent&&result.claimId){
     let providerId=null;
-    try{providerId=await sendGuestEmail({email,name,people,result,allergies,dietary,notes:message});}catch(error){console.error("First Access email connection error",error);}
+    try{providerId=await sendGuestEmail({email,name,people,result,dietaryNotes,notes:message});}catch(error){console.error("First Access email connection error",error);}
     emailSent=Boolean(providerId);
     if(providerId){
       try{
@@ -144,7 +231,14 @@ export const handler=async event=>{
       }catch(error){console.error("First Access email mark connection error",error);}
     }
   }
-  if(header(event,"accept").includes("application/json")) return json(200,{...result,emailSent});
+  let operatorNotified=false;
+  if(result.claimId){
+    try{operatorNotified=Boolean(await sendOperatorEmail({email,name,people,weekend,result,dietaryNotes,
+      extraNights:stayNote||extraNights,stayFailed,notes:message}));}
+    catch(error){console.error("Operator notification connection error",error);}
+  }
+  if(header(event,"accept").includes("application/json")) return json(200,{...result,emailSent,operatorNotified,
+    extraNightsStatus:stayStored?.extraNightsStatus||"none",extraNightsStored:stayStored?.status==="ok"});
   if(result.status==="first_access_held") return redirect(`/thanks/?status=held&weekend=${encodeURIComponent(result.weekendLabel)}&seats=${result.seats}`);
   if(result.status==="private_inquiry") return redirect("/contact-thanks/");
   if(result.status==="alternative_offered") return redirect(`/tavern/?status=alternative&offered=${encodeURIComponent(result.offeredWeekend)}&label=${encodeURIComponent(result.offeredWeekendLabel)}&seats=${result.seats}#book`);

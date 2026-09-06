@@ -589,4 +589,230 @@ begin
   end if;
 end $$;
 
+
+-- ═══════════════════════════════════════════════════════════════════════════
+--  Toegevoegd 6 september 2026: het verblijfsvenster, het samengevoegde
+--  dieetveld en de beheerfuncties. Alles rolt terug.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ── Het venster waarin een gast mag kiezen ─────────────────────────────────
+do $$
+declare
+  w public.tavern_weekends%rowtype;
+  van date; tot date;
+begin
+  select * into w from public.tavern_weekends where slug='weekend-01';
+  select s.van, s.tot into van, tot from private.stay_window(w) s;
+  -- Weekend 01 loopt van vrijdag 30 oktober tot maandag 2 november.
+  if van <> date '2026-10-26' then
+    raise exception 'venster_begint_niet_op_de_maandag_ervoor: %', van;
+  end if;
+  -- **De wisseldag telt mee.** Weekend 02 begint vrijdag 6 november; jij vertrekt die
+  -- ochtend om 09:30, zij komen om 16:00. Jouw laatste nacht is donderdag de 5e, hun
+  -- eerste nacht is vrijdag de 6e. Die botsen niet, dus de 6e mag je vertrekdag zijn.
+  if tot <> date '2026-11-06' then
+    raise exception 'vrijdagochtend_is_geen_geldige_vertrekdag: %', tot;
+  end if;
+
+  select * into w from public.tavern_weekends where slug='weekend-02';
+  select s.van, s.tot into van, tot from private.stay_window(w) s;
+  -- Andersom net zo: aankomen op de dag dat het vorige weekend vertrekt.
+  if van <> date '2026-11-02' then
+    raise exception 'aankomen_op_de_wisseldag_kan_niet: %', van;
+  end if;
+end $$;
+
+-- ── De aanvraag zelf: de grens staat in de database, niet alleen in de browser ──
+do $$
+declare
+  weekend_id uuid;
+  claim_id uuid;
+  uitkomst jsonb;
+  geweigerd boolean;
+begin
+  select id into weekend_id from public.tavern_weekends where slug='weekend-01';
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
+    values('Venster Gast','venster-test@example.invalid',2,weekend_id,'first_access_held',now())
+    returning id into claim_id;
+
+  -- Vrijdagochtend 6 november moet kunnen.
+  uitkomst:=public.set_tavern_stay_request(claim_id, date '2026-10-26', date '2026-11-06');
+  if uitkomst->>'status' <> 'ok' then raise exception 'geldige_aanvraag_werd_geweigerd: %', uitkomst; end if;
+  if (uitkomst->>'nightsAfter')::int <> 4 then
+    raise exception 'de_nachten_na_het_weekend_kloppen_niet: %', uitkomst->>'nightsAfter';
+  end if;
+
+  -- Zaterdag de 7e niet: dan slaap je een nacht die van het volgende weekend is.
+  geweigerd:=false;
+  begin
+    perform public.set_tavern_stay_request(claim_id, null, date '2026-11-07');
+  exception when others then
+    if sqlerrm='stay_departure_too_late' then geweigerd:=true; else raise; end if;
+  end;
+  if not geweigerd then raise exception 'een_nacht_van_het_volgende_weekend_kwam_erdoor'; end if;
+
+  -- En vóór de maandag ervóór ook niet.
+  geweigerd:=false;
+  begin
+    perform public.set_tavern_stay_request(claim_id, date '2026-10-25', null);
+  exception when others then
+    if sqlerrm='stay_arrival_too_early' then geweigerd:=true; else raise; end if;
+  end;
+  if not geweigerd then raise exception 'een_te_vroege_aankomst_kwam_erdoor'; end if;
+
+  -- Het bevestigde verblijf blijft ondertussen het weekend zelf.
+  if exists(select 1 from public.tavern_seat_claims
+             where id=claim_id and (arrival_date is not null or departure_date is not null)) then
+    raise exception 'een_aanvraag_gold_meteen_als_bevestigd_verblijf';
+  end if;
+  if (select extra_nights_status from public.tavern_seat_claims where id=claim_id) <> 'requested' then
+    raise exception 'de_status_staat_niet_op_requested';
+  end if;
+end $$;
+
+-- ── Allergieën en dieetwensen: één veld, bestaande gegevens behouden ───────
+do $$
+declare
+  weekend_id uuid;
+  oud_id uuid;
+  detail jsonb;
+  overzicht jsonb;
+  admin_email text := 'lewos.co@gmail.com';
+  geweigerd boolean;
+begin
+  select id into weekend_id from public.tavern_weekends where slug='weekend-01';
+
+  -- Een boeking van vóór de samenvoeging: twee gevulde kolommen, `dietary_notes` leeg.
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,
+      allergies,dietary_requirements,consented_at)
+    values('Oude Boeking','oud-dieet@example.invalid',2,weekend_id,'paid',
+      'Peanuts - severe','Vegetarian',now())
+    returning id into oud_id;
+
+  -- De samenvoeging plakt ze aan elkaar mét hun kopje, en verliest niets.
+  if private.merged_dietary_text('Peanuts - severe','Vegetarian')
+     <> E'Allergies: Peanuts - severe\nDietary requirements: Vegetarian' then
+    raise exception 'de_samenvoeging_heeft_een_andere_vorm: %',
+      private.merged_dietary_text('Peanuts - severe','Vegetarian');
+  end if;
+  if private.merged_dietary_text(null,null) is not null then
+    raise exception 'twee_lege_velden_leveren_geen_null_op';
+  end if;
+
+  -- Het detailvenster toont één tekst met beide regels erin, en de oude velden staan er
+  -- niet los naast — anders leest iemand dezelfde allergie twee keer.
+  detail:=public.admin_booking_detail(admin_email, oud_id);
+  if detail->>'dietaryNotes' is null or detail->>'dietaryNotes' not like '%Peanuts - severe%'
+     or detail->>'dietaryNotes' not like '%Vegetarian%' then
+    raise exception 'bestaande_dieetgegevens_zijn_verdwenen: %', detail->>'dietaryNotes';
+  end if;
+  if detail ? 'allergies' or detail ? 'dietary' then
+    raise exception 'de_oude_velden_staan_er_nog_los_naast';
+  end if;
+
+  -- Het maandoverzicht draagt er niets van.
+  overzicht:=public.admin_bookings_in_range(admin_email, date '2026-10-01', date '2026-11-30');
+  if overzicht::text like '%Peanuts%' or overzicht::text like '%Vegetarian%' then
+    raise exception 'het_maandoverzicht_draagt_gezondheidsgegevens_mee';
+  end if;
+
+  -- Een nieuwe aanmelding schrijft naar het nieuwe veld.
+  perform public.register_tavern_interest('Nieuwe Gast','nieuw-dieet@example.invalid',2,'weekend-01',
+    null, now()+interval '1 hour', null, null, null, 'Ana: peanut allergy. Bram: vegetarian.');
+  if (select dietary_notes from public.tavern_seat_claims where email='nieuw-dieet@example.invalid')
+     <> 'Ana: peanut allergy. Bram: vegetarian.' then
+    raise exception 'het_gecombineerde_veld_kwam_niet_in_de_database';
+  end if;
+
+  -- En een lege waarde wist nooit wat er al stond.
+  perform public.register_tavern_interest('Nieuwe Gast','nieuw-dieet@example.invalid',2,'weekend-01',
+    null, now()+interval '1 hour', null, null, null, null);
+  if (select dietary_notes from public.tavern_seat_claims where email='nieuw-dieet@example.invalid') is null then
+    raise exception 'een_lege_waarde_wiste_het_dieetveld';
+  end if;
+
+  -- Te lang wordt geweigerd, niet afgekapt.
+  geweigerd:=false;
+  begin
+    perform public.register_tavern_interest('Lange Tekst','lang-dieet@example.invalid',2,'weekend-01',
+      null, now()+interval '1 hour', null, null, null, repeat('p',1001));
+  exception when others then
+    if sqlerrm='invalid_dietary_notes' then geweigerd:=true; else raise; end if;
+  end;
+  if not geweigerd then raise exception 'een_te_lang_dieetveld_kwam_erdoor'; end if;
+end $$;
+
+-- ── Het oordeel van de accommodatie over extra nachten ─────────────────────
+do $$
+declare
+  weekend_id uuid;
+  boeking_id uuid;
+  uitkomst jsonb;
+  geweigerd boolean;
+begin
+  select id into weekend_id from public.tavern_weekends where slug='weekend-01';
+  insert into public.tavern_seat_claims(name,email,party_size,assigned_weekend_id,status,consented_at)
+    values('Oordeel Gast','oordeel-test@example.invalid',2,weekend_id,'paid',now())
+    returning id into boeking_id;
+  perform public.set_tavern_stay_request(boeking_id, date '2026-10-28', date '2026-11-04');
+
+  -- Een vreemde mag niet beslissen.
+  geweigerd:=false;
+  begin
+    perform public.admin_decide_extra_nights('iemand.anders@example.invalid',boeking_id,'confirmed');
+  exception when others then
+    if sqlerrm='not_an_administrator' then geweigerd:=true; else raise; end if;
+  end;
+  if not geweigerd then raise exception 'een_vreemde_kon_extra_nachten_bevestigen'; end if;
+
+  -- Méér bevestigen dan gevraagd kan niet.
+  geweigerd:=false;
+  begin
+    perform public.admin_decide_extra_nights('lewos.co@gmail.com',boeking_id,'confirmed',
+      date '2026-10-26', date '2026-11-04');
+  exception when others then
+    if sqlerrm='stay_more_than_requested' then geweigerd:=true; else raise; end if;
+  end;
+  if not geweigerd then raise exception 'er_kon_meer_bevestigd_worden_dan_gevraagd'; end if;
+
+  -- Bevestigen zet het verblijf, en pas dán schuift de aankomstdatum op.
+  uitkomst:=public.admin_decide_extra_nights('lewos.co@gmail.com',boeking_id,'confirmed');
+  if uitkomst->>'status' <> 'ok' then raise exception 'bevestigen_lukte_niet: %', uitkomst; end if;
+  if (select arrival_date from public.tavern_seat_claims where id=boeking_id) <> date '2026-10-28' then
+    raise exception 'het_bevestigde_verblijf_is_niet_bijgewerkt';
+  end if;
+  if (select extra_nights_status from public.tavern_seat_claims where id=boeking_id) <> 'confirmed' then
+    raise exception 'de_status_staat_niet_op_confirmed';
+  end if;
+
+  -- Wijzigt de gast daarna zijn datums, dan vervalt die bevestiging.
+  perform public.set_tavern_stay_request(boeking_id, date '2026-10-29', date '2026-11-04');
+  if (select extra_nights_status from public.tavern_seat_claims where id=boeking_id) <> 'requested'
+     or (select arrival_date from public.tavern_seat_claims where id=boeking_id) is not null then
+    raise exception 'een_gewijzigde_aanvraag_hield_de_oude_bevestiging';
+  end if;
+
+  -- Elke beslissing is vastgelegd.
+  if (select count(*) from public.lewos_admin_actions
+       where claim_id=boeking_id and action like 'extra_nights_%') = 0 then
+    raise exception 'het_oordeel_is_niet_vastgelegd';
+  end if;
+end $$;
+
+-- ── Geen dubbele handtekeningen na het toevoegen van parameters ────────────
+do $$
+declare naam text; aantal integer;
+begin
+  foreach naam in array array['register_tavern_interest','begin_tavern_checkout',
+                              'begin_tavern_first_access_checkout','promote_seat_hold_to_payment']
+  loop
+    select count(*) into aantal from pg_proc p
+      join pg_namespace n on n.oid=p.pronamespace
+     where n.nspname='public' and p.proname=naam;
+    if aantal <> 1 then
+      raise exception 'er_staan_% versies_van_%_naast_elkaar', aantal, naam;
+    end if;
+  end loop;
+end $$;
+
 rollback;

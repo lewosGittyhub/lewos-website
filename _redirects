@@ -2,6 +2,13 @@
 /api/checkout  /.netlify/functions/create-checkout-session  200
 /api/stripe-webhook  /.netlify/functions/stripe-webhook  200
 /api/media-consent  /.netlify/functions/media-consent  200
+/api/contact  /.netlify/functions/contact  200
+/api/hold  /.netlify/functions/seat-hold  200
+/api/hold/*  /.netlify/functions/seat-hold  200
+/api/admin/config  /.netlify/functions/admin-config  200
+/api/admin/bookings  /.netlify/functions/admin-bookings  200
+/api/admin/bookings/*  /.netlify/functions/admin-bookings  200
+/api/admin/participants/*  /.netlify/functions/admin-actions  200
 /HANDOVER.md  /404.html  404!
 /AGENTS.md  /404.html  404!
 /CLAUDE.md  /404.html  404!

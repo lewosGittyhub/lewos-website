@@ -244,6 +244,48 @@
     .calday.is-full { border-color: rgba(237,230,218,.16); background: repeating-linear-gradient(135deg, rgba(247,243,236,.06), rgba(247,243,236,.06) 4px, transparent 4px, transparent 8px); color: rgba(237,230,218,.42); cursor: not-allowed; }
     .calday.is-full .calday__n { text-decoration: line-through; }
     .calday:focus-visible { outline: 3px solid #f4a285; outline-offset: 2px; }
+    /* De maandnavigatie. Er zit geen bovengrens op het aantal extra nachten, dus er zit
+       ook geen bovengrens op hoe ver je vooruit kunt bladeren. Terug kan niet verder dan
+       de huidige maand: aankomen in het verleden is geen aanvraag. */
+    .calnav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .calnav__label { color: var(--cream); font: 600 .86rem/1.2 "Poppins", sans-serif; }
+    .calnav__btn { min-width: 44px; min-height: 44px; padding: 0 12px; border: 1px solid rgba(237,230,218,.42); border-radius: var(--radius-small); background: rgba(247,243,236,.1); color: var(--cream); font: inherit; cursor: pointer; }
+    .calnav__btn:hover:not([disabled]) { border-color: var(--orange); }
+    .calnav__btn[disabled] { opacity: .32; cursor: not-allowed; }
+    .calday.is-past { opacity: .32; }
+    /* Buiten het venster dat op deze pagina staat beschreven: zichtbaar, niet te kiezen.
+       Zoals een volgeboekte dag bij een hotel. Wat je dan wél kunt doen staat eronder. */
+    .calday.is-outside { opacity: .3; }
+    /* Een dag die je kúnt aanklikken draagt geen rand. Stond die er wel, dan vroegen er
+       vijfenveertig vakjes tegelijk om aandacht en was je eigen weekend niet meer te
+       vinden. Hij laat zich zien zodra je hem aanwijst. */
+    .calday.is-open { color: rgba(237,230,218,.78); cursor: pointer; }
+    .calday.is-open:hover { background: rgba(229,100,58,.2); color: var(--cream); }
+    /* Aangevraagde nachten kleuren mee in hetzelfde oranje als het weekend, zodat het
+       verblijf als één reeks leest. **Een tint lichter**, want ze zijn aangevraagd en niet
+       geboekt: de accommodatie moet ze nog bevestigen. Dat verschil staat er ook in
+       woorden bij, in de legenda en in de zin onder de kalender. */
+    .calday.is-requested { border-color: var(--orange); background: rgba(229,100,58,.5); color: var(--white); font-weight: 600; }
+    /* Een wisseldag: hij hoort bij een ánder Tavern-weekend, maar mag jouw aankomst- of
+       vertrekdag zijn — de ene groep vertrekt 's ochtends, de andere komt 's middags. Het
+       ringetje zegt dat er die dag nog iets anders speelt. */
+    .calday.is-turnover { box-shadow: inset 0 0 0 1px rgba(237,230,218,.34); }
+    /* De twee uiteinden van je verblijf: je aankomst- en je vertrekdag. */
+    .calday.is-edge { border-width: 2px; }
+    /* Wat je zou krijgen als je hier klikt. */
+    .calday.is-preview { border-color: rgba(229,100,58,.55); background: rgba(229,100,58,.26); color: var(--cream); }
+    .callegend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; color: var(--beige); font-size: .82rem; }
+    .callegend__item { display: inline-flex; align-items: center; gap: 7px; }
+    .callegend__swatch { width: 15px; height: 15px; border: 1px solid rgba(237,230,218,.42); border-radius: 4px; }
+    .callegend__swatch.is-chosen { border-color: var(--orange); background: var(--orange); }
+    .callegend__swatch.is-requested { border-color: var(--orange); background: rgba(229,100,58,.5); }
+    .callegend__clear { min-height: 38px; padding: 7px 13px; border: 1px solid rgba(237,230,218,.42); border-radius: var(--radius-small); background: transparent; color: var(--cream); font: inherit; font-size: .8rem; cursor: pointer; }
+    .callegend__clear:hover { border-color: var(--orange); }
+    .calendar__hint { margin: 0; color: var(--beige); font-size: .85rem; }
+    /* Zonder deze regel wordt de link standaard browserblauw op donkergroen. */
+    .calendar__hint a { color: var(--orange); font-weight: 600; }
+    .calendar__stay { margin: 0; color: var(--cream); font: 600 .95rem/1.5 "Poppins", sans-serif; }
+    .form-field__legend { font: 600 .86rem/1.4 "Poppins", sans-serif; }
     .calendar__chosen { margin: 0; color: var(--cream); font: 700 clamp(1.05rem, 1.5vw, 1.22rem)/1.4 "Poppins", sans-serif; }
     /* Een vierkant hokje wordt op een telefoon te klein om met een duim te raken.
        Laat de hoogte dan los van de breedte lopen. */
@@ -254,6 +296,10 @@
     .form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 52px; padding: 13px 14px; border: 1px solid rgba(247,243,236,.5); border-radius: var(--radius-small); background: rgba(247,243,236,.12); color: var(--cream); font: inherit; }
     .form-field select option { color: var(--green); background: var(--cream); }
     .form-field textarea { min-height: 120px; resize: vertical; }
+    /* De voorbeeldtekst van dit veld loopt op een telefoon over vijf regels. Een vak dat
+       er vier toont kapt hem af, en juist de laatste regel ("Leave empty if none.")
+       is de regel die zegt dat het veld optioneel is. */
+    .form-field textarea[data-limit="dietaryNotes"] { min-height: 172px; }
     /* De labels zijn ongelijk lang, dus lijn de velden op hun onderkant uit in plaats
        van op hun bovenkant; anders zakt het invoerveld weg onder het prijsvakje. */
     .party { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
@@ -271,6 +317,7 @@
     .booking-result[data-type="alternative"] { border-color: var(--orange); }
     .booking-result[data-type="error"] { border-color: #f4a285; }
     .booking__micro { max-width: 690px; margin: -5px 0 0; color: rgba(237,230,218,.72); font-size: .8rem; }
+    .field-hint { display: block; margin-top: 6px; color: rgba(237,230,218,.72); font-size: .8rem; }
     .booking__terms { max-width: 690px; margin: 0; padding: 12px 14px; border-left: 3px solid var(--orange); background: rgba(247,243,236,.07); color: var(--cream); font-size: .88rem; }
     .bot-field { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -664,10 +711,13 @@
           <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
           <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
           <div class="form-field">
-            <div class="calendar" data-weekend-calendar aria-label="Pick a Tavern weekend">
-              <div class="calendar__months" data-calendar-months></div>
-              <p class="calendar__chosen" data-calendar-chosen role="status"></p>
-            </div>
+            <span class="form-field__legend" id="stay-legend">Your weekend, and the nights around it</span>
+            <div class="calendar" data-weekend-calendar aria-labelledby="stay-legend"></div>
+            <p class="calendar__chosen" data-calendar-chosen role="status" hidden></p>
+            <p class="calendar__stay" data-stay-line role="status" hidden></p>
+            <small class="field-hint" data-stay-hint hidden>Extra nights are available on request only and depend on accommodation availability. Only the weekend itself is part of this request, and only the weekend is priced.</small>
+            <input type="hidden" name="requestedArrival" data-stay-arrival>
+            <input type="hidden" name="requestedDeparture" data-stay-departure>
             <a class="link-button" href="/tavern/private/">Planning a private Tavern for 4 to 12 players? →</a>
             <div data-weekend-field>
             <label for="weekend">Which weekend?</label>
@@ -683,8 +733,7 @@
             <div class="form-field"><label for="people">How many of you?</label><input id="people" name="people" type="number" min="1" max="12" required></div>
             <div class="form-field"><label for="party-price">Total</label><output class="party__price" id="party-price" data-party-price for="people" data-empty>&mdash;</output></div>
           </div>
-          <div class="form-field"><label for="allergies">Allergies</label><textarea id="allergies" name="allergies" rows="2" data-limit="allergies" placeholder="List each allergy and how serious it is. Leave empty if you have none."></textarea></div>
-          <div class="form-field"><label for="dietary">Dietary requirements</label><textarea id="dietary" name="dietary" rows="2" data-limit="dietary" placeholder="Vegetarian, vegan, gluten-free, anything else we should cook around. Leave empty if you have none."></textarea></div>
+          <div class="form-field"><label for="dietaryNotes">Allergies &amp; dietary requirements</label><textarea id="dietaryNotes" name="dietaryNotes" rows="4" data-limit="dietaryNotes" placeholder="Tell us about any allergies, how severe they are, and dietary requirements. For a group, include who each requirement applies to. Leave empty if none."></textarea></div>
           <div class="form-field"><label for="message">Anything else we should know?</label><textarea id="message" name="message" data-limit="message" placeholder="Anything that affects the weekend, or anything else you want to tell us."></textarea></div>
           <div class="consent"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about The Lewos Tavern. <a href="/privacy/">details</a></label></div>
           <p class="booking-result" data-booking-result role="status" tabindex="-1" hidden></p>
@@ -798,7 +847,7 @@
     </div>
   </footer>
   <script src="/assets/field-limits.js" defer></script>
-  <script src="first-access.js" defer></script>
+  <script type="module" src="first-access.js"></script>
   <script src="surroundings.js" defer></script>
   <script>
     const faqItems=[...document.querySelectorAll(".faq details")].map(item=>({"@type":"Question",name:item.querySelector("summary")?.textContent.trim(),acceptedAnswer:{"@type":"Answer",text:[...item.querySelectorAll("p")].map(p=>p.textContent.trim()).join(" ")}})).filter(item=>item.name&&item.acceptedAnswer.text);

@@ -5,12 +5,14 @@ import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 let registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};
 let emailRequests=0;
+let mailBodies=[];
 let markRequests=0;
 let markStatus="marked";
 let publicReady=true;
 let rateAllowed=true;
 let registrationError="";
 let rateBodies=[];
+let registerBodies=[];
 let server;
 let base;
 const nativeFetch=globalThis.fetch;
@@ -25,11 +27,12 @@ before(async()=>{
       if(request.url==="/rest/v1/rpc/tavern_public_booking_ready") return response.end(JSON.stringify(publicReady));
       if(request.url==="/rest/v1/rpc/check_tavern_request_limit"){rateBodies.push(JSON.parse(body));return response.end(JSON.stringify(rateAllowed));}
       if(request.url==="/rest/v1/rpc/register_tavern_interest"){
+        registerBodies.push(JSON.parse(body));
         if(registrationError){response.statusCode=400;return response.end(JSON.stringify({code:"P0001",message:registrationError}));}
         return response.end(JSON.stringify(registrationResult));
       }
       if(request.url==="/rest/v1/rpc/mark_tavern_receipt_email_sent"){markRequests+=1;return response.end(JSON.stringify({status:markStatus}));}
-      if(request.url==="/emails"){emailRequests+=1;return response.end(JSON.stringify({id:"email-1"}));}
+      if(request.url==="/emails"){emailRequests+=1;mailBodies.push(JSON.parse(body));return response.end(JSON.stringify({id:"email-1"}));}
       response.statusCode=404;response.end("{}");
     });
   });
@@ -46,9 +49,13 @@ before(async()=>{
   process.env.RESEND_API_KEY="test-resend-key";
   process.env.TAVERN_FROM_EMAIL="The Lewos Tavern <tavern@example.com>";
   process.env.RATE_LIMIT_SECRET="a-long-random-test-secret";
+  process.env.LEWOS_GENERAL_EMAIL="lewos.co@gmail.com";
+  process.env.FONTECHA_ACCOMMODATION_EMAIL="accommodation@example.invalid";
 });
 
-beforeEach(()=>{emailRequests=0;rateAllowed=true;registrationError="";rateBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",claimId:"00000000-0000-4000-8000-000000000001",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
+const mailsAan=adres=>mailBodies.filter(mail=>[].concat(mail.to).includes(adres));
+
+beforeEach(()=>{emailRequests=0;mailBodies=[];rateAllowed=true;registrationError="";rateBodies=[];registerBodies=[];delete process.env.TAVERN_PAYMENTS_ENABLED;delete process.env.PUBLIC_BOOKING_OPENS_AT;delete process.env.BOOKING_TERMS_VERSION;delete process.env.BOOKING_TERMS_DOCUMENT_URL;delete process.env.TRAVEL_INFORMATION_DOCUMENT_URL;delete process.env.NODE_ENV;registrationResult={status:"first_access_held",claimId:"00000000-0000-4000-8000-000000000001",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};});
 beforeEach(()=>{markRequests=0;markStatus="marked";publicReady=true;process.env.PUBLIC_BOOKING_OPENS_AT="2099-01-01T00:00:00Z";});
 beforeEach(()=>{process.env.URL=base;});
 after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);server=null;});
@@ -207,4 +214,87 @@ test("stops rapid automated requests before claiming seats",async()=>{
   assert.equal(response.statusCode,429);
   assert.equal(JSON.parse(response.body).error,"too_many_requests");
   assert.equal(emailRequests,0);
+});
+
+// ── De mailroutering, gevraagd door Robert op 5 september 2026 ───────────────
+// Dit formulier levert geen bevestigde boeking op — het houdt stoelen vast of
+// registreert een aanvraag. De accommodatie hoort hier dus niets te ontvangen; wat hier
+// binnenkomt is precies het soort bericht dat op het adres van Lewos hoort.
+
+test("a private Tavern request goes to Lewos and never to the accommodation",async()=>{
+  registrationResult={status:"private_inquiry",claimId:"00000000-0000-4000-8000-000000000009"};
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...valid,weekend:"private",people:5,message:"Six of us, a long weekend in spring."}));
+  assert.equal(result.statusCode,200);
+  assert.equal(JSON.parse(result.body).operatorNotified,true);
+  const naarLewos=mailsAan("lewos.co@gmail.com");
+  assert.equal(naarLewos.length,1,"Lewos kreeg geen melding van de private aanvraag");
+  assert.deepEqual(naarLewos[0].to,["lewos.co@gmail.com"]);
+  assert.match(naarLewos[0].subject,/A private Tavern request/);
+  assert.match(naarLewos[0].text,/Requested weekend:\n {2}private/);
+  assert.equal(mailsAan("accommodation@example.invalid").length,0,"de accommodatie kreeg een aanvraag die niet voor haar was");
+});
+
+test("a dietary requirement or accessibility note reaches Lewos",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...valid,dietaryNotes:"Peanuts - severe. Vegetarian.",message:"Wheelchair user, ground floor please."}));
+  assert.equal(result.statusCode,200);
+  const naarLewos=mailsAan("lewos.co@gmail.com");
+  assert.equal(naarLewos.length,1);
+  assert.match(naarLewos[0].text,/Allergies & dietary requirements:\n {2}Peanuts - severe\. Vegetarian\./);
+  assert.match(naarLewos[0].text,/Anything else:\n {2}Wheelchair user, ground floor please\./);
+  assert.equal(mailsAan("accommodation@example.invalid").length,0);
+});
+
+test("a registration with nothing special does not produce an empty notification",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post(valid));
+  assert.equal(result.statusCode,200);
+  assert.equal(mailsAan("lewos.co@gmail.com").length,0,"er ging een melding uit zonder dat er iets te melden was");
+  assert.equal(mailsAan(valid.email).length,1,"de gast kreeg geen ontvangstbevestiging");
+});
+
+test("the guest still gets a receipt when the notification to Lewos fails",async()=>{
+  // Het eigen postvak van Lewos mag nooit tussen de gast en zijn bevestiging staan: de
+  // stoelen zijn vastgehouden, dus een foutmelding zou onwaar zijn.
+  process.env.LEWOS_GENERAL_EMAIL="not-an-address";
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...valid,allergies:"Peanuts"}));
+  assert.equal(result.statusCode,200);
+  const body=JSON.parse(result.body);
+  assert.equal(body.emailSent,true);
+  assert.equal(body.operatorNotified,false);
+  assert.equal(mailsAan(valid.email).length,1);
+  process.env.LEWOS_GENERAL_EMAIL="lewos.co@gmail.com";
+});
+
+// ── Extra nachten, gevraagd door Robert op 5 september 2026 ──────────────────
+// Het enige veld op dit formulier dat over de accommodatie gaat en niet over de tafel.
+// Op /tavern/ staat al dat extra nachten "on request" zijn; nu is er ook een veld.
+
+test("an extra-night request reaches the database as its own column",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...valid,extraNights:"Two nights before, one after."}));
+  assert.equal(result.statusCode,200);
+  assert.equal(registerBodies.length,1);
+  assert.equal(registerBodies[0].p_extra_nights,"Two nights before, one after.");
+});
+
+test("an extra-night request is something Lewos hears about", async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  await handler(post({...valid,extraNights:"One night after."}));
+  const naarLewos=mailsAan("lewos.co@gmail.com");
+  assert.equal(naarLewos.length,1,"Lewos hoorde niets over een verzoek om extra nachten");
+  assert.match(naarLewos[0].text,/Extra nights requested:\n {2}One night after\./);
+  // Fontecha hoort het pas bij een bevestigde boeking, niet bij een aanmelding.
+  assert.equal(mailsAan("accommodation@example.invalid").length,0);
+});
+
+test("an extra-night request over the limit is refused, not truncated",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...valid,extraNights:"n".repeat(501)}));
+  assert.equal(result.statusCode,400);
+  const body=JSON.parse(result.body);
+  assert.equal(body.error,"field_too_long");
+  assert.deepEqual(body.fields,[{field:"extraNights",limit:500,length:501}]);
 });

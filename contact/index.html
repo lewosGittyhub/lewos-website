@@ -46,6 +46,9 @@
     input:focus, textarea:focus { outline:3px solid rgba(229,100,58,.42); border-color:var(--orange); }
     .button { width:fit-content; min-height:54px; padding:14px 24px; border:2px solid var(--orange); border-radius:10px; background:var(--orange); color:var(--white); font:600 .94rem/1.2 "Poppins",sans-serif; cursor:pointer; }
     .note { margin:-6px 0 0; color:rgba(237,230,218,.7); font-size:.8rem; }
+    [hidden] { display:none!important; }
+    .form-result { margin:0; padding:12px 14px; border-radius:8px; background:rgba(237,230,218,.12); color:var(--beige); font-size:.9rem; }
+    .form-result[data-type="error"] { background:rgba(229,100,58,.16); color:#F7F3EC; box-shadow:inset 0 0 0 1px var(--orange); }
     .note a { color:var(--orange); }
     .bot-field { position:absolute!important; width:1px!important; height:1px!important; overflow:hidden!important; clip:rect(1px,1px,1px,1px)!important; white-space:nowrap!important; }
     footer { padding:34px 0; color:rgba(237,230,218,.7); background:var(--dark); font-size:.85rem; }
@@ -80,12 +83,13 @@
           </div>
         </div>
       </div>
-      <form name="tavern-question" method="POST" data-netlify="true" netlify-honeypot="contact-bot-field" action="/contact-thanks/">
+      <form name="tavern-question" method="POST" action="/api/contact">
         <input type="hidden" name="form-name" value="tavern-question">
         <p class="bot-field" aria-hidden="true"><label for="contact-bot-field">Do not fill this out if you are human</label><input id="contact-bot-field" name="contact-bot-field" type="text" tabindex="-1" autocomplete="off"></p>
         <div class="field"><label for="contact-name">Your name</label><input id="contact-name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
         <div class="field"><label for="contact-email">Email</label><input id="contact-email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
         <div class="field"><label for="contact-question">Your question</label><textarea id="contact-question" name="question" maxlength="500" data-limit="question" required></textarea></div>
+        <p class="form-result" data-result role="status" tabindex="-1" hidden></p>
         <button class="button" type="submit">Send my question →</button>
         <p class="note">Maximum 500 characters. Your details are used only to answer your question. <a href="/privacy/">Privacy details</a>.</p>
       </form>
@@ -93,5 +97,6 @@
   </main>
   <footer><div class="footer-inner wrap"><span>© 2026 Lewos</span><span><a href="../privacy/">Privacy</a> · <a href="../legal/">Legal</a></span></div></footer>
   <script src="/assets/field-limits.js" defer></script>
+  <script src="/contact/contact.js" defer></script>
 </body>
 </html>

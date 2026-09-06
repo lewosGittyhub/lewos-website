@@ -6,14 +6,63 @@
   <meta name="robots" content="noindex">
   <title>Book your table | The Lewos Tavern</title>
   <style>
-    :root{--green:#0f3b35;--dark:#092d29;--orange:#ef653b;--cream:#f7f3ec;--beige:#ede6da;--grey:#6b6f72}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font:17px/1.65 Arial,sans-serif}header{padding:24px;color:var(--cream);background:var(--green)}header a{color:inherit;font-weight:700;text-decoration:none}main{width:min(calc(100% - 40px),1040px);margin:0 auto;padding:clamp(56px,8vw,100px) 0}.grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(42px,7vw,90px);align-items:start}.eyebrow{color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}h1{margin:.2em 0;font-size:clamp(3rem,7vw,5.8rem);line-height:1;letter-spacing:-.05em}.lead{font-size:1.08rem}.price{margin-top:28px;padding-top:22px;border-top:1px solid rgba(15,59,53,.2)}form{display:grid;gap:20px;padding:clamp(25px,4vw,42px);border-radius:20px;background:var(--green);color:var(--cream);box-shadow:0 24px 65px rgba(15,59,53,.22)}label{display:block;margin-bottom:7px;font-weight:700}input,select{width:100%;padding:14px;border:1px solid rgba(247,243,236,.55);border-radius:9px;background:rgba(247,243,236,.12);color:var(--cream);font:inherit}select option{color:var(--green);background:var(--cream)}input:focus,select:focus{outline:3px solid #f4a285;outline-offset:2px}[hidden]{display:none!important}.check{display:grid;grid-template-columns:20px 1fr;gap:10px}.check input{width:18px;height:18px;margin-top:5px;accent-color:var(--orange)}.check label{margin:0;font-weight:400}.check a{color:#ff9a78}.notice{padding:16px 18px;border-left:4px solid var(--orange);background:rgba(247,243,236,.1)}button{justify-self:start;padding:16px 25px;border:0;border-radius:10px;background:var(--orange);color:white;font:700 1rem Arial,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.error{padding:14px;border:1px solid #ff9a78;border-radius:8px}small{color:rgba(247,243,236,.74)}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-top:45px}}
+    :root{--green:#0f3b35;--dark:#092d29;--orange:#ef653b;--cream:#f7f3ec;--beige:#ede6da;--grey:#6b6f72}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font:17px/1.65 Arial,sans-serif}header{padding:24px;color:var(--cream);background:var(--green)}header a{color:inherit;font-weight:700;text-decoration:none}main{width:min(calc(100% - 40px),1040px);margin:0 auto;padding:clamp(56px,8vw,100px) 0}.grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(42px,7vw,90px);align-items:start}.eyebrow{color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}h1{margin:.2em 0;font-size:clamp(3rem,7vw,5.8rem);line-height:1;letter-spacing:-.05em}.lead{font-size:1.08rem}.price{margin-top:28px;padding-top:22px;border-top:1px solid rgba(15,59,53,.2)}form{display:grid;gap:20px;padding:clamp(25px,4vw,42px);border-radius:20px;background:var(--green);color:var(--cream);box-shadow:0 24px 65px rgba(15,59,53,.22)}label{display:block;margin-bottom:7px;font-weight:700}input,select,textarea{width:100%;padding:14px;border:1px solid rgba(247,243,236,.55);border-radius:9px;background:rgba(247,243,236,.12);color:var(--cream);font:inherit}textarea{min-height:96px;resize:vertical;line-height:1.5}textarea[data-limit="dietaryNotes"]{min-height:172px}select option{color:var(--green);background:var(--cream)}input:focus,select:focus,textarea:focus{outline:3px solid #f4a285;outline-offset:2px}[hidden]{display:none!important}.check{display:grid;grid-template-columns:20px 1fr;gap:10px}.check input{width:18px;height:18px;margin-top:5px;accent-color:var(--orange)}.check label{margin:0;font-weight:400}.check a{color:#ff9a78}.notice{padding:16px 18px;border-left:4px solid var(--orange);background:rgba(247,243,236,.1)}button{justify-self:start;padding:16px 25px;border:0;border-radius:10px;background:var(--orange);color:white;font:700 1rem Arial,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.error{padding:14px;border:1px solid #ff9a78;border-radius:8px}small{color:rgba(247,243,236,.74)}.field-hint{display:block;margin-top:6px;font-size:.85rem}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-top:45px}}
 
     /* Lengtegrenzen: de teller staat onder het veld, de tekstuele grens gaat naar de
        schermlezer. Zie assets/field-limits.js. */
-    .field-count{display:block;margin-top:4px;font-size:.78rem;opacity:.72;text-align:right}
+    .field-count{display:block;margin-top:6px;font-size:.78rem;opacity:.72;text-align:right}
     .field-count[data-state="near"]{opacity:1;font-weight:700}
     .field-count[data-state="over"]{opacity:1;font-weight:700;color:#E5643A}
     .field-count__sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+    .field-legend{display:block;margin-bottom:7px;font-weight:700}
+    .is-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;white-space:nowrap;clip-path:inset(50%);border:0}
+    .calendar{display:none}
+    .calendar[data-ready]{display:grid;gap:14px}
+    .calendar__months{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .calmonth{padding:14px;border:1px solid rgba(247,243,236,.24);border-radius:10px;background:rgba(247,243,236,.07)}
+    .calmonth h4{margin:0 0 10px;font:700 .92rem/1.2 Arial,sans-serif}
+    .calmonth__dow,.calmonth__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+    .calmonth__dow span{padding-bottom:6px;color:rgba(247,243,236,.6);font-size:.6rem;font-weight:700;letter-spacing:.05em;text-align:center;text-transform:uppercase}
+    .calday{aspect-ratio:1;min-width:0;width:auto;display:grid;place-items:center;padding:3px 4px;margin:0;border:1px solid transparent;border-radius:6px;background:none;color:rgba(247,243,236,.45);font:inherit;font-size:.78rem;line-height:1.1;justify-self:auto}
+    .calday.is-weekend{border-color:rgba(247,243,236,.42);background:rgba(247,243,236,.12);color:var(--cream);font-weight:700;cursor:pointer}
+    .calday.is-low{border-color:rgba(217,162,59,.75);background:rgba(217,162,59,.22)}
+    .calday.is-chosen{border-color:var(--orange);background:var(--orange);color:#fff}
+    .calday.is-full{border-color:rgba(247,243,236,.16);background:repeating-linear-gradient(135deg,rgba(247,243,236,.06),rgba(247,243,236,.06) 4px,transparent 4px,transparent 8px);color:rgba(247,243,236,.42);cursor:not-allowed}
+    .calday.is-full .calday__n{text-decoration:line-through}
+    .calday.is-past{opacity:.32}
+    /* Buiten het venster: zichtbaar, niet te kiezen. Zoals een volgeboekte dag. */
+    .calday.is-outside{opacity:.3}
+       en goud in plaats van vol oranje. Wij weten niet of die nacht vrij is, dus mag het
+       vakje dat ook niet suggereren. */
+    /* Een dag die je kúnt aanklikken draagt geen rand: vijfenveertig vakjes die tegelijk
+       om aandacht vragen zijn geen kalender meer. Hij laat zich zien bij aanwijzen. */
+    .calday.is-open{color:rgba(247,243,236,.78);cursor:pointer}
+    .calday.is-open:hover{background:rgba(239,101,59,.2);color:var(--cream)}
+    /* Aangevraagd kleurt mee in hetzelfde oranje, een tint lichter: het is nog geen
+       geboekte nacht. Dat verschil staat er ook in woorden bij. */
+    .calday.is-requested{border-color:var(--orange);background:rgba(239,101,59,.5);color:#fff;font-weight:700}
+    .calday.is-preview{border-color:rgba(239,101,59,.55);background:rgba(239,101,59,.26);color:var(--cream)}
+    /* Een wisseldag: hoort bij een ánder weekend, mag jouw aankomst- of vertrekdag zijn. */
+    .calday.is-turnover{box-shadow:inset 0 0 0 1px rgba(247,243,236,.34)}
+    .calday.is-edge{border-width:2px}
+    .calday:focus-visible{outline:3px solid #f4a285;outline-offset:2px}
+    .calnav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .calnav__label{font-weight:700;font-size:.86rem}
+    .calnav__btn{width:auto;min-width:44px;min-height:44px;padding:0 12px;border:1px solid rgba(247,243,236,.42);border-radius:10px;background:rgba(247,243,236,.1);color:var(--cream);font:inherit;cursor:pointer;justify-self:auto}
+    .calnav__btn[disabled]{opacity:.32;cursor:not-allowed}
+    .callegend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:.82rem;color:rgba(247,243,236,.8)}
+    .callegend__item{display:inline-flex;align-items:center;gap:7px}
+    .callegend__swatch{width:15px;height:15px;border:1px solid rgba(247,243,236,.42);border-radius:4px}
+    .callegend__swatch.is-chosen{border-color:var(--orange);background:var(--orange)}
+    .callegend__swatch.is-requested{border-color:var(--orange);background:rgba(239,101,59,.5)}
+    .callegend__clear{width:auto;min-height:38px;padding:7px 13px;border:1px solid rgba(247,243,236,.42);border-radius:10px;background:transparent;color:var(--cream);font:inherit;font-size:.8rem;cursor:pointer;justify-self:auto}
+    .calendar__hint{margin:0;font-size:.85rem;color:rgba(247,243,236,.78)}
+    /* Zonder deze regel wordt de link standaard browserblauw op donkergroen. */
+    .calendar__hint a{color:#ff9a78;font-weight:700}
+    .calendar__chosen{margin:0;font-weight:700}
+    .calendar__stay{margin:0;font-weight:700;line-height:1.5}
+    @media(max-width:460px){.calmonth{padding:11px}.calday{aspect-ratio:auto;min-height:44px;font-size:.66rem}}
   </style>
 </head>
 <body>
@@ -23,7 +72,7 @@
       <section>
         <p class="eyebrow">Six seats per weekend</p>
         <h1>Choose your table.</h1>
-        <p class="lead">Your complete party is held together for 40 minutes while you pay. Payment is taken now, by card, through Stripe. Your seats are confirmed the moment the payment succeeds — not before. If the group does not fit, no seats are taken and nothing is charged.</p>
+        <p class="lead">Choosing your seats holds them for your party while you fill in the details. Nothing is charged at that point and no seat is taken from anyone else. When you submit, each guest receives their own payment link for their own share, and the group has 30 minutes to complete payment. Seats are confirmed per guest, the moment each payment succeeds.</p>
         <p class="price"><strong>€2,025 per person</strong><br>Total price including taxes. Three nights, every meal, non-alcoholic drinks, transfers, the campaign and the professional Game Master. Travel to Asturias is not included.</p>
           
           <!-- JURIDISCHE COPY — CONCEPTVERSIE.
@@ -37,20 +86,61 @@
           <p><small>The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> are published as drafts and do not apply yet. The final versions are provided before any payment is requested. A weekend runs with a minimum of four players; if that minimum is not reached, you get every euro back.</small></p>
       </section>
       <form data-public-booking-form>
+        <!-- Stap 1. Alleen kijken blokkeert niets; pas deze knop zet stoelen vast. -->
+        <fieldset data-step-seats style="border:0;padding:0;margin:0;display:grid;gap:20px">
+          <div><label for="people">Seats for your party</label><input id="people" name="people" type="number" min="1" max="6" required></div>
+          <div>
+            <span class="field-legend" id="stay-legend">Your weekend, and the nights around it</span>
+            <div class="calendar" data-weekend-calendar aria-labelledby="stay-legend"></div>
+            <p class="calendar__chosen" data-calendar-chosen role="status" hidden></p>
+            <p class="calendar__stay" data-stay-line role="status" hidden></p>
+            <small class="field-hint" data-stay-hint hidden>Extra nights are available on request only and depend on accommodation availability. Only the weekend itself is held and priced here.</small>
+            <input type="hidden" name="requestedArrival" data-stay-arrival>
+            <input type="hidden" name="requestedDeparture" data-stay-departure>
+          </div>
+          <div data-weekend-field><label for="weekend">Which weekend?</label><select id="weekend" name="weekend" required><option value="">Choose a weekend</option><option value="weekend-01">Weekend 01 &middot; 30 Oct to 2 Nov 2026</option><option value="weekend-02">Weekend 02 &middot; 6 to 9 Nov 2026</option></select></div>
+          <p class="error" data-hold-error hidden></p>
+          <button type="button" data-hold-button>Hold these seats &rarr;</button>
+          <small>Nothing is charged now. Your seats are held for 60 minutes while you fill in the details, and released again if you do not finish.</small>
+        </fieldset>
+
+        <!-- De afteller. Verschijnt zodra de stoelen vastgezet zijn. -->
+        <div class="notice" data-hold-panel hidden>
+          <strong data-hold-title>Your seats are held.</strong><br>
+          <span data-hold-detail></span><br>
+          <span style="font-size:1.5rem;font-weight:700;letter-spacing:.02em" data-hold-countdown role="timer" aria-live="off">—</span>
+          <span data-hold-deadline style="opacity:.8"></span><br>
+          <button type="button" data-hold-cancel style="margin-top:10px;background:transparent;border:1px solid currentColor;color:inherit">Cancel and release the seats</button>
+        </div>
+
+        <!-- Stap 2. Pas zichtbaar met een lopende blokkering. -->
+        <fieldset data-step-details hidden style="border:0;padding:0;margin:0;display:grid;gap:20px">
         <div><label for="name">Your name</label><input id="name" name="name" autocomplete="name" minlength="2" data-limit="name" required></div>
         <div><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
-        <div><label for="weekend">Which weekend?</label><select id="weekend" name="weekend" required><option value="">Choose a weekend</option><option value="weekend-01">Weekend 01 · 30 Oct to 2 Nov 2026</option><option value="weekend-02">Weekend 02 · 6 to 9 Nov 2026</option></select></div>
-        <div><label for="people">Seats for your party</label><input id="people" name="people" type="number" min="1" max="6" required></div>
-        <div><label for="allergies">Allergies</label><textarea id="allergies" name="allergies" rows="2" data-limit="allergies" placeholder="List each allergy and how serious it is. Leave empty if none."></textarea></div>
-        <div><label for="dietary">Dietary requirements</label><textarea id="dietary" name="dietary" rows="2" data-limit="dietary" placeholder="Vegetarian, vegan, gluten-free, anything else we should cook around."></textarea></div>
+        
+        
+        <div><label for="dietaryNotes">Allergies &amp; dietary requirements</label><textarea id="dietaryNotes" name="dietaryNotes" rows="4" data-limit="dietaryNotes" placeholder="Tell us about any allergies, how severe they are, and dietary requirements. For a group, include who each requirement applies to. Leave empty if none."></textarea></div>
+        <div class="notice" data-stay-recap hidden><strong>Your stay</strong><br><span data-stay-recap-line></span><br><small data-stay-recap-note></small></div>
         <div><label for="message">Anything else we should know?</label><textarea id="message" name="message" rows="2" data-limit="message" placeholder="Anything that affects the weekend."></textarea></div>
         <div class="notice" data-filming-notice hidden><strong>Weekend 01 &mdash; The Filmed First Edition.</strong><br>A professional videographer captures selected parts of this weekend: the game table above all, and also shared activities, meals and the Tavern grounds. The photography, video and accompanying audio may be used to document and promote The Lewos Tavern on Lewos and StoryForgers websites, official organic social-media channels, newsletters, PR and editorial material, and promotional films. There is no filming in bedrooms, bathrooms or changing areas. Paid advertising needs a separate, optional permission. The <a href="/legal/#filming" target="_blank">filming information</a> sets out the whole of it.</div>
         <div class="check" data-filming-check hidden><input id="filming-acknowledged" name="filmingAcknowledged" type="checkbox"><label for="filming-acknowledged">I understand that Weekend 01 is The Lewos Tavern's professionally filmed First Edition. Professional photography, video and audio recording will take place during selected parts of the weekend. Each attendee must individually complete the Filming &amp; Media Agreement before attending.<br><small>This is your own confirmation that you have read this. It is not media or privacy permission &mdash; not for you and not for anyone else in your party. Every adult attending gives, or withholds, that permission personally.</small></label></div>
         <div class="check"><input id="adult" name="adultConfirmed" type="checkbox" required><label for="adult">I confirm that every guest included in this booking will be 18 or older when the weekend begins.</label></div>
         <div class="check"><input id="privacy" name="privacyAccepted" type="checkbox" required><label for="privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I understand that the full booking terms are provided before any payment is requested.</label></div>
+        <div data-participants></div>
         <p class="error" data-booking-error hidden></p>
-        <button type="submit">Continue to payment →</button>
-        <small>The next screen is Stripe, where you pay by card. Lewos never sees your card details. Your seats are held for 40 minutes while you are there; if you do not finish, they are released and nothing is charged.</small>
+        <button type="submit">Send everyone their payment link &rarr;</button>
+        <small>Each guest receives their own payment link by email for their own share of &euro;2,025. Everyone in the group has 30 minutes to pay. Seats are confirmed one by one, as each payment succeeds.</small>
+        </fieldset>
+
+        <!-- Na indienen. De instructie, de adressen en dezelfde deadline. -->
+        <div class="notice" data-sent-panel hidden>
+          <strong>Check your email &mdash; complete payment within 30 minutes.</strong><br>
+          We&rsquo;ve sent each guest a personal payment link. Everyone in your group must pay their share before
+          <span data-sent-deadline></span> to complete the booking.<br>
+          <span style="font-size:1.5rem;font-weight:700" data-sent-countdown role="timer" aria-live="off">—</span><br>
+          <span data-sent-addresses></span><br>
+          <small>Please check your spam folder too.</small>
+        </div>
       </form>
     </div>
   </main>

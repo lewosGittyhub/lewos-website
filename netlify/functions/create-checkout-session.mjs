@@ -1,4 +1,6 @@
 import {createHash,randomUUID} from "node:crypto";
+import {mergeLegacyDietary} from "./_dietary.mjs";
+import {readStayRequest,STAY_ERRORS} from "./_stay.mjs";
 import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 
@@ -83,6 +85,12 @@ export const handler=async event=>{
     if(!ipAllowed||!identityAllowed)return json(429,{error:"too_many_requests"});
   }catch(error){console.error("Checkout rate limit error",error);return json(503,{error:"checkout_unavailable"});}
   let hold;
+  // De aanvraag voor extra nachten komt als datums binnen, in beide takken. Vorm hier;
+  // of ze bij het weekend passen weet alleen de database.
+  let stayRequest;
+  try{stayRequest=readStayRequest(input);}
+  catch(error){return json(422,{error:error.message,message:STAY_ERRORS[error.message]||"We could not read those dates."});}
+
   try{
     if(mode==="first_access"){
       const token=String(input.token||"");
@@ -95,11 +103,13 @@ export const handler=async event=>{
       const extraAllergies=String(input.allergies||"").trim();
       const extraDietary=String(input.dietary||"").trim();
       const extraNotes=String(input.message||"").trim();
-      const teLangHier=tooLongFields({allergies:extraAllergies,dietary:extraDietary,message:extraNotes});
+      const extraNachten=String(input.extraNights||"").trim();
+      const extraDieet=String(input.dietaryNotes||"").trim()||mergeLegacyDietary(extraAllergies,extraDietary);
+      const teLangHier=tooLongFields({dietaryNotes:extraDieet,extraNights:extraNachten,message:extraNotes});
       if(teLangHier.length)return json(400,{error:"field_too_long",fields:teLangHier});
       if(!/^[A-Za-z0-9_-]{32,200}$/.test(token))return json(400,{error:"invalid_invitation"});
       if(!adultConfirmed||!privacyAccepted||!filmingAcknowledged)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_hold_minutes:CHECKOUT_HOLD_MINUTES,p_allergies:extraAllergies,p_dietary:extraDietary,p_message:extraNotes});
+      hold=await rpc("begin_tavern_first_access_checkout",{p_token_hash:tokenHash(token),p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_hold_minutes:CHECKOUT_HOLD_MINUTES,p_allergies:extraAllergies,p_dietary:extraDietary,p_dietary_notes:extraDieet,p_message:extraNotes,p_extra_nights:extraNachten});
     }else{
       const name=String(input.name||"").trim();
       const email=String(input.email||"").trim().toLowerCase();
@@ -111,18 +121,27 @@ export const handler=async event=>{
       const allergies=String(input.allergies||"").trim();
       const dietary=String(input.dietary||"").trim();
       const notes=String(input.message||"").trim();
+      const extraNights=String(input.extraNights||"").trim();
       // Geen .slice(): te lang wordt geweigerd, met het veld erbij.
-      const teLang=tooLongFields({name,email,allergies,dietary,message:notes});
+      const dieet=String(input.dietaryNotes||"").trim()||mergeLegacyDietary(allergies,dietary);
+      const teLang=tooLongFields({name,email,dietaryNotes:dieet,extraNights,message:notes});
       if(teLang.length)return json(400,{error:"field_too_long",fields:teLang});
       if(name.length<NAME_MIN||!emailOk(email)||!["weekend-01","weekend-02"].includes(weekend)||!Number.isInteger(people)||people<1||people>6||!adultConfirmed||!privacyAccepted)return json(400,{error:"invalid_details"});
       // Het vakje staat op de pagina alleen bij Weekend 01, dus de server eist het daar ook
       // alleen. Een verzoek dat de pagina omzeilt en het weglaat, komt niet langs.
       if(weekend==="weekend-01"&&!filmingAcknowledged)return json(400,{error:"confirmations_required"});
-      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES,p_allergies:allergies,p_dietary:dietary,p_message:notes});
+      hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES,p_allergies:allergies,p_dietary:dietary,p_dietary_notes:dieet,p_message:notes,p_extra_nights:extraNights});
       hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"Weekend 01 · 30 Oct to 2 Nov 2026":"Weekend 02 · 6 to 9 Nov 2026"};
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}
   if(hold.status!=="payment_pending")return json(409,{error:hold.status,...hold});
+  // **Niet blokkerend, met opzet.** De plaatsen liggen vast en de gast staat op het punt
+  // te betalen; een vraag over accommodatie mag dat niet omgooien. Lukt het niet, dan
+  // staat de boeking er gewoon en ontbreekt alleen de aanvraag.
+  if(hold.claimId&&(stayRequest.arrival||stayRequest.departure)){
+    try{await rpc("set_tavern_stay_request",{p_claim_id:hold.claimId,p_arrival:stayRequest.arrival,p_departure:stayRequest.departure});}
+    catch(error){console.error("Stay request error",error);}
+  }
   const unitAmount=priceFromHold(hold);
   if(unitAmount===null){
     console.error("Refusing checkout with an unusable price",{reference,priceCents:hold.priceCents});

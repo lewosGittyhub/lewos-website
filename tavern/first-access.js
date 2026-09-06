@@ -1,3 +1,5 @@
+import {createWeekendCalendar} from '/assets/weekend-calendar.js';
+
 (()=>{
   const form=document.querySelector('[data-first-access-form]');
   if(!form)return;
@@ -6,8 +8,12 @@
   const weekend=form.querySelector('#weekend');
   const people=form.querySelector('#people');
   const calendar=form.querySelector('[data-weekend-calendar]');
-  const calendarMonths=form.querySelector('[data-calendar-months]');
   const calendarChosen=form.querySelector('[data-calendar-chosen]');
+  const stayLine=form.querySelector('[data-stay-line]');
+  const stayHint=form.querySelector('[data-stay-hint]');
+  const arrivalInput=form.querySelector('[data-stay-arrival]');
+  const departureInput=form.querySelector('[data-stay-departure]');
+  let kalender=null;
   const partyPrice=form.querySelector('[data-party-price]');
   const weekendField=form.querySelector('[data-weekend-field]');
   const bookingNote=form.querySelector('#booking-note');
@@ -36,15 +42,15 @@
     partyPrice.setAttribute('data-empty','');
   };
 
-  const paintCalendar=()=>{
-    if(!calendar||!calendar.hasAttribute('data-ready')){priceUnavailable();return;}
-    const chosen=weekend.value;
-    calendar.querySelectorAll('.calday[data-slug]').forEach(cell=>{
-      cell.classList.toggle('is-chosen',cell.dataset.slug===chosen&&!cell.classList.contains('is-full'));
-    });
-    const item=availability.find(entry=>entry.slug===chosen);
+  // Het weekend, de vrije stoelen en het bedrag. De kalender zelf tekent zichzelf; deze
+  // functie zegt alleen wat er gekozen is en wat dat kost.
+  const paintChoice=()=>{
+    const gereed=Boolean(kalender&&kalender.ready());
+    if(calendarChosen)calendarChosen.hidden=!gereed;
+    if(!gereed){priceUnavailable();return;}
+    const item=availability.find(entry=>entry.slug===weekend.value);
     if(!item){
-      calendarChosen.textContent='Pick a weekend in the calendar, or choose a private Tavern below.';
+      if(calendarChosen)calendarChosen.textContent='Pick a weekend in the calendar, or choose a private Tavern below.';
       if(partyPrice){partyPrice.textContent='Pick a weekend';partyPrice.setAttribute('data-empty','');}
       return;
     }
@@ -53,7 +59,7 @@
     const cents=Number(item.priceCents);
     const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100);
     const hasPrice=Number.isFinite(cents)&&cents>0;
-    calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${hasPrice?` ${money(cents)} per person, including taxes.`:''}`;
+    if(calendarChosen)calendarChosen.textContent=`Selected weekend: ${item.label} · ${item.dateLabel} — ${item.remaining} of ${item.capacity} seats free.${hasPrice?` ${money(cents)} per person, including taxes.`:''}`;
     if(!partyPrice)return;
     const guests=Number.parseInt(people.value,10);
     const fits=Number.isInteger(guests)&&guests>0&&guests<=Math.min(item.capacity,item.remaining);
@@ -74,55 +80,45 @@
     }
   };
 
+  // **Het bedrag hierboven gaat alleen over het weekend.** Een aangevraagde nacht telt er
+  // niet in mee en mag dat ook niet: wij weten niet of hij vrij is en wat hij kost. De
+  // prijs daarvan komt van de accommodatie, ná bevestiging.
+  const onthoudVerblijf=stand=>{
+    const heeftExtra=Boolean(stand?.valid&&stand.extraNights>0);
+    // Alleen een échte aanvraag gaat mee. Zijn de datums gelijk aan het weekend zelf, dan
+    // blijven de velden leeg — anders zou elke boeking als "extra nachten" binnenkomen.
+    if(arrivalInput)arrivalInput.value=heeftExtra?stand.arrival:'';
+    if(departureInput)departureInput.value=heeftExtra?stand.departure:'';
+    if(stayHint)stayHint.hidden=!stand?.valid;
+    if(stayLine)stayLine.hidden=!stand?.valid;
+  };
+
   const buildCalendar=()=>{
-    if(!calendar||!calendarMonths)return;
-    const items=dated();
-    if(!items.length){calendar.removeAttribute('data-ready');calendarMonths.textContent='';syncWeekendField();return;}
-    const days=new Map();
-    items.forEach(item=>{
-      const start=asDate(item.startsOn), end=asDate(item.endsOn);
-      for(let day=new Date(start);day<=end;day.setDate(day.getDate()+1))days.set(key(day),{item});
-    });
-    const months=[];
-    items.forEach(item=>{
-      const start=asDate(item.startsOn), end=asDate(item.endsOn);
-      [start,end].forEach(date=>{
-        const stamp=`${date.getFullYear()}-${date.getMonth()}`;
-        if(!months.some(month=>month.stamp===stamp))months.push({stamp,year:date.getFullYear(),month:date.getMonth()});
+    if(!calendar)return;
+    if(!kalender){
+      kalender=createWeekendCalendar({
+        mount:calendar,summary:stayLine,
+        onChange:({slug,stay})=>{
+          if(slug&&weekend.value!==slug){
+            weekend.value=slug;
+            weekend.dispatchEvent(new Event('change',{bubbles:true}));
+          }
+          onthoudVerblijf(stay);
+          paintChoice();
+          syncWeekendField();
+        }
       });
-    });
-    months.sort((a,b)=>a.year-b.year||a.month-b.month);
-    calendarMonths.innerHTML=months.map(({year,month})=>{
-      const lead=(new Date(year,month,1).getDay()+6)%7;
-      const total=new Date(year,month+1,0).getDate();
-      let cells='';
-      for(let i=0;i<lead;i++)cells+='<div class="calday" aria-hidden="true"></div>';
-      // Een weekend is voor déze groep onbeschikbaar zodra de hele partij er niet meer
-      // bij past, niet pas als de laatste stoel weg is. Anders kiest een gezelschap van
-      // drie een weekend met twee plekken en krijgt het pas na het versturen te horen
-      // dat de groep niet gesplitst wordt.
-      const wanted=wantedSeats();
-      for(let day=1;day<=total;day++){
-        const found=days.get(key(new Date(year,month,day)));
-        if(!found){cells+=`<div class="calday"><span class="calday__n">${day}</span></div>`;continue;}
-        const {item}=found;
-        const full=item.remaining<wanted;
-        const low=!full&&item.remaining<=2;
-        // In het vakje staat alleen de datum. Het aantal vrije stoelen staat groot
-        // onder de kalender en in het label van de knop; een cijfertje of een rij
-        // vormpjes in zo'n vakje was op ware grootte niet af te lezen.
-        const label=`${item.label}, ${item.dateLabel}, ${item.remaining===0?'no seats left':full?`only ${item.remaining} of ${item.capacity} seats free, not enough for ${wanted}`:`${item.remaining} of ${item.capacity} seats free`}`;
-        cells+=`<button type="button" class="calday is-weekend${full?' is-full':low?' is-low':''}" data-slug="${item.slug}"${full?' disabled':''} aria-label="${label}" title="${label}"><span class="calday__n">${day}</span></button>`;
-      }
-      return `<div class="calmonth"><h4>${MONTHS[month]} ${year}</h4><div class="calmonth__dow">${DOW.map(name=>`<span>${name}</span>`).join('')}</div><div class="calmonth__grid">${cells}</div></div>`;
-    }).join('');
-    calendar.setAttribute('data-ready','');
-    const openWeekend=items.find(item=>item.remaining>=wantedSeats());
-    if(!weekend.value&&openWeekend)weekend.value=openWeekend.slug;
-    // Past de eerder gekozen datum niet meer bij een gewijzigd aantal, laat de keuze los.
-    const current=items.find(item=>item.slug===weekend.value);
-    if(current&&current.remaining<wantedSeats())weekend.value=openWeekend?openWeekend.slug:'';
-    paintCalendar();
+    }
+    kalender.setWeekends(dated());
+    kalender.setWantedSeats(wantedSeats());
+    // Is er nog geen weekend gekozen, kies dan het eerste waar de hele groep in past.
+    if(!weekend.value||weekend.value==='private'){
+      const open=dated().find(item=>item.remaining>=wantedSeats());
+      if(open&&weekend.value!=='private')kalender.select(open.slug);
+    }else{
+      kalender.select(weekend.value);
+    }
+    paintChoice();
     syncWeekendField();
   };
 
@@ -132,6 +128,12 @@
   const submitLabel=()=>isPrivate()?'Send my request →':'Hold my seats →';
   const applyMode=on=>{
     if(calendar)calendar.style.display=on?'none':'';
+    if(calendarChosen)calendarChosen.hidden=on||!kalender?.ready();
+    if(stayLine)stayLine.hidden=on;
+    if(stayHint)stayHint.hidden=on;
+    // Een privé-Tavern heeft geen vast weekend, dus ook geen aangevraagde nachten die
+    // aan zo'n weekend hangen. Laat ze dan los in plaats van ze mee te sturen.
+    if(on){if(arrivalInput)arrivalInput.value='';if(departureInput)departureInput.value='';}
     if(bookingNote)bookingNote.hidden=on;
     // Een vast weekend heeft zes stoelen; een privé-Tavern loopt van vier tot twaalf.
     people.min=on?'4':'1';
@@ -144,28 +146,15 @@
   // gekozen weekend te dragen. Kan de kalender niet laden, dan komt het menu terug.
   const syncWeekendField=()=>{
     if(!weekendField)return;
-    const usingCalendar=Boolean(calendar&&calendar.hasAttribute('data-ready'))||weekend.value==='private';
+    const usingCalendar=Boolean(kalender&&kalender.ready())||weekend.value==='private';
     weekendField.classList.toggle('is-visually-hidden',usingCalendar);
   };
 
-  const hoverCalendar=(slug,on)=>{
-    if(!calendar)return;
-    calendar.querySelectorAll(`.calday[data-slug="${slug}"]`).forEach(cell=>{
-      if(!cell.classList.contains('is-full'))cell.classList.toggle('is-hot',on);
-    });
-  };
-  if(calendar){
-    calendar.addEventListener('pointerover',event=>{const cell=event.target.closest('.calday[data-slug]');if(cell)hoverCalendar(cell.dataset.slug,true);});
-    calendar.addEventListener('pointerout',event=>{const cell=event.target.closest('.calday[data-slug]');if(cell)hoverCalendar(cell.dataset.slug,false);});
-    calendar.addEventListener('click',event=>{
-      const cell=event.target.closest('.calday[data-slug]');
-      if(!cell||cell.disabled)return;
-      weekend.value=cell.dataset.slug;
-      weekend.dispatchEvent(new Event('change',{bubbles:true}));
-      paintCalendar();
-    });
-    weekend.addEventListener('change',()=>{paintCalendar();applyMode(isPrivate());});
-  }
+  weekend.addEventListener('change',()=>{
+    if(kalender&&weekend.value&&weekend.value!=='private')kalender.select(weekend.value);
+    paintChoice();
+    applyMode(isPrivate());
+  });
 
   const updateWeekendOptions=()=>{
     const partySize=Number.parseInt(people.value,10)||0;
@@ -195,7 +184,11 @@
       // Keep the published date labels when live availability cannot be reached.
     }
   };
-  people.addEventListener('input',()=>{updateWeekendOptions();paintCalendar();});
+  people.addEventListener('input',()=>{
+    updateWeekendOptions();
+    if(kalender)kalender.setWantedSeats(wantedSeats());
+    paintChoice();
+  });
   applyMode(isPrivate());
   loadAvailability();
   const query=new URLSearchParams(window.location.search);

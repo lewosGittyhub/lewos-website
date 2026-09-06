@@ -208,27 +208,36 @@ test("een naam van één teken wordt nog steeds geweigerd",async()=>{
 // algemeen berichtveld. Deze tests bewaken dat ze een eigen veld, een eigen kolom en
 // een eigen weg naar de operator houden.
 
-test("allergieën en dieetwensen hebben een eigen veld op beide formulieren",async()=>{
-  for(const pagina of ["tavern/index.html","tavern/private/index.html"]){
+// Op 5 september 2026 zijn de twee velden samengevoegd tot één. De eis eronder is niet
+// veranderd: het blijft een **eigen** veld, los van het algemene berichtveld. Wat wél weg
+// is, is de scheiding tussen "allergie" en "dieetwens" — die maakte de gast toch niet.
+test("allergieën en dieetwensen hebben één eigen veld op alle boekingsformulieren",async()=>{
+  const LABEL="Allergies &amp; dietary requirements";
+  const PLACEHOLDER="Tell us about any allergies, how severe they are, and dietary requirements. "
+    +"For a group, include who each requirement applies to. Leave empty if none.";
+  for(const pagina of ["tavern/index.html","tavern/private/index.html",
+                       "tavern/book/index.html","tavern/checkout/index.html"]){
     const html=await lees(pagina);
-    for(const veld of ["allergies","dietary"]){
-      assert.match(html,new RegExp(`name="${veld}"`),`${pagina} mist een eigen veld voor ${veld}`);
-      assert.match(html,new RegExp(`data-limit="${veld}"`),`${pagina}: ${veld} heeft geen zichtbare grens`);
-    }
-    // Het oude berichtveld mag ze niet meer als zijn taak opeisen.
-    assert.doesNotMatch(html,/placeholder="Allergies, dietary needs/,`${pagina} stuurt allergieën nog naar het berichtveld`);
+    assert.match(html,/name="dietaryNotes"/,`${pagina} mist het gecombineerde veld`);
+    assert.match(html,/data-limit="dietaryNotes"/,`${pagina}: het veld heeft geen zichtbare grens`);
+    assert.ok(html.includes(LABEL),`${pagina} draagt het afgesproken label niet`);
+    assert.ok(html.includes(PLACEHOLDER),`${pagina} draagt de afgesproken voorbeeldtekst niet`);
+    // Twee losse velden mogen niet terugkomen, en het berichtveld mag deze taak niet
+    // overnemen: dan verdwijnt een allergie alsnog in een vrije tekst.
+    assert.doesNotMatch(html,/name="allergies"|name="dietary"/,`${pagina} heeft nog een oud los veld`);
+    assert.doesNotMatch(html,/placeholder="Allergies, dietary needs/,`${pagina} stuurt allergieën naar het berichtveld`);
   }
+  assert.equal(FIELD_LIMITS.dietaryNotes,1000,"de servergrens is verschoven");
+  const browser=await lees("assets/field-limits.js");
+  assert.match(browser,/dietaryNotes:1000/,"de browser kent de grens niet");
 });
 
-test("de privépagina plakt allergieën niet in het bericht",async()=>{
+test("de privépagina plakt het dieetveld niet in het bericht",async()=>{
   const bron=await lees("tavern/private/private.js");
   const payload=bron.slice(bron.indexOf("const payload="),bron.indexOf("submit.disabled=true"));
-  assert.match(payload,/allergies:String\(data\.allergies/,"allergies gaat niet als eigen veld mee");
-  assert.match(payload,/dietary:String\(data\.dietary/,"dietary gaat niet als eigen veld mee");
+  assert.match(payload,/dietaryNotes:String\(data\.dietaryNotes/,"het veld gaat niet als eigen veld mee");
   const bericht=payload.slice(payload.indexOf("message:"));
-  for(const verboden of ["allergies","dietary"]){
-    assert.doesNotMatch(bericht,new RegExp(verboden),`${verboden} wordt in het samengestelde bericht geplakt`);
-  }
+  assert.doesNotMatch(bericht,/dietaryNotes/,"het dieetveld wordt in het samengestelde bericht geplakt");
 });
 
 test("beide velden komen als eigen parameter bij de database aan",async()=>{
@@ -238,6 +247,42 @@ test("beide velden komen als eigen parameter bij de database aan",async()=>{
   assert.equal(rpcBodies[0].p_allergies,"Severe peanut allergy, carries an EpiPen");
   assert.equal(rpcBodies[0].p_dietary,"Vegetarian");
   assert.equal(rpcBodies[0].p_message,"We arrive late on Friday.","het bericht is vervuild met de andere velden");
+});
+
+test("het gecombineerde veld komt als eigen parameter bij de database aan",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const tekst="Ana: severe peanut allergy, carries an EpiPen.\nBram: vegetarian.";
+  const result=await handler(post({...basis,dietaryNotes:tekst,message:"We arrive late on Friday."}));
+  assert.equal(result.statusCode,200);
+  assert.equal(rpcBodies[0].p_dietary_notes,tekst,"het dieetveld bereikt de database niet");
+  assert.equal(rpcBodies[0].p_message,"We arrive late on Friday.","het bericht is vervuild met het dieetveld");
+});
+
+test("een ouder formulier met twee velden wordt onderweg samengevoegd",async()=>{
+  // Een tabblad dat al openstond stuurt nog `allergies` en `dietary`. Die tekst mag niet
+  // verdwijnen omdat het formulier inmiddels één veld heeft.
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const result=await handler(post({...basis,allergies:"Peanuts - severe",dietary:"Vegetarian"}));
+  assert.equal(result.statusCode,200);
+  assert.equal(rpcBodies[0].p_dietary_notes,"Allergies: Peanuts - severe\nDietary requirements: Vegetarian");
+  // En de twee oude kolommen worden nog steeds gevuld, zodat er niets verloren gaat als
+  // iemand later toch naar de oorspronkelijke velden kijkt.
+  assert.equal(rpcBodies[0].p_allergies,"Peanuts - severe");
+  assert.equal(rpcBodies[0].p_dietary,"Vegetarian");
+});
+
+test("een te lang dieetveld wordt geweigerd en bereikt de database niet",async()=>{
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const opGrens="p".repeat(FIELD_LIMITS.dietaryNotes);
+  assert.equal((await handler(post({...basis,dietaryNotes:opGrens}))).statusCode,200);
+  assert.equal(rpcBodies[0].p_dietary_notes,opGrens,"er is een teken verdwenen");
+  rpcBodies.length=0;
+  const teLang=await handler(post({...basis,dietaryNotes:"p".repeat(FIELD_LIMITS.dietaryNotes+1)}));
+  assert.equal(teLang.statusCode,400);
+  const body=JSON.parse(teLang.body);
+  assert.equal(body.error,"field_too_long");
+  assert.deepEqual(body.fields,[{field:"dietaryNotes",limit:FIELD_LIMITS.dietaryNotes,length:FIELD_LIMITS.dietaryNotes+1}]);
+  assert.equal(rpcBodies.length,0,"een te lange tekst mag de database niet bereiken");
 });
 
 test("een allergie exact op de grens komt volledig aan, erboven wordt geweigerd",async()=>{
@@ -275,9 +320,10 @@ test("bestaande aanvragen blijven werken en bestaande berichten blijven staan",a
   // Geen not null en geen default: bestaande rijen worden null en niets wordt herschreven.
   assert.doesNotMatch(migratie,/add column if not exists allergies text not null/,"bestaande rijen zouden de migratie breken");
   assert.doesNotMatch(migratie,/add column if not exists dietary_requirements text not null/,"idem");
+  assert.doesNotMatch(migratie,/add column if not exists extra_nights text not null/,"idem voor de extra nachten");
   assert.doesNotMatch(migratie,/update public\.tavern_seat_claims set message/,"de migratie herschrijft bestaande berichten");
   // De nieuwe parameters hebben een default, dus een oude aanroep zonder die twee werkt nog.
-  assert.match(migratie,/p_allergies text default null,p_dietary text default null\)/,"de nieuwe parameters zijn niet optioneel");
+  assert.match(migratie,/p_allergies text default null,p_dietary text default null,p_extra_nights text default null,p_dietary_notes text default null\)/,"de nieuwe parameters zijn niet optioneel");
   // En de oude signatuur wordt opgeruimd, anders blijven er twee functies naast elkaar staan.
   assert.match(migratie,/drop function if exists public\.register_tavern_interest\(text,text,integer,text,text,timestamptz\);/,"de oude signatuur wordt niet opgeruimd");
   const {handler}=await import("../netlify/functions/first-access.mjs");
@@ -287,8 +333,11 @@ test("bestaande aanvragen blijven werken en bestaande berichten blijven staan",a
 
 test("de rechten op de nieuwe signatuur staan nog steeds alleen op service_role",async()=>{
   const migratie=await lees("database/first-access.sql");
-  assert.match(migratie,/revoke all on function public\.register_tavern_interest\(text,text,integer,text,text,timestamptz,text,text\) from public, anon, authenticated;/);
-  assert.match(migratie,/grant execute on function public\.register_tavern_interest\(text,text,integer,text,text,timestamptz,text,text\) to service_role;/);
+  assert.match(migratie,/revoke all on function public\.register_tavern_interest\(text,text,integer,text,text,timestamptz,text,text,text,text\) from public, anon, authenticated;/);
+  assert.match(migratie,/grant execute on function public\.register_tavern_interest\(text,text,integer,text,text,timestamptz,text,text,text,text\) to service_role;/);
+  // Elke keer dat er een parameter bij komt, moet de vórige handtekening weg. Anders staan
+  // er twee functies naast elkaar en kiest PostgreSQL er zelf een.
+  assert.match(migratie,/drop function if exists public\.register_tavern_interest\(text,text,integer,text,text,timestamptz,text,text,text\);/,"de vorige signatuur wordt niet opgeruimd");
   assert.doesNotMatch(migratie,/grant execute on function public\.register_tavern_interest[^;]*to (anon|authenticated|public)/);
 });
 
@@ -401,47 +450,66 @@ const stuur=async extra=>{
   const {handler}=await import("../netlify/functions/first-access.mjs");
   const result=await handler(post({...basis,...extra}));
   assert.equal(result.statusCode,200,`de aanvraag werd geweigerd: ${result.body}`);
-  assert.equal(mailBodies.length,1,"er ging geen of meer dan één mail uit");
-  return mailBodies[0];
+  // Sinds 5 september 2026 gaat er naast de ontvangstbevestiging ook een melding naar
+  // Lewos, zodat een allergie niet alleen in de database belandt. Deze tests gaan over
+  // de mail aan de gást, dus die pikken we hier eruit — en dat er precies één van is,
+  // blijft de assertie die telt.
+  const aanGast=mailBodies.filter(mail=>[].concat(mail.to).includes(basis.email));
+  assert.equal(aanGast.length,1,"er ging geen of meer dan één mail naar de gast");
+  return aanGast[0];
 };
 
+const KOP="Allergies & dietary requirements";
+// In de HTML-versie wordt het label ontsmet, net als alle andere tekst. Dat hoort zo:
+// een label dat niet langs `escapeHtml` gaat, is een label waarlangs iets anders ook
+// niet gaat.
+const KOP_HTML="Allergies &amp; dietary requirements";
+
 test("elke mail draagt zowel een HTML- als een tekstversie",async()=>{
-  const mail=await stuur({allergies:"Peanuts"});
+  const mail=await stuur({dietaryNotes:"Peanuts"});
   assert.ok(mail.html,"er is geen HTML-versie");
   assert.ok(mail.text,"er is geen tekstversie — een postvak zonder HTML ziet de allergie dan niet");
-  assert.match(mail.text,/Allergies:\n {2}Peanuts/,"de tekstversie noemt de allergie niet onder een kopje");
+  assert.ok(mail.text.includes(`${KOP}:\n  Peanuts`),"de tekstversie noemt de allergie niet onder een kopje");
 });
 
 test("één regel komt in beide formaten ongewijzigd aan",async()=>{
-  const mail=await stuur({allergies:"Peanut allergy"});
-  assert.match(mail.html,/<strong>Allergies:<\/strong><br>Peanut allergy<\/li>/);
-  assert.match(mail.text,/Allergies:\n {2}Peanut allergy/);
+  const mail=await stuur({dietaryNotes:"Peanut allergy"});
+  assert.ok(mail.html.includes(`<strong>${KOP_HTML}:</strong><br>Peanut allergy</li>`));
+  assert.ok(mail.text.includes(`${KOP}:\n  Peanut allergy`));
+});
+
+// Een tabblad dat al openstond stuurt nog twee velden. Die worden samengevoegd tot
+// dezelfde ene tekst, mét hun kopjes, zodat er niets wegvalt en niets dubbel staat.
+test("een ouder formulier met twee velden komt samengevoegd aan",async()=>{
+  const mail=await stuur({allergies:"Peanuts - severe",dietary:"Vegetarian"});
+  assert.ok(mail.text.includes(`${KOP}:\n  Allergies: Peanuts - severe\n  Dietary requirements: Vegetarian`),
+    "de twee oude velden komen niet als één tekst aan");
+  assert.equal((mail.html.match(/<li>/g)||[]).length,1,"de twee oude velden staan als twee punten in de mail");
 });
 
 test("meerdere regels blijven afzonderlijk leesbaar en vloeien niet samen",async()=>{
-  const mail=await stuur({allergies:"Peanuts - severe\nShellfish - moderate\nSesame - mild"});
+  const mail=await stuur({dietaryNotes:"Peanuts - severe\nShellfish - moderate\nSesame - mild"});
   // HTML: een <br> tussen elke regel, dus niets loopt over.
   assert.match(mail.html,/Peanuts - severe<br>Shellfish - moderate<br>Sesame - mild/);
   assert.doesNotMatch(mail.html,/severe\s*Shellfish/,"twee regels zijn samengevloeid in de HTML");
   // Tekst: echte regeleindes, elke regel ingesprongen onder zijn kopje.
-  assert.match(mail.text,/Allergies:\n {2}Peanuts - severe\n {2}Shellfish - moderate\n {2}Sesame - mild/);
+  assert.ok(mail.text.includes(`${KOP}:\n  Peanuts - severe\n  Shellfish - moderate\n  Sesame - mild`));
   for(const regel of ["Peanuts - severe","Shellfish - moderate","Sesame - mild"]){
     assert.ok(mail.text.includes(regel)&&mail.html.includes(regel),`${regel} is verdwenen`);
   }
 });
 
 test("een lege regel binnen de tekst blijft, maar zonder losse inspringing",async()=>{
-  const mail=await stuur({allergies:"Peanuts\n\nShellfish"});
-  assert.match(mail.text,/Allergies:\n {2}Peanuts\n\n {2}Shellfish/,"de lege regel draagt spaties of is weg");
+  const mail=await stuur({dietaryNotes:"Peanuts\n\nShellfish"});
+  assert.ok(mail.text.includes(`${KOP}:\n  Peanuts\n\n  Shellfish`),"de lege regel draagt spaties of is weg");
   assert.doesNotMatch(mail.text,/\n {2}\n/,"er staat een regel met alleen inspringing");
   assert.match(mail.html,/Peanuts<br><br>Shellfish/);
 });
 
 test("een leeg veld levert geen kopje en geen lege regel op",async()=>{
-  const mail=await stuur({allergies:"Peanuts",dietary:"",message:"   "});
-  assert.doesNotMatch(mail.text,/Dietary requirements:/,"een leeg veld kreeg toch een kopje");
-  assert.doesNotMatch(mail.text,/Anything else:/);
-  assert.doesNotMatch(mail.html,/Dietary requirements/);
+  const mail=await stuur({dietaryNotes:"Peanuts",message:"   "});
+  assert.doesNotMatch(mail.text,/Anything else:/,"een leeg veld kreeg toch een kopje");
+  assert.doesNotMatch(mail.html,/Anything else/);
   assert.doesNotMatch(mail.text,/\n\n\n/,"er staan onduidelijke lege regels in de tekstversie");
   // En zonder enig ingevuld veld staat het hele blok er niet.
   mailBodies.length=0;
@@ -451,15 +519,15 @@ test("een leeg veld levert geen kopje en geen lege regel op",async()=>{
 });
 
 test("lange maar geldige invoer komt volledig door, in beide formaten",async()=>{
-  const lang=Array.from({length:20},(_,i)=>`Line ${i+1} of a long but valid allergy list`).join("\n").slice(0,FIELD_LIMITS.allergies);
-  const mail=await stuur({allergies:lang});
+  const lang=Array.from({length:20},(_,i)=>`Line ${i+1} of a long but valid allergy list`).join("\n").slice(0,FIELD_LIMITS.dietaryNotes);
+  const mail=await stuur({dietaryNotes:lang});
   for(const regel of lang.split("\n"))assert.ok(mail.text.includes(regel),`"${regel}" ontbreekt in de tekstversie`);
   assert.equal(mail.html.match(/<br>/g).length>=lang.split("\n").length-1,true,"niet elke regel kreeg een <br>");
 });
 
 test("speciale tekens en HTML-achtige tekst worden getoond, niet uitgevoerd",async()=>{
   const gemeen='Sesame & mustard <mild>; "quotes"; O\'Brien; <script>alert(1)</script>';
-  const mail=await stuur({allergies:gemeen});
+  const mail=await stuur({dietaryNotes:gemeen});
   assert.doesNotMatch(mail.html,/<script>/,"er staat een uitvoerbare scripttag in de mail");
   assert.match(mail.html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/,"de scripttag is niet zichtbaar als tekst");
   assert.match(mail.html,/Sesame &amp; mustard &lt;mild&gt;/);
@@ -469,14 +537,18 @@ test("speciale tekens en HTML-achtige tekst worden getoond, niet uitgevoerd",asy
   assert.ok(mail.text.includes(gemeen),"de tekstversie heeft de invoer veranderd");
 });
 
-test("allergieën, dieetwensen en overige opmerkingen staan gescheiden naast elkaar",async()=>{
-  const mail=await stuur({allergies:"Peanuts",dietary:"Vegetarian",message:"We arrive late."});
-  for(const [kop,waarde] of [["Allergies","Peanuts"],["Dietary requirements","Vegetarian"],["Anything else","We arrive late."]]){
+test("het dieetveld en de overige opmerkingen staan gescheiden naast elkaar",async()=>{
+  // Allergieën en dieetwensen zijn sinds 5 september 2026 één veld. Het algemene
+  // berichtveld blijft er los van staan: een allergie mag nooit alleen te vinden zijn
+  // door een vrije tekst door te lezen.
+  const mail=await stuur({dietaryNotes:"Peanuts - severe. Vegetarian.",message:"We arrive late."});
+  for(const [kop,kopHtml,waarde] of [[KOP,KOP_HTML,"Peanuts - severe. Vegetarian."],
+                                     ["Anything else","Anything else","We arrive late."]]){
     assert.ok(mail.text.includes(`${kop}:\n  ${waarde}`),`${kop} staat niet als eigen kopje in de tekstversie`);
-    assert.ok(mail.html.includes(`<strong>${kop}:</strong><br>${waarde}`),`${kop} staat niet als eigen punt in de HTML`);
+    assert.ok(mail.html.includes(`<strong>${kopHtml}:</strong><br>${waarde}`),`${kop} staat niet als eigen punt in de HTML`);
   }
-  assert.doesNotMatch(mail.text,/Peanuts *Vegetarian/,"twee velden zijn samengevoegd zonder scheiding");
-  assert.equal((mail.html.match(/<li>/g)||[]).length,3,"de drie velden staan niet als drie punten");
+  assert.doesNotMatch(mail.text,/Vegetarian\. *We arrive late/,"twee velden zijn samengevoegd zonder scheiding");
+  assert.equal((mail.html.match(/<li>/g)||[]).length,2,"de twee velden staan niet als twee punten");
 });
 
 test("geen header-injectie: vrije tekst komt nooit in een kopregel terecht",async()=>{
@@ -488,11 +560,101 @@ test("geen header-injectie: vrije tekst komt nooit in een kopregel terecht",asyn
   assert.match(mail.text,/ {2}Bcc: iemand@elders\.invalid/);
 });
 
+test("elk vrij tekstveld is ook echt opgemaakt, op elke pagina die er een heeft",async()=>{
+  // Gevonden op 5 september 2026: `/tavern/book/` gaf alleen `input,select` een breedte,
+  // niet `textarea`. Alle vier de tekstvelden vielen daardoor terug op de standaard van de
+  // browser — smal, wit, monospace, met de placeholder afgekapt. Het viel niet op omdat de
+  // velden er al stonden en de test alleen naar hun bestaan keek.
+  for(const pagina of ["tavern/index.html","tavern/book/index.html","tavern/checkout/index.html",
+                       "tavern/private/index.html","contact/index.html"]){
+    const html=await lees(pagina);
+    if(!html.includes("<textarea"))continue;
+    const stijl=(html.match(/<style>[\s\S]*?<\/style>/g)||[]).join("\n");
+    const regels=[...stijl.matchAll(/([^{}]*textarea[^{}]*)\{([^}]*)\}/g)];
+    assert.ok(regels.length,`${pagina} heeft tekstvelden maar geen enkele opmaakregel voor textarea`);
+    // Breedte alleen was niet genoeg. Op 5 september 2026 bleek `/tavern/checkout/` wél een
+    // breedte te zetten maar geen achtergrond, geen kleur en geen hoogte: witte vakjes van
+    // twee regels hoog op een donkergroene pagina, met de voorbeeldtekst afgebroken. Een
+    // veld dat de kleur van de browser overneemt op een gekleurde pagina is een fout, geen
+    // smaakkwestie — dus alle vier de eigenschappen worden hier gecontroleerd.
+    const heeft=eigenschap=>regels.some(([,,inhoud])=>new RegExp(`(^|;|\\s)${eigenschap}\\s*:`).test(inhoud));
+    for(const [eigenschap,waarom] of [
+      ["width","valt terug op de standaardbreedte van de browser"],
+      ["background","neemt de achtergrond van de browser over — wit op een gekleurde pagina"],
+      ["color","neemt de tekstkleur van de browser over"],
+      ["min-height","is twee regels hoog en kapt de voorbeeldtekst af"]
+    ])assert.ok(heeft(eigenschap),`${pagina}: textarea zet geen ${eigenschap} en ${waarom}`);
+  }
+});
+
+// ── 11b. Extra nachten ───────────────────────────────────────────────────────
+// Robert, 5 september 2026. De site bood extra nachten al aan als "available on request",
+// maar er was geen veld: zo'n verzoek belandde in het vrije tekstveld. Nu is het een eigen
+// veld met een eigen kolom, want dit is het enige gegeven dat rechtstreeks naar de
+// accommodatie gaat.
+
+// Bijgewerkt op 5 september 2026. Het tekstvak is vervangen door de kalender: de gast
+// klikt aankomst en vertrek aan en de zin voor de accommodatie wordt daaruit afgeleid.
+// Vrije tekst kon iets anders zeggen dan de datums, en dan is er geen bron meer die het
+// wint. De grens van 500 tekens blijft staan voor de afgeleide tekst en voor oudere
+// boekingen die hun eigen woorden nog in dat veld hebben staan.
+test("de datums worden aangeklikt, niet ingetypt",async()=>{
+  for(const pagina of ["tavern/index.html","tavern/book/index.html"]){
+    const html=await lees(pagina);
+    assert.match(html,/data-weekend-calendar/,`${pagina} mist de kalender`);
+    assert.match(html,/name="requestedArrival"/,`${pagina} bewaart de aangevraagde aankomst niet`);
+    assert.match(html,/name="requestedDeparture"/,`${pagina} bewaart het aangevraagde vertrek niet`);
+    assert.doesNotMatch(html,/<textarea[^>]*name="extraNights"/,`${pagina} heeft nog een tekstvak voor datums`);
+  }
+  // De afrekenpagina kent het weekend niet en kan dus geen kalender tonen. Daar mag ook
+  // geen tekstvak meer staan: dan zou iemand daar datums typen die niets veranderen.
+  const afrekenen=await lees("tavern/checkout/index.html");
+  assert.doesNotMatch(afrekenen,/name="extraNights"/,"de afrekenpagina heeft nog een vrij tekstveld voor datums");
+  assert.equal(FIELD_LIMITS.extraNights,500,"de servergrens is verschoven");
+  const browser=await lees("assets/field-limits.js");
+  assert.match(browser,/extraNights:500/,"de browser kent de grens niet");
+});
+
+test("het veld belooft niets: extra nachten blijven op aanvraag",async()=>{
+  // Zolang er niets vastligt over beschikbaarheid mag het formulier geen toezegging doen.
+  // Robert heeft deze zin op 5 september 2026 letterlijk vastgelegd; hij staat zichtbaar
+  // onder het veld en niet in een placeholder, want een placeholder verdwijnt zodra iemand
+  // begint te typen — precies op het moment dat het voorbehoud telt.
+  const zin="Extra nights are available on request only and depend on accommodation availability.";
+  for(const pagina of ["tavern/index.html","tavern/book/index.html","tavern/checkout/index.html"]){
+    const html=await lees(pagina);
+    assert.ok(html.includes(zin),`${pagina} draagt het voorbehoud niet letterlijk`);
+    assert.doesNotMatch(html,/placeholder="[^"]*available on request/,`${pagina} verstopt het voorbehoud in een placeholder`);
+  }
+  // En de kalender zelf mag een aangevraagde nacht nergens als beschikbaar of inbegrepen
+  // tonen. Hij zegt "on request", en het bedrag gaat alleen over het weekend.
+  const kalender=await lees("assets/weekend-calendar.js");
+  assert.match(kalender,/on request/i,"de kalender noemt extra nachten niet als aanvraag");
+  const rekenwerk=await lees("assets/stay.js");
+  assert.match(rekenwerk,/requested\./,"de zin onder de kalender presenteert extra nachten niet als aanvraag");
+  assert.match(rekenwerk,/Not confirmed — subject to accommodation availability\./,
+    "de tekst voor de accommodatie zegt niet dat er nog niets vastligt");
+});
+
+test("de database bewaart extra nachten in een eigen kolom met een eigen grens",async()=>{
+  const migratie=await lees("database/first-access.sql");
+  assert.match(migratie,/add column if not exists extra_nights text;/);
+  assert.match(migratie,/tavern_seat_claims_extra_nights_length check \(extra_nights is null or char_length\(extra_nights\)<=500\)/);
+  assert.match(migratie,/'extraNights',claim\.extra_nights/,"confirm_tavern_payment geeft de extra nachten niet terug");
+});
+
+test("een lege waarde wist nooit wat er al stond",async()=>{
+  const migratie=await lees("database/first-access.sql");
+  const bijwerkingen=[...migratie.matchAll(/extra_nights=coalesce\(nullif\(trim\(p_extra_nights\),''\),extra_nights\)/g)];
+  assert.equal(bijwerkingen.length,7,"het aantal bijwerkingen is veranderd — kijk na welke");
+  assert.doesNotMatch(migratie,/extra_nights=trim\(p_extra_nights\)/,"een bijwerking kan de extra nachten wissen");
+});
+
 // ── 12. Het boekingspad en de operatorweergave ───────────────────────────────
 
-test("de boekingspagina heeft dezelfde drie velden met dezelfde grenzen",async()=>{
+test("de boekingspagina heeft dezelfde twee velden met dezelfde grenzen",async()=>{
   const html=await lees("tavern/book/index.html");
-  for(const veld of ["allergies","dietary","message"]){
+  for(const veld of ["dietaryNotes","message"]){
     assert.match(html,new RegExp(`name="${veld}"`),`tavern/book/ mist een veld voor ${veld}`);
     assert.match(html,new RegExp(`data-limit="${veld}"`),`tavern/book/: ${veld} heeft geen zichtbare grens`);
   }
@@ -501,26 +663,33 @@ test("de boekingspagina heeft dezelfde drie velden met dezelfde grenzen",async()
 
 test("de boekingspagina stuurt ze apart mee, niet samengevoegd",async()=>{
   const bron=await lees("tavern/book/booking.js");
-  const input=bron.slice(bron.indexOf("const input="),bron.indexOf("try{"));
-  for(const veld of ["allergies","dietary","message"]){
+  // Sinds 5 september 2026 dient deze pagina de boeking in via /api/hold/promote in plaats
+  // van rechtstreeks via /api/checkout. De eis blijft dezelfde: drie eigen velden, niet één
+  // samengeplakte tekst.
+  const input=bron.slice(bron.indexOf("/api/hold/promote"),bron.indexOf("knop.disabled=false;knop.textContent=\"Send"));
+  assert.ok(input.length>0,"het indienpad is niet gevonden — is de aanroep hernoemd?");
+  for(const veld of ["dietaryNotes","message"]){
     assert.match(input,new RegExp(`${veld}:form\\.elements\\.${veld}\\.value`),`${veld} gaat niet als eigen veld mee`);
   }
-  assert.doesNotMatch(input,/message:.*allergies|allergies.*\+.*dietary/,"velden worden samengeplakt");
+  // Het dieetveld mag nooit in het berichtveld belanden: dan is een allergie alleen nog
+  // te vinden door een vrije tekst door te lezen.
+  assert.doesNotMatch(input,/message:[^,]*dietaryNotes/,"het dieetveld wordt in het bericht geplakt");
 });
 
 test("begin_tavern_checkout bewaart ze in dezelfde kolommen en weigert te lange invoer",async()=>{
   const migratie=await lees("database/first-access.sql");
   const functie=migratie.slice(migratie.indexOf("function public.begin_tavern_checkout(p_name"),migratie.indexOf("revoke all on function public.begin_tavern_checkout"));
-  assert.match(functie,/p_allergies text default null,p_dietary text default null,p_message text default null\)/,"de nieuwe parameters zijn niet optioneel");
+  assert.match(functie,/p_allergies text default null,p_dietary text default null,p_message text default null,p_extra_nights text default null,p_dietary_notes text default null\)/,"de nieuwe parameters zijn niet optioneel");
   assert.match(functie,/raise exception 'invalid_allergies'/);
   assert.match(functie,/raise exception 'invalid_dietary'/);
+  assert.match(functie,/raise exception 'invalid_dietary_notes'/);
   assert.match(functie,/raise exception 'invalid_message'/);
-  assert.match(functie,/status,allergies,dietary_requirements,message,consented_at/,"de insert vult de eigen kolommen niet");
-  assert.match(functie,/nullif\(trim\(p_allergies\),''\),nullif\(trim\(p_dietary\),''\),nullif\(trim\(p_message\),''\)/);
+  assert.match(functie,/status,allergies,dietary_requirements,dietary_notes,message,extra_nights,consented_at/,"de insert vult de eigen kolommen niet");
+  assert.match(functie,/nullif\(trim\(p_allergies\),''\),nullif\(trim\(p_dietary\),''\),nullif\(trim\(p_dietary_notes\),''\),nullif\(trim\(p_message\),''\),nullif\(trim\(p_extra_nights\),''\)/);
   // De oude signatuur moet weg, anders staan er twee functies naast elkaar en faalt PostgREST.
   assert.match(migratie,/drop function if exists public\.begin_tavern_checkout\(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer\);/);
   for(const woord of ["revoke all on function","grant execute on function"]){
-    assert.match(migratie,new RegExp(`${woord} public\\.begin_tavern_checkout\\(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer,text,text,text\\)`),`${woord} staat nog op de oude signatuur`);
+    assert.match(migratie,new RegExp(`${woord} public\\.begin_tavern_checkout\\(text,text,integer,text,text,boolean,boolean,text,boolean,timestamptz,integer,text,text,text,text,text\\)`),`${woord} staat nog op de oude signatuur`);
   }
 });
 
@@ -528,8 +697,10 @@ test("het operator-script leest de drie velden en schrijft nooit iets",async()=>
   const bron=await lees("scripts/guest-details.mjs");
   assert.doesNotMatch(bron,/method:"(POST|PATCH|PUT|DELETE)"/,"het script schrijft naar de database");
   assert.doesNotMatch(bron,/rpc\//,"het script roept een RPC aan in plaats van te lezen");
-  assert.match(bron,/select=name,email,party_size,status,allergies,dietary_requirements,message/,"het script leest niet alle drie de velden");
+  assert.match(bron,/select=name,email,party_size,status,dietary_notes,allergies,dietary_requirements,message/,"het script leest het gecombineerde veld of de twee oude kolommen niet");
   assert.match(bron,/ALLERGIES/,"een allergie valt niet op in de uitvoer");
+  // Nooit allebei tonen: dan staat een allergie van een oude boeking er twee keer.
+  assert.match(bron,/dietary_notes\|\|""\)\.trim\(\)\|\|\[/,"het script kiest niet tussen het nieuwe veld en de twee oude");
   // Regeleindes van de gast blijven staan in de operatorweergave.
   assert.match(bron,/split\(\/\\r\?\\n\/\)/,"de operatorweergave plet meerregelige tekst");
   // En de waarschuwing over oude aanvragen moet erin blijven.
@@ -539,7 +710,7 @@ test("het operator-script leest de drie velden en schrijft nooit iets",async()=>
 test("oude aanvragen zonder de nieuwe velden blijven bruikbaar",async()=>{
   const migratie=await lees("database/first-access.sql");
   // Geen not null, geen default, geen herschrijving van bestaande berichten.
-  assert.doesNotMatch(migratie,/add column if not exists (allergies|dietary_requirements) text not null/);
+  assert.doesNotMatch(migratie,/add column if not exists (allergies|dietary_requirements|dietary_notes) text not null/);
   assert.doesNotMatch(migratie,/update public\.tavern_seat_claims set message=(?!coalesce)/);
   // En het operator-script wijst de operator op die rijen in plaats van ze te verbergen.
   const script=await lees("scripts/guest-details.mjs");
@@ -548,22 +719,22 @@ test("oude aanvragen zonder de nieuwe velden blijven bruikbaar",async()=>{
 
 // ── 13. Het First Access-betaalvenster: aanvullen mag, wissen nooit ──────────
 
-test("de checkoutpagina heeft de drie velden en zegt dat leeg laten niets wist",async()=>{
+test("de checkoutpagina heeft de twee velden en zegt dat leeg laten niets wist",async()=>{
   const html=await lees("tavern/checkout/index.html");
-  for(const veld of ["allergies","dietary","message"]){
+  for(const veld of ["dietaryNotes","message"]){
     assert.match(html,new RegExp(`data-limit="${veld}"`),`tavern/checkout/ mist een grens voor ${veld}`);
   }
   assert.match(html,/assets\/field-limits\.js/,"tavern/checkout/ laadt het grensscript niet");
   assert.match(html,/Leaving a field empty never erases what you told us before\./,"de gast leest niet dat leeg laten veilig is");
   const bron=await lees("tavern/checkout/checkout.js");
-  for(const veld of ["allergies","dietary","message"])assert.match(bron,new RegExp(`${veld}:\\(document\\.querySelector\\("#${veld}"\\)`),`${veld} gaat niet mee`);
+  for(const veld of ["dietaryNotes","message"])assert.match(bron,new RegExp(`${veld}:\\(document\\.querySelector\\("#${veld}"\\)`),`${veld} gaat niet mee`);
 });
 
 test("begin_tavern_first_access_checkout vult aan en wist nooit",async()=>{
   const migratie=await lees("database/first-access.sql");
   const functie=migratie.slice(migratie.indexOf("function public.begin_tavern_first_access_checkout(p_token_hash"),migratie.indexOf("revoke all on function public.begin_tavern_first_access_checkout"));
-  assert.match(functie,/p_allergies text default null,p_dietary text default null,p_message text default null\)/);
-  for(const fout of ["invalid_allergies","invalid_dietary","invalid_message"])assert.match(functie,new RegExp(`raise exception '${fout}'`));
+  assert.match(functie,/p_allergies text default null,p_dietary text default null,p_message text default null,p_extra_nights text default null,p_dietary_notes text default null\)/);
+  for(const fout of ["invalid_allergies","invalid_dietary","invalid_dietary_notes","invalid_message","invalid_extra_nights"])assert.match(functie,new RegExp(`raise exception '${fout}'`));
   // Drie update-takken: twee die de claim bijwerken, en één die een verlopen uitnodiging
   // op 'expired' zet. Die laatste hoort de velden juist NIET aan te raken.
   const updates=functie.split("update public.tavern_seat_claims set").slice(1);
@@ -573,6 +744,8 @@ test("begin_tavern_first_access_checkout vult aan en wist nooit",async()=>{
   for(const update of metVelden){
     assert.match(update,/allergies=coalesce\(nullif\(trim\(p_allergies\),''\),allergies\)/,"een tak kan de allergie wissen");
     assert.match(update,/dietary_requirements=coalesce\(nullif\(trim\(p_dietary\),''\),dietary_requirements\)/);
+    // Ook het gecombineerde veld mag nooit gewist worden door een lege waarde.
+    assert.match(update,/dietary_notes=coalesce\(nullif\(trim\(p_dietary_notes\),''\),dietary_notes\)/,"een tak kan het dieetveld wissen");
     assert.match(update,/message=coalesce\(nullif\(trim\(p_message\),''\),message\)/,"een tak kan het bericht wissen");
   }
   const verlopen=updates.find(u=>/status='expired'/.test(u));
@@ -580,16 +753,16 @@ test("begin_tavern_first_access_checkout vult aan en wist nooit",async()=>{
   assert.doesNotMatch(verlopen,/allergies=/,"de verlooptak raakt de gastgegevens aan");
   assert.match(migratie,/drop function if exists public\.begin_tavern_first_access_checkout\(text,text,boolean,boolean,text,boolean,integer\);/,"de oude signatuur blijft staan");
   for(const woord of ["revoke all on function","grant execute on function"]){
-    assert.match(migratie,new RegExp(`${woord} public\\.begin_tavern_first_access_checkout\\(text,text,boolean,boolean,text,boolean,integer,text,text,text\\)`));
+    assert.match(migratie,new RegExp(`${woord} public\\.begin_tavern_first_access_checkout\\(text,text,boolean,boolean,text,boolean,integer,text,text,text,text,text\\)`));
   }
 });
 
 test("alle vier de gastpaden sturen de drie velden apart mee",async()=>{
   const paden=[
-    ["/tavern/ (First Access)","tavern/index.html",["allergies","dietary","message"]],
-    ["/tavern/private/","tavern/private/index.html",["allergies","dietary"]],
-    ["/tavern/book/","tavern/book/index.html",["allergies","dietary","message"]],
-    ["/tavern/checkout/","tavern/checkout/index.html",["allergies","dietary","message"]]
+    ["/tavern/ (First Access)","tavern/index.html",["dietaryNotes","message"]],
+    ["/tavern/private/","tavern/private/index.html",["dietaryNotes"]],
+    ["/tavern/book/","tavern/book/index.html",["dietaryNotes","message"]],
+    ["/tavern/checkout/","tavern/checkout/index.html",["dietaryNotes","message"]]
   ];
   for(const [naam,pagina,velden] of paden){
     const html=await lees(pagina);

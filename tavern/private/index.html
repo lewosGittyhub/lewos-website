@@ -32,7 +32,7 @@
   form{display:grid;gap:20px;padding:clamp(24px,4vw,40px);border-radius:20px;background:var(--green);color:var(--cream);box-shadow:0 24px 65px rgba(15,59,53,.22)}
   label{display:block;margin-bottom:7px;font-weight:700}
   input,textarea{width:100%;padding:13px 14px;border:1px solid rgba(247,243,236,.5);border-radius:9px;background:rgba(247,243,236,.12);color:var(--cream);font:inherit}
-  textarea{min-height:132px;resize:vertical}
+  textarea{min-height:132px;resize:vertical}textarea[data-limit="dietaryNotes"]{min-height:172px}
   .hint{margin:6px 0 0;color:rgba(247,243,236,.72);font-size:.86rem}
   .check{display:grid;grid-template-columns:20px 1fr;gap:11px}
   .check input{width:18px;height:18px;margin-top:5px;accent-color:var(--orange)}
@@ -90,12 +90,8 @@
         <textarea id="idea" name="idea" required data-limit="idea" placeholder="Who is coming, how long you would like to stay, what kind of story you are after, and anything else that matters."></textarea>
       </div>
       <div>
-        <label for="allergies">Allergies</label>
-        <textarea id="allergies" name="allergies" rows="2" data-limit="allergies" placeholder="List each allergy and how serious it is. Leave empty if nobody in your group has one."></textarea>
-      </div>
-      <div>
-        <label for="dietary">Dietary requirements</label>
-        <textarea id="dietary" name="dietary" rows="2" data-limit="dietary" placeholder="Vegetarian, vegan, gluten-free, anything else we should cook around. Leave empty if none."></textarea>
+        <label for="dietaryNotes">Allergies &amp; dietary requirements</label>
+        <textarea id="dietaryNotes" name="dietaryNotes" rows="4" data-limit="dietaryNotes" placeholder="Tell us about any allergies, how severe they are, and dietary requirements. For a group, include who each requirement applies to. Leave empty if none."></textarea>
       </div>
       <div class="check"><input id="consent" name="consent" type="checkbox" value="agreed" required><label for="consent">I agree that Lewos may store my details and contact me about this request. <a href="/privacy/">Privacy information</a></label></div>
       <p class="result" data-result role="status" tabindex="-1" hidden></p>

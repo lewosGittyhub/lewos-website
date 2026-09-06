@@ -10,6 +10,8 @@
 //
 // `escapeHtml` stond viermaal los in de repo; hij staat nu hier.
 
+import {recipientsAreMixed} from "./_recipients.mjs";
+
 export const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 
 // Eerst ontsnappen, dán pas de regeleindes omzetten. Die volgorde is wat dit veilig
@@ -40,6 +42,11 @@ export const resendPayload=({from,to,replyTo="lewos.co@gmail.com",subject,html,t
   // ontstaan — de onderwerpen zijn vaste tekst — maar de controle hoort op de plek te
   // staan waar elke mail langskomt.
   if(/[\r\n]/.test(String(subject)))throw new Error("email_subject_newline");
+  // Elke mail passeert deze functie, dus staat hier ook de scheiding tussen de twee
+  // postvakken. Het adres van Lewos en dat van de accommodatie in één ontvangerslijst
+  // betekent dat een dieetwens of een persoonlijke vraag meeliftt naar een partij die
+  // alleen de kamergegevens hoort te zien. Dat is geen mail die we alsnog versturen.
+  if(recipientsAreMixed(to))throw new Error("email_recipient_mixup");
   const payload={from,to,reply_to:replyTo,subject,text,html};
   if(attachments)payload.attachments=attachments;
   return payload;

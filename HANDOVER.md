@@ -355,6 +355,654 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-06 · Claude · Migraties eindelijk tegen een echte database; vrijdagochtend hersteld · TE CONTROLEREN
+
+**Het belangrijkste eerst: de SQL is niet langer ongetest.** Er staat op deze Mac geen
+PostgreSQL, geen Homebrew en geen Docker, en dat was maandenlang de reden dat elke migratie
+"NOG NIET GEVERIFIEERD" bleef. Er blijkt een weg zonder installatie: native arm64-binaries
+(~30 MB) uit de Maven-repository van zonky.io, uitpakken in een tijdelijke map, TCP-only.
+De recepten staan in `operations/supabase-migration-testplan.md`.
+
+Resultaat, op PostgreSQL 16.4:
+
+- Alle vijf migraties draaien schoon in volgorde: `first-access.sql` → `filming-consent.sql`
+  → `admin.sql` → `seat-holds.sql` → `stay-dates.sql`.
+- Nog een keer alle vijf: ook schoon. Ze zijn idempotent, en de eenmalige samenvoeging van
+  de dieetvelden verdubbelt niets bij een tweede run.
+- `tests/database-integration.sql` slaagt volledig. Dat bestand is uitgebreid met het
+  verblijfsvenster, het samengevoegde dieetveld en de beheerfuncties.
+
+De banners in de vier migratiebestanden zijn daarop aangepast: **lokaal gedraaid, niet op
+Supabase.** Wat nog steeds niet is aangetoond: de Supabase-standaardrechten (op 3 september
+bleek dat verschil al eerder te bijten), PostgREST, en de gegevens die er al in staan.
+
+**Robert's correctie op de vrijdag, verwerkt.** Het venster liep tot donderdag omdat het
+volgende Tavern-weekend op vrijdag begint. Dat was fout: jij vertrekt om 09:30 en de
+volgende gasten komen om 16:00, dus jouw laatste nacht is de donderdag en hun eerste nacht
+is die vrijdag. Die botsen niet.
+
+- `assets/stay.js` heeft nu `stayWindow()`, `previousMonday()` en `nextFriday()`. Eén
+  rekenkern voor de browser.
+- `database/stay-dates.sql` heeft `private.stay_window()` met dezelfde regel, en
+  `set_tavern_stay_request` en `admin_decide_extra_nights` weigeren nu buiten dat venster
+  (`stay_arrival_too_early`, `stay_departure_too_late`). **De grens staat dus ook aan de
+  serverkant**, niet alleen in de kalender.
+- Beide implementaties zijn naast elkaar gelegd tegen de draaiende database en geven voor
+  elk weekend hetzelfde venster. Weekend 01: 26 oktober t/m **6 november**.
+- Een dag die bij een ánder weekend hoort maar voor jou een geldig eindpunt is, wordt in de
+  kalender als **wisseldag** aangeboden (`is-turnover`), met uitleg in het voorleeslabel.
+
+**Integratietests, over echte HTTP.** Twee nieuwe scripts, geen npm-afhankelijkheden:
+
+- `scripts/integration-auth.mjs` — 17 controles: geen token, `alg:none`, verkeerde
+  handtekening, verlopen token, ingelogd-maar-niet-op-de-lijst, het maandoverzicht zonder
+  gezondheidsgegevens, het detail mét, en de rolverdeling (Nadine herinnert wel, verlengt
+  en geeft niet vrij). Alle 17 groen.
+- `scripts/integration-booking.mjs` — de boekingsflow, inclusief: vertrek op vrijdag
+  6 november aanvaard, 7 november geweigerd, aankomst 25 oktober geweigerd, onleesbare datum
+  422. Alle groen.
+
+**Het contactformulier is nu lokaal te proeven.** De testserver onderschept Resend en
+schrijft de post naar de postbus op schijf; er gaat niets de deur uit. Gemeten: gewone vraag
+200 met *reply-to* de gast, zonder JavaScript 303 naar `/contact-thanks/`, honeypot 200 zonder
+bericht, te lange vraag 400, `GET` 405. Daarmee is de vervangende route geverifieerd en staat
+het uitzetten van Netlify Forms als livegangstap in `deploy-mailroutering.md` — mét de
+volgorde: pas ná één echte vraag op productie.
+
+**Verder.** De negen nieuwe omgevingsvariabelen staan compleet in
+`deploy-mailroutering.md`, met per stuk wat er misgaat als hij ontbreekt en **zonder één
+waarde**. Het privacyconcept heeft er drie punten bij (de beheeromgeving, het samengevoegde
+veld, aangevraagd tegenover bevestigd verblijf) en blijft een concept: `privacy/index.html`
+is niet aangeraakt en de patch dekt bewust alleen de drie oudste wijzigingen. Nieuw:
+`operations/openstaande-punten.md`, één lijst met alles wat op Robert, de gestor of de
+verzekeraar wacht.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 394 tests, 394 groen.
+Databasecontroles: zie het testplan. Integratie: start `scripts/local-admin-server.mjs` en
+draai de twee `integration-*.mjs`-scripts.
+
+**Niet geverifieerd — voor Codex.**
+
+1. Supabase zelf. Zie hierboven wat kale PostgreSQL niet aantoont.
+2. De negen omgevingsvariabelen: ik kan het Netlify-dashboard niet zien.
+3. Google Agenda draait op de echte koppeling maar er is sinds 5 september geen nieuwe
+   afspraak gemaakt; de wijziging aan de omschrijving is alleen in tests gezien.
+
+### 2026-09-05 · Claude · Allergieën en dieetwensen samengevoegd tot één veld · TE CONTROLEREN
+
+**Wat.** Op verzoek van Robert. De twee tekstvakken *Allergies* en *Dietary requirements*
+zijn op alle vier de boekingsformulieren één veld geworden:
+
+- Label **Allergies & dietary requirements**, optioneel, maximaal **1.000 tekens**.
+- Voorbeeldtekst: *"Tell us about any allergies, how severe they are, and dietary
+  requirements. For a group, include who each requirement applies to. Leave empty if none."*
+- Pagina's: `/tavern/`, `/tavern/private/`, `/tavern/book/`, `/tavern/checkout/`. De
+  huisstijl is ongewijzigd; alleen `rows` is van 2 naar 4 gegaan zodat de voorbeeldtekst
+  past.
+
+**Opslag.** Nieuwe kolom `tavern_seat_claims.dietary_notes` (max 1.000). De twee oude
+kolommen blijven staan en worden **niet gewist**; de migratie voegt ze eenmalig samen naar
+`dietary_notes` met een kopje per herkomst (`Allergies: …` / `Dietary requirements: …`).
+Overal geldt: het nieuwe veld wint, en dan staan de oude er niet meer naast — nooit
+allebei, want dan leest iemand dezelfde allergie twee keer.
+
+- `database/first-access.sql`: kolom, constraint, `private.merged_dietary_text`, de
+  eenmalige samenvoeging, en `p_dietary_notes` op de drie schrijffuncties.
+- `database/seat-holds.sql`: `p_dietary_notes` op `promote_seat_hold_to_payment`.
+- `database/stay-dates.sql`: `admin_booking_detail` en `confirm_tavern_payment` geven
+  `dietaryNotes` terug, met terugval op de twee oude kolommen.
+- Nieuw: `netlify/functions/_dietary.mjs` — `mergeLegacyDietary` en `dietaryText`, met
+  exact dezelfde vorm als de SQL, zodat een oude rij en een oude client er hetzelfde
+  uitzien. Gedeelde module, géén handler die een andere handler importeert.
+
+**Wat níét is veranderd.** Dit blijft een **eigen** veld, los van *Anything else*: een
+allergie moet terug te vinden zijn zonder een vrije tekst door te lezen. En de tekst gaat
+nog steeds alléén naar Lewos — niet naar Google Agenda, niet naar de accommodatie, niet
+naar het maandoverzicht van de beheeromgeving. `bookingEvent()` neemt het veld niet eens
+aan.
+
+**Terugwaarts compatibel.** Een tabblad dat nog openstond stuurt `allergies` en `dietary`;
+die worden aan de serverkant samengevoegd tot dezelfde ene tekst en gaan óók nog naar de
+twee oude kolommen. Een oude client verliest dus niets.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 390 tests, 390 groen, hier
+gedraaid op 5 september 2026. Nieuw: `tests/dietary.test.mjs` (13 tests) over samenvoegen,
+niet-verdubbelen en de uitsluitingen. Lokaal doorlopen in de browser: alle vier de
+formulieren tonen één veld met de afgesproken tekst en `0 / 1000`; een boeking ingediend op
+`/tavern/book/` kwam in de testdatabase terecht met alleen `dietary_notes` gevuld; in de
+beheeromgeving toont de testboeking die nog twee oude kolommen had één blok met beide
+regels erin, en het maandoverzicht draagt er niets van.
+
+**Niet geverifieerd — voor Codex.**
+
+1. De SQL is nooit tegen een database gedraaid. Let vooral op de **handtekeningen**: er is
+   een parameter bij gekomen op vier functies, dus de `revoke`/`grant`-regels zijn
+   meegeschoven en er is per functie een `drop function if exists` voor de vórige
+   handtekening bijgekomen. Zonder die drop staan er twee overloads naast elkaar.
+2. De eenmalige samenvoeging (`update … set dietary_notes = …`) draait alleen waar het veld
+   leeg is. Twee keer draaien hoort niets te veranderen; dat is te toetsen.
+
+**Openstaand voor Robert.** Op `/tavern/checkout/` staat de afgesproken voorbeeldtekst
+*"Leave empty if none"*, terwijl leeg laten daar juist betekent dat blijft staan wat je bij
+je aanmelding hebt opgegeven. De regel eronder zegt dat wél (*"Leaving a field empty never
+erases what you told us before."*). Wil je daar een eigen voorbeeldtekst, zeg het.
+
+### 2026-09-05 · Claude · Datums aanklikken in de kalender; aangevraagd verblijf apart van bevestigd · TE CONTROLEREN
+
+**Wat.** Op verzoek van Robert. Het tekstvak "Extra nights before or after?" is weg. De
+gast klikt zijn weekend aan en daarna zijn aankomst en vertrek, in dezelfde kalender.
+
+- Nieuw: `assets/stay.js` — het rekenwerk (nachten tellen, aangevraagd tegenover bevestigd,
+  en de teksten die daaruit volgen). **De enige plek waar nachten geteld worden**; de
+  browser en `netlify/functions/_stay.mjs` importeren allebei hiervandaan.
+- Nieuw: `assets/weekend-calendar.js` — één kalender, gebruikt door `/tavern/` én
+  `/tavern/book/`. De kalender die in `first-access.js` zat is daarheen verhuisd en kan nu
+  ook aankomst en vertrek. Dat was de herstructurering waar Robert akkoord op gaf.
+- Nieuw: `database/stay-dates.sql` — `requested_arrival`, `requested_departure`,
+  `extra_nights_status`, plus `set_tavern_stay_request` en `admin_decide_extra_nights`.
+  `arrival_date` / `departure_date` uit `admin.sql` bestonden al maar werden nergens
+  gevuld; dat zijn nu de **bevestigde** datums. **Volgorde: `first-access.sql` →
+  `admin.sql` → `stay-dates.sql`.**
+- `netlify/functions/stripe-webhook.mjs`: de mail aan de accommodatie heeft twee blokken —
+  *Confirmed booking* en *NOT YET CONFIRMED — extra nights requested*, met de vraag om te
+  antwoorden. De regel in het tweede blok wordt afgeleid uit de opgeslagen datums.
+- `netlify/functions/_calendar.mjs`: de agenda-afspraak loopt van het bevestigde verblijf.
+  Een aangevraagde nacht rekt hem niet op en staat alleen als regel in de omschrijving.
+- `admin/admin.js`: *Arrival (confirmed)* bij de feiten, de aanvraag in een eigen blok met
+  **Confirm as requested · Confirm different dates · Decline**. In het maandoverzicht komt
+  er `· extra nights requested` bij; het balkje loopt niet verder dan wat vaststaat.
+- `tavern/checkout/index.html`: de drie tekstvelden waren **witte standaardvakjes** — die
+  pagina had als enige geen achtergrond, kleur of hoogte op `.field textarea` staan. Nu in
+  de huisstijl, 120px hoog, volle breedte, leesbare voorbeeldtekst. Het tekstvak voor extra
+  nachten is daar weg; die pagina kent het weekend niet en kan dus geen kalender tonen.
+- Nieuw: `operations/verblijf-en-extra-nachten.md`.
+
+**Waarom.** Eén tekstveld betekende drie dingen tegelijk — een wens, een afspraak en een
+verblijf — en niemand kon zien welke. Wij hebben geen beschikbaarheidsagenda van Fontecha,
+dus een aangeklikte nacht is een vraag. Die mag nergens als bevestigd verblijf opduiken:
+niet in de prijs, niet in de agenda, niet in het balkje van de maandkalender.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 371 tests, 371 groen, hier gedraaid
+op 5 september 2026. Nieuw: `tests/stay.test.mjs` (21 tests). Lokaal doorlopen in de
+browser met `node scripts/local-admin-server.mjs`: weekend gekozen, twee nachten vooraf en
+één erna aangeklikt, stoelen vastgezet, ingediend — de boeking staat in de testdatabase met
+`requested_arrival` en `requested_departure` gevuld en `arrival_date` leeg. In de
+beheeromgeving liep het balkje van 6 t/m 9 november en niet van 5 t/m 10; na *Confirm as
+requested* liep het wél van 5 t/m 10.
+
+**Niet geverifieerd — voor Codex.**
+
+1. `database/stay-dates.sql` is nooit tegen een database gedraaid. Er is hier geen
+   PostgreSQL. Na te testen: de vier constraints, `set_tavern_stay_request` met een datum
+   ná `starts_on` (moet weigeren), `admin_decide_extra_nights` met meer nachten dan
+   gevraagd (moet weigeren), en de hervertaalde `confirm_tavern_payment`.
+2. `netlify/functions/_stay.mjs` importeert `../../assets/stay.js`, buiten de functiemap.
+   Controleer na de eerste deploy of `/api/first-access` antwoordt; zo niet, `assets/stay.js`
+   opnemen in `included_files`.
+3. Er gaat geen mail naar de gast als de accommodatie bevestigt of afwijst.
+
+**Openstaand voor Robert.**
+
+- **Mag Nadine over extra nachten beslissen?** Nu wel: zij is de accommodatie en weet of er
+  een kamer vrij is. Verlengen en vrijgeven blijven alleen van Robert. Wil je dit ook
+  alleen zelf, zeg het — het is één regel.
+- De 18+-wegwijzer staat geparkeerd tot na deze wijziging.
+
+**Fout van mijn kant, hersteld.** Tijdens dit werk heb ik `git checkout database/first-access.sql`
+gedraaid en daarmee niet-gecommitte wijzigingen van eerder die dag weggegooid. Ze zijn
+teruggehaald uit het sessielogboek en regel voor regel gelijk aan de staat ervoor. Dat het
+kón gebeuren komt doordat er 50+ bestanden ongecommit op deze branch staan.
+
+### 2026-09-05 · Claude · Mailroutering gesplitst, contactformulier omgezet, veld voor extra nachten · TE CONTROLEREN
+
+**Wat.** Op verzoek van Robert, met zijn definitieve beslissingen van dezelfde dag verwerkt.
+Twee postvakken, allebei via een omgevingsvariabele, en ze mogen nooit door elkaar lopen:
+`LEWOS_GENERAL_EMAIL` (standaard `lewos.co@gmail.com`) voor alles wat geen gewone
+accommodatieboeking is, `FONTECHA_ACCOMMODATION_EMAIL` (**geen** standaard) voor bevestigde,
+betaalde boekingen. Volledige uitleg in `operations/mailroutering.md`, deploy-stappen in
+`operations/deploy-mailroutering.md`.
+
+- Nieuw: `netlify/functions/_recipients.mjs`. Weigert twee gelijke of ongeldige adressen.
+- `netlify/functions/_email.mjs`: `resendPayload()` weigert elke mail die de twee postvakken
+  samen als ontvanger draagt. Elke mail komt daar langs, dus dat is de plek voor die grens.
+- `netlify/functions/stripe-webhook.mjs`: na de bevestiging aan de gast gaan er twee
+  meldingen uit. Naar de accommodatie, tweetalig Engels/Spaans: naam, aantal gasten, weekend,
+  aankomst, vertrek, extra nachten, kenmerk — géén allergie, dieetwens, vrij tekstveld of
+  e-mailadres van de gast. Naar Lewos: alleen wanneer er een allergie, dieetwens of opmerking
+  is. Allebei blokkerend (500 → Stripe herhaalt); een betaalde boeking waar de accommodatie
+  niets van weet is een gast zonder bed. De gast houdt zijn bevestiging met de twee PDF's,
+  ongewijzigd.
+- `netlify/functions/first-access.mjs`: een private aanvraag gaat altijd naar Lewos, een
+  aanmelding met allergie, dieetwens, extra nachten of opmerking ook. Niet blokkerend — de
+  gast heeft zijn stoelen en zijn ontvangstbevestiging al. De accommodatie krijgt hier niets:
+  een aanmelding is geen bevestigde boeking.
+- **Nieuw: `netlify/functions/contact.mjs` en `contact/contact.js`.** Het vragenformulier liep
+  via Netlify Forms, met de ontvanger in het Netlify-dashboard. Nu langs een eigen functie, met
+  dezelfde honeypot, grenzen en snelheidsbegrenzer als het aanmeldformulier, en `reply_to` op
+  het adres van de gast. `_redirects` kreeg `/api/contact`. Zonder JavaScript werkt het ook:
+  de functie antwoordt met een 303 naar `/contact-thanks/`.
+- **Extra nachten.** Eigen veld op `/tavern/`, `/tavern/book/` en `/tavern/checkout/`, eigen
+  kolom `extra_nights`, grens 500 in `_field-limits.mjs` én `assets/field-limits.js`.
+  Zichtbaar onder het veld staat, letterlijk zoals Robert hem heeft vastgelegd: *"Extra nights
+  are available on request only and depend on accommodation availability."* Als
+  `<small class="field-hint">` en niet als placeholder — een placeholder verdwijnt zodra
+  iemand begint te typen, precies wanneer het voorbehoud telt.
+- `database/first-access.sql`: kolom `extra_nights` met eigen check-constraint;
+  `p_extra_nights` op `register_tavern_interest`, `begin_tavern_checkout` en
+  `begin_tavern_first_access_checkout` (alle drie met default, oude signaturen worden gedropt);
+  `confirm_tavern_payment` geeft `extraNights`, `arrivalDate` en `departureDate` terug.
+  **Bovenaan dat bestand staat nu een blok NOG NIET GEVERIFIEERD** met de vijf scenario's die
+  tegen een echte database moeten. Weghalen zodra dat gebeurd is.
+- Nieuw: `operations/mailroutering.md`, `operations/deploy-mailroutering.md`,
+  `operations/privacy-concept-accommodatie.md`, `operations/privacy-concept-accommodatie.diff`,
+  `tests/recipients.test.mjs`, `tests/contact.test.mjs`.
+
+**Het adres van Fontecha staat nergens in de repo.** Dat Gmail-account bestaat op 5 september
+2026 nog niet, en het postvak van een derde partij hoort sowieso niet in een repository. De
+tests draaien op `accommodation@example.invalid`. Het echte adres komt alleen in Netlify.
+
+**Waarom.** Er ging tot nu toe geen enkele mail naar Lewos zelf. Een allergie, een dieetwens
+of een aanvraag voor een private Tavern stond alleen in Supabase, en Robert moest er zelf naar
+gaan zoeken. De accommodatie hoorde niets over een bevestigde boeking. En het contactformulier
+hing aan een instelling in een dashboard — precies wat je vergeet als je van adres wisselt.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 284 tests, 284 groen, hier gedraaid op
+5 september 2026. De routeringstests lezen de payload die daadwerkelijk naar Resend gaat, niet
+de broncode: ze controleren onder meer dat het woord *Peanuts* nooit in een bericht aan de
+accommodatie voorkomt en dat geen enkele mail meer dan één ontvanger heeft. Welke test welke
+afspraak bewaakt staat als tabel in `operations/mailroutering.md`.
+
+De drie formulieren zijn lokaal geserveerd vanaf een kopie onder `/private/tmp` en in de
+browser nagelopen op 375px breed: het veld staat tussen dieetwensen en het vrije tekstveld,
+draagt dezelfde opmaak als zijn buren, krijgt zijn teller en `maxlength` van
+`assets/field-limits.js`, en geen van de pagina's scrollt horizontaal. Dat is met
+`getBoundingClientRect` en `getComputedStyle` nagemeten, niet met een schermafdruk: de
+schermafdrukken kwamen leeg terug uit dit hulpmiddel, dus dáár heb ik niets aan gezien.
+
+**Niet geverifieerd — voor Codex.**
+
+1. **De SQL.** Ik heb geen Supabase, en Robert heeft uitdrukkelijk gezegd dat er niets tegen
+   een echt project mag draaien. De vijf na te lopen scenario's staan bovenaan
+   `database/first-access.sql`, in het blok NOG NIET GEVERIFIEERD.
+2. **Geen kolom voor de melding aan de accommodatie.** Er is niets dat vastlegt dat die mail
+   verstuurd is, zoals `confirmation_email_sent_at` dat voor de gast doet. Een herhaalde
+   Stripe-webhook stuurt hem dus opnieuw; Resend houdt dat tegen op de `idempotency-key`, maar
+   die geldt 24 uur en Stripe herhaalt tot drie dagen. Een eigen kolom zou dat harder maken.
+   Voorstel voor Codex, niet gebouwd omdat het weer SQL is die ik niet kan proeven.
+
+**Openstaand voor Robert.**
+
+- `operations/privacy-concept-accommodatie.diff` is een concept en **niet toegepast**;
+  `privacy/index.html` is ongewijzigd. `git apply --check` zegt dat de patch schoon toepast.
+  Eén vraag in de bijbehorende `.md` hoort bij de gestor: is Fontecha verwerker of zelfstandig
+  verantwoordelijke.
+- De oude Netlify Forms-instelling voor `tavern-question` mag uit het dashboard.
+- `LEWOS_GENERAL_EMAIL` kan vandaag in Netlify. `FONTECHA_ACCOMMODATION_EMAIL` zodra het
+  Gmail-account bestaat, en in elk geval vóór de betaalpoort opengaat.
+
+**Wat nu volgt.** De betaalpoort staat dicht, dus de melding aan de accommodatie kan pas echt
+vuren als er verkocht mag worden. Tot die tijd is dit gebouwd en getest, niet in bedrijf. Het
+contactformulier werkt wél meteen zodra dit live staat — dat is het enige stuk van deze
+wijziging dat vandaag al iets doet.
+
+### 2026-09-05 · Claude · Opmaakfout op de boekingspagina: textarea stond nergens in de CSS · TE CONTROLEREN
+
+**Wat er mis was.** `tavern/book/index.html` gaf alleen `input,select` een breedte en een
+achtergrond. `textarea` stond in geen enkele regel. Alle vier de vrije tekstvelden —
+allergieën, dieetwensen, extra nachten en overige opmerkingen — vielen daardoor terug op de
+standaard van de browser: een smal wit vakje van ongeveer 190 bij 50 pixels, in monospace,
+met de placeholder halverwege afgekapt (*"is. Leave empty if none."*). De tellers stonden
+rechts uitgelijnd op de formulierbreedte en zweefden daardoor los van hun veld.
+
+Robert zag het in de browser; ik niet, omdat mijn controles keken of de velden er wáren en
+of ze een grens droegen — niet of ze te lezen waren.
+
+**Hersteld.** `textarea` toegevoegd aan de opmaak- én de focusregel, met `min-height:96px`
+en `resize:vertical`. De velden zijn nu 476 breed en 96 hoog, in Arial, met dezelfde kleuren
+als de invoervelden ernaast. Ook de deelnemersrijen zaten te ruim: die stonden in een grid
+met `gap:10px` terwijl het label al een eigen ondermarge had, dus tweemaal ruimte tussen
+label en veld. Nu gelijk aan de rest van het formulier.
+
+**De andere vier formulierpagina's hadden dit niet** — `tavern/index.html`,
+`tavern/checkout/index.html`, `tavern/private/index.html` en `contact/index.html` maken hun
+tekstvelden wel op. Het was één pagina.
+
+**Nieuwe wachter.** `tests/field-limits.test.mjs`: elke pagina met een `<textarea>` moet er
+een opmaakregel voor hebben die een breedte zet. Zonder zo'n test is dit het soort fout dat
+pas opvalt als iemand het formulier echt invult.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 343 tests, 343 groen. En in de
+browser op `/tavern/book/`: de tekstvelden zijn even breed als de invoervelden, donker met
+crèmekleurige tekst, en de placeholders zijn volledig leesbaar.
+
+### 2026-09-05 · Claude · Betaalverzoeken per deelnemer, beheeracties, hele keten doorlopen · TE CONTROLEREN
+
+**Wat.** Nieuw: `netlify/functions/_payment-request.mjs` (het persoonlijke betaalverzoek en
+de melding aan de operators), `netlify/functions/admin-actions.mjs` (herinneren, verlengen,
+vrijgeven), en in `database/admin.sql` een logboek `lewos_admin_actions` plus de drie RPC's
+met rolcontrole. De beheeromgeving heeft knoppen per deelnemer; de lokale server heeft een
+postbus op `/outbox/` en een betaalsimulatie.
+
+**De rolscheiding.** `remind` mag Robert én Nadine; `extend` en `release` alleen Robert.
+Verlengen staat bewust ook dicht: het is een beslissing over geld en voorraad. De rol komt
+uit `lewos_admins`, opgezocht op het adres uit het gecontroleerde token — de browser stuurt
+geen rol mee. Elke actie gaat in het logboek met wie, wat, wanneer en waarom; vrijgeven en
+verlengen zonder reden worden geweigerd.
+
+**Vrijgeven raakt alleen die ene plaats.** De deelnemersrij blijft bestaan met status
+`cancelled`, `party_size` gaat met één omlaag, en er wordt niets terugbetaald. Annuleren,
+vrijgeven en terugbetalen zijn drie handelingen; de laatste bestaat hier niet.
+
+**Twee inconsistenties gevonden en hersteld:**
+
+1. `first_access_held` telde wél mee bij het uitgeven van stoelen maar niet in het
+   beheeroverzicht. Robert zag daardoor meer vrije stoelen dan er waren — precies het getal
+   waar hij op stuurt. Nu meegeteld.
+2. Mijn eigen wachter *"geen enkele knop die iets wijzigt"* sloeg terecht aan bij de nieuwe
+   beheeracties. Omgezet naar de nieuwe grens: precies drie acties, geen terugbetaling, geen
+   annulering van een hele boeking, en het boekingseindpunt blijft alleen-lezen.
+
+**Doorlopen, met echte HTTP en echte browser.** Vier plaatsen gereserveerd, vier namen en
+adressen ingevuld, vier persoonlijke betaalverzoeken van €2.025 opgebouwd (geen enkel
+bericht noemt het groepstotaal van €8.100), drie betalingen gesimuleerd, door de
+verlengingen heen geklokt tot *Actie nodig*, en gecontroleerd dat er niets automatisch
+vrijkwam. Nadine krijgt 403 op vrijgeven én verlengen en ziet die knoppen niet; Robert kan
+alleen de geselecteerde onbetaalde plaats vrijgeven en de andere drie blijven bevestigd. Een
+betaalde plaats weigert vrijgave met 409. Verlopen zonder betaling geeft de stoelen wél
+terug: na 60 minuten in de invulfase en na 30 minuten in de betaalfase. Twee sessies om
+dezelfde laatste plaatsen: één krijgt ze, de ander `not_available`, nooit overboekt.
+
+**Wat nog steeds gesimuleerd is.** De database is een JSON-bestand in hetzelfde proces en
+het advisory lock is een wachtrij van beloftes; de betaling is een lokaal eindpunt in plaats
+van een Stripe-webhook; de identiteitsprovider is nagebootst. De autorisatie eromheen is de
+echte code, en de mails worden met de echte bouwfunctie opgebouwd — alleen de bezorging is
+vervangen door een bestand.
+
+**Blokkade, ongewijzigd.** Geen PostgreSQL, Homebrew of Docker op deze Mac; de vier
+migraties zijn nooit gedraaid. Dat twee gelijktijdige transacties in echt Postgres geen
+overboeking veroorzaken is dus nog steeds niet bewezen.
+
+### 2026-09-05 · Claude · Boekingsflow verbonden: eindpunten, afteller, begrenzing, grensproeven · TE CONTROLEREN
+
+**Wat.** De stoelblokkering hangt nu aan het boekingsformulier. Nieuw:
+`netlify/functions/seat-hold.mjs` (vier eindpunten), een tweestaps `/tavern/book/` met
+afteller, `scripts/local-boundary-test.mjs`, en `operations/voorwaarden-verschillen.md`.
+`database/seat-holds.sql` kreeg `get_seat_hold` en een `promote` die de deelnemersrijen
+aanmaakt met de weekendprijs — nooit met een bedrag uit de browser.
+
+**Drie fouten gevonden en hersteld, alle drie door te testen in plaats van te lezen:**
+
+1. **Verborgen velden bleven verplicht.** Na verversen stonden `weekend` en `people`
+   verborgen maar nog steeds `required`; het formulier weigerde te verzenden zonder te
+   kunnen aanwijzen waarom. Stap 1 wordt nu `disabled`, en een uitgeschakelde fieldset telt
+   niet mee bij de validatie. Precies de fout waar `tests/filming.test.mjs` al voor
+   waarschuwde bij het filmvinkje.
+2. **Het eindpunt gaf 200 terug voor een beëindigde blokkering.** De database zei `ended`,
+   de functie rekende met haar eigen klok en zei `expired:false`. Nu is de database de baas:
+   is de blokkering niet `active`, dan volgt een 404. Twee klokken die het oneens zijn is
+   gevaarlijk — de stoelen kunnen intussen aan iemand anders zijn gegeven.
+3. **`new Date()` liep om de testklok heen.** Overal vervangen door `new Date(Date.now())`:
+   in productie identiek gedrag, in een proef stuurbaar. Zonder die wijziging mat de
+   grensproef de klok van de test tegen de klok van de code en bewees hij niets.
+
+**Wat er met échte lokale integratie is getest** (draaiende server, echte functiecode, echte
+browser):
+
+- Twee echte browsersessies in twee tabbladen: de eerste krijgt de stoelen, de tweede krijgt
+  *"0 seats are free"*. Verversen geeft dezelfde deadline (17:48) en de teller loopt door in
+  plaats van opnieuw te beginnen. Afbreken geeft de stoelen meteen terug. Verlopen laat het
+  paneel verdwijnen en stap 1 terugkomen, met de melding dat de beschikbaarheid opnieuw is
+  gecontroleerd. Indienen levert het betaalpaneel met 29:58 en de adressen waarheen de
+  betaallinks gingen.
+- `node scripts/local-boundary-test.mjs`: de invulgrens ligt op exact 60:00 (59:59 geldig,
+  60:00 verlopen), de betaalgrens op exact 30:00. **Elke stap telt op bij de vorige: 20 + 41
+  is 61 minuten na het aanmaken, en dus voorbij de grens.**
+- De begrenzing: vier blokkeringen per netwerkadres per uur, de vijfde poging met een vers
+  sessietoken krijgt 429 `too_many_holds`.
+- `node --test tests/*.test.mjs` — 341 tests, 341 groen.
+
+**Wat alleen met een simulatie is getest, en dus níét bewezen is.** De database is een
+JSON-bestand in hetzelfde proces; het advisory lock is een wachtrij van beloftes. Dat
+serialiseert net zo, maar het is een nabootsing. **Dat twee gelijktijdige transacties in
+PostgreSQL geen overboeking kunnen veroorzaken, is hiermee niet aangetoond.**
+
+**Concrete externe blokkade.** Op deze Mac staat geen PostgreSQL, geen Homebrew en geen
+Docker (nagekeken: `psql`, `postgres`, `initdb`, `pg_ctl`, `pg_isready`, `/Applications/Postgres.app`,
+`brew`, `docker` — alle afwezig). De drie migraties zijn daarom nog steeds nooit gedraaid.
+Zonder een echte database blijft scenario (a) bovenaan `database/seat-holds.sql` open.
+
+**Nog niet af.** De persoonlijke betaalverzoeken bestaan als rij met een eigen bedrag en een
+eigen link, maar er is nog geen mailvoorbeeld per deelnemer. De beheeracties per deelnemer
+(herinneren, verlengen, annuleren — alleen Robert, met reden en logboek) zijn er nog niet.
+
+### 2026-09-05 · Claude · Blokkering in twee fasen: invullen (60 min) en betalen (30 min) · TE CONTROLEREN
+
+**Wat.** Robert heeft de blokkering gesplitst in een invulfase en een betaalfase. De
+levensloop van een stoel staat nu als één berekening in `netlify/functions/_seat-hold.mjs`
+(16 tests), bovenop `_group-payment.mjs`. Nieuw: `database/seat-holds.sql` en
+`scripts/local-hold-sim.mjs`.
+
+- **Kijken blokkeert niets.** Pas bij bewust doorgaan met boeken worden de stoelen als één
+  geheel gecontroleerd en vastgezet, zestig minuten vanaf dát moment.
+- **Verversen verlengt niets**, en dat is structureel: elke deadline hangt aan een tijdstip
+  dat één keer gezet wordt (`hold_started_at`, `payment_started_at`). Er is geen veld voor
+  activiteit of laatst gezien, dus er valt niets te verlengen. `begin_seat_hold` heeft geen
+  tak die `hold_expires_at` opnieuw zet; dezelfde sessie krijgt zijn bestaande rij terug.
+- **De overgang naar betalen laat geen stoel los.** Dezelfde rij wisselt van fase; er wordt
+  nergens vrijgegeven-en-opnieuw-gereserveerd, want daartussen kan iemand anders erin.
+- **Zodra er één betaald heeft komt er niets meer automatisch vrij**, ook niet na de laatste
+  deadline. `release_seat_hold` weigert dan en verwijst naar de operator.
+- **Publiek is beschikbaarheid één getal.** `publicAvailability()` geeft alleen `capacity`
+  en `remaining` terug; een test controleert dat de woorden *paid*, *awaiting*, *deadline*
+  en *filling* er niet in voorkomen. De verdeling ziet alleen het beheer.
+- **Het minimum van vier is een eigen status**, los van de bevestiging per deelnemer:
+  `weekendStatus` is `going_ahead` of `below_minimum`. De beheeromgeving toont er een
+  waarschuwing bij, met de zin dat vastgehouden stoelen niet meetellen — alleen betaalde.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 341 tests, 341 groen. En
+`node scripts/local-hold-sim.mjs`: negen scenario's met een klok die vooruit wordt gezet en
+twee sessies die tegelijk aankloppen. Alle controles slagen. Het advisory lock is daar een
+wachtrij van één, net als `pg_advisory_xact_lock` in Postgres.
+
+**Niet geverifieerd, en eerlijk benoemd.**
+
+1. `database/seat-holds.sql` is nooit tegen een echte database gedraaid; de vijf scenario's
+   staan bovenaan dat bestand. Vooral scenario (a) — twee gelijktijdige `begin_seat_hold` —
+   bewijst pas iets tegen echte Postgres.
+2. De gelijktijdigheid is getest met **twee sessies in één proces**, niet met twee echte
+   browservensters. De simulatie serialiseert dezelfde bewerkingen op dezelfde manier, maar
+   dat is een nabootsing van het slot, geen bewijs ervan.
+3. Er zijn nog **geen HTTP-eindpunten** voor `begin_seat_hold`, `release_seat_hold` en
+   `promote_seat_hold_to_payment`, en dus ook nog geen afteller op het boekingsformulier.
+   De snelheidsbegrenzing per bezoeker hangt daaraan: één blokkering per sessie ligt vast in
+   een unieke index, maar het beperken van hérhaalde sessies hoort in het eindpunt, bij de
+   bestaande `check_tavern_request_limit`.
+
+**Testgegevens.** De seed overboekte weekend 02 met negen stoelen op een capaciteit van zes.
+Hersteld door een duidelijk fictief `TEST Weekend 03` toe te voegen; nu past alles.
+
+### 2026-09-05 · Claude · Betaaltermijn per deelnemer vastgelegd; twee strijdigheden gevonden · TE CONTROLEREN
+
+**Wat.** Robert heeft de bedrijfsregels voor groepsbetalingen vastgesteld. De termijnlogica
+staat nu als één toetsbare berekening in `netlify/functions/_group-payment.mjs`, met
+`tests/group-payment.test.mjs` erlangs (12 tests). De beheeromgeving toont de fase, de
+deadline, de resterende tijd en "3 confirmed, 1 awaiting payment".
+
+De regels: 30 minuten vanaf het aanmaken van de reservering · niemand betaald → vervalt,
+maar pas na controle van de echte betaalstatus · ≥1 betaald → eenmalig 60 minuten extra ·
+daarna nog 30 minuten met een melding aan Robert en Nadine · na 120 minuten "Actie nodig",
+geen automatische vrijgave en geen terugbetaling. Bevestiging geldt per deelnemer.
+
+Alle deadlines hangen uitsluitend aan `created_at`. Er is geen veld waarmee een herinnering
+tijd kan toevoegen, dus opnieuw versturen kán de deadline niet verschuiven — een test legt
+dat vast.
+
+**⚠️ Twee strijdigheden met wat er al vastligt. Niet zelf opgelost; ze raken juridische tekst.**
+
+1. **De voorwaarden beloven 40 minuten, de nieuwe regel is er 30.**
+   `terms/index.html:22` — *"the complete group is held for up to 40 minutes while payment
+   is completed"*. Ook `tavern/book/index.html` (twee plekken) en de opmerking bij
+   `CHECKOUT_HOLD_MINUTES` in `_booking-config.mjs`, die er expliciet bij zegt dat die 40
+   uit de voorwaarden komt. De nieuwe regel wijkt twee kanten op af: korter aan de basis
+   (30) en veel langer in totaal (120). Robert beslist of de voorwaarden mee veranderen;
+   dat is zijn tekst, en het gaat langs de gestor.
+2. **Het minimum van vier geldt per weekend, niet per groep.**
+   `terms/index.html:26` — *"A featured weekend requires at least four paid guests"* — en
+   `tavern_weekends.minimum_players` is een kolom op het wéékend. Alleen een *private*
+   Tavern kent een groepsminimum van vier (`private_party_too_small`).
+   Het knelpunt: een featured weekend heeft zes stoelen, en bij gedeeltelijke betaling komt
+   er nu nooit iets automatisch vrij. Een groep van vier met één betaler blokkeert dus vier
+   van de zes stoelen voor onbepaalde tijd, terwijl het weekend zélf vier *betaalde* gasten
+   nodig heeft. De blokkeerregel kan het weekend zo van zijn eigen minimum af houden.
+
+**Wat er nog niet is.** De echte checkout en webhook zijn niet omgebouwd naar betaling per
+deelnemer; de beheeracties per deelnemer (herinnering, verlengen, annuleren — alleen Robert,
+met reden en logboek) zijn er nog niet; het boekingsformulier vraagt nog geen vier namen en
+adressen; er is nog geen bevestigingspaneel met afteller. De automatische verlengingen
+vragen bovendien een planner — Netlify-functies draaien op verzoek — of luie evaluatie bij
+elke lezing. Dat is de volgende stap, en die raakt geld, dus hij begint met Roberts akkoord
+op punt 1 en 2 hierboven.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 325 tests, 325 groen. En lokaal:
+`node scripts/local-admin-server.mjs --reseed` zet vijf fictieve groepen neer die samen alle
+fasen laten zien; de aanmaakmomenten liggen ten opzichte van het zaaien, dus ze verouderen
+vanzelf en `--reseed` zet ze terug.
+
+### 2026-09-05 · Claude · Beheeromgeving gebouwd, lokaal draaiend achter echte autorisatie · TE CONTROLEREN
+
+**Wat.** Een afgeschermd boekingsoverzicht voor Robert en Nadine op `/admin/`. **Alleen
+lezen** — geen enkele knop die annuleert, terugbetaalt of wijzigt, en een test valt om als
+er een schrijfpad bijkomt. Volledige uitleg in `operations/beheeromgeving.md`.
+
+- Nieuw: `netlify/functions/_admin-auth.mjs` (tokencontrole + lijst),
+  `netlify/functions/admin-bookings.mjs` (twee leeseindpunten),
+  `netlify/functions/admin-config.mjs` (alleen publieke waarden),
+  `admin/index.html` + `admin/admin.js`, `database/admin.sql`,
+  `scripts/local-admin-server.mjs`, `tests/admin.test.mjs`.
+- Drie sloten: handtekening van het token · `LEWOS_ADMIN_EMAILS` in de functie ·
+  `public.lewos_admins` in de database. Ingelogd zijn is niet genoeg.
+- **De rechten van `anon`/`authenticated` zijn niet teruggedraaid.** De browser praat met
+  de functie, de functie met de database. Dat is de reden om geen RLS-route te kiezen.
+- Het maandoverzicht geeft géén allergieën of dieetwensen terug; die komen alleen uit
+  `admin_booking_detail`. Een test controleert dat het woord *peanut* niet in het
+  overzichtsantwoord voorkomt.
+- `database/admin.sql` voegt ook toe: `arrival_date`/`departure_date` (de kalender toont de
+  volledige verblijfsduur, en die is niet af te leiden uit het vrije tekstveld
+  `extra_nights`), de twee ontbrekende verzendregistraties, en
+  `tavern_booking_participants` voor de betaling per deelnemer.
+- `stripe-webhook.mjs` legt nu vast dát de melding aan de accommodatie en die aan Lewos
+  verstuurd zijn, zodat het berichtenoverzicht "verstuurd" kan zeggen zonder te gokken.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 313 tests, 313 groen, gedraaid op
+5 september 2026. Daarnaast met `curl` tegen de lokaal draaiende server: zonder token 401,
+`alg:none` 401, verkeerde handtekening 401, ingelogd-maar-niet-toegestaan 403 op zowel het
+overzicht als het detail. En in de browser: kalender, dagpaneel, weeklijst en detailpaneel
+op 581px en op 1280px, zonder horizontale scroll en zonder consolefouten.
+
+**Niet geverifieerd.** `database/admin.sql` is nooit tegen een echte database gedraaid — de
+scenario's staan bovenaan dat bestand. De lokale proef gebruikt een nagebootste database en
+een nagebootste identiteitsprovider; de autorisatie eromheen is wél de echte code.
+
+**Openstaand — betaling per deelnemer.** Robert vroeg op 5 september 2026 om een eigen
+betaallink per deelnemer bij een groepsboeking. Het datamodel ligt er
+(`tavern_booking_participants`, eigen bedrag en eigen status per persoon) en de
+beheeromgeving toont "2 van 4 betaald". **De echte checkout en webhook zijn nog niet
+omgebouwd**, want daar ontbreken bedrijfsregels: de betaaltermijn is nu 40 minuten en
+gekoppeld aan één Stripe-sessie, en wat er moet gebeuren als één van de vier niet op tijd
+betaalt is niet vastgelegd. Die vragen staan bij Robert. Er is ook een juridische kant —
+wie is de contractspartij bij een *viaje combinado* als vier mensen apart betalen — en die
+hoort bij de gestor, niet bij ons.
+
+### 2026-09-05 · Claude · Agendaproef geslaagd: de TEST-afspraak staat in Lewos · TE CONTROLEREN
+
+**Wat.** Robert heeft de Google-inrichting afgerond (project `lewos-automation`,
+serviceaccount `lewos-calendar@lewos-automation.iam.gserviceaccount.com`, sleutel in
+`~/.config/lewos/`, buiten de repo). Daarmee is `scripts/local-booking-test.mjs` echt
+gedraaid.
+
+**Uitkomst.** De doelagenda is gecontroleerd vóór het schrijven: `"Lewos"` ·
+`lewos.co@gmail.com` · `Europe/Madrid` · toegangsrol `writer`. De afspraak
+*TEST – Lewos boeking – donderdag t/m dinsdag* staat er, van 2026-11-05 16:00 tot
+2026-11-10 09:30, status `confirmed`, nul deelnemers. Teruggelezen uit Google Agenda, niet
+alleen weggeschreven.
+
+Let op: het agenda-ID is de **primaire agenda** van `lewos.co@gmail.com`, niet een aparte
+`@group.calendar.google.com`. Dat werkt, maar het betekent dat Nadine via de deling van díé
+agenda meekijkt.
+
+**Twee dingen om te weten.**
+
+1. De aanroep meldde `updated`, niet `created`: er bestond al een afspraak met dit
+   afspraak-id voordat deze run begon. De ontdubbeling heeft dus precies gedaan waarvoor hij
+   er is. Een telling over heel november 2026 laat één TEST-afspraak zien, naast Roberts
+   eigen *Tavern openings weekend* en *Tavern Second weekend*. Geen dubbelen.
+2. `bookingEvent()` neemt sinds deze run geen `notes` meer aan, en heeft nooit `allergies`
+   of `dietary` aangenomen. Robert: geen medische of allergiegegevens in de agenda — die
+   staat gedeeld en open op een telefoon. Een test in `tests/calendar.test.mjs` bewaakt dat
+   ze er ook niet via een latere aanroep in kunnen komen.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 295 tests, 295 groen. En de
+afspraak zelf staat in de agenda; Robert en Nadine laten hem staan tot ze hem gezien hebben.
+
+**Wat nu volgt.** De drie Google-variabelen moeten nog in Netlify voordat een échte
+bevestigde boeking vanzelf in de agenda komt; zie `operations/google-agenda-koppeling.md`.
+Zolang ze er niet staan slaat de webhook de agenda over en logt hij dat.
+
+### 2026-09-05 · Claude · Google Agenda-koppeling gebouwd; lokale boekingsproef draait, afspraak wacht op sleutel · TE CONTROLEREN
+
+**Wat.** Robert wil dat een bevestigde boeking in de gedeelde agenda `Lewos` verschijnt, en
+vroeg om een lokale proefboeking die daar één echte TEST-afspraak in zet.
+
+Eerst gecontroleerd of er iets te hergebruiken viel. **Er was geen enkele Google-koppeling**:
+geen `googleapis`, geen OAuth, geen serviceaccount, geen `.ics`. En geen route om er zelf een
+te maken — `gcloud` is niet geïnstalleerd, er staan geen Google-credentials op deze Mac, er is
+geen Calendar-connector, en er is geen browser met een Google-sessie verbonden. Alles wat in
+Google zelf moet gebeuren vraagt Roberts login; dat staat als stappenplan in
+`operations/google-agenda-koppeling.md`.
+
+- Nieuw: `netlify/functions/_calendar.mjs`. Serviceaccount-JWT ondertekend met `node:crypto`,
+  dus **geen enkele dependency** — de repo blijft zonder `package.json`. Scope is alleen
+  `calendar.events`, niet `calendar`: het account kan geen agenda's aanmaken of verwijderen.
+  `describeCalendar()` controleert eerst naam, tijdzone en schrijfrecht van de doelagenda vóór
+  er iets wordt geschreven. Geen deelnemers op de afspraak en `sendUpdates=none`, want Nadine
+  kijkt mee via de gedeelde agenda en hoort geen uitnodiging te krijgen.
+- Ontdubbeling: het afspraak-id is `sha256(boekingskenmerk)`. Een tweede run of een herhaalde
+  Stripe-webhook krijgt een 409 en werkt de bestaande afspraak bij in plaats van een tweede
+  aan te maken.
+- `netlify/functions/stripe-webhook.mjs`: na de twee meldingen komt de agenda. **Niet
+  ingesteld → overslaan en loggen**, zodat een boeking er nu niet op stukloopt. **Wel
+  ingesteld en het mislukt → 500**, zodat Stripe het opnieuw probeert; een boeking die niet in
+  de agenda staat, bestaat voor Nadine niet. Ontbreken `arrivalDate`/`departureDate`, dan
+  stopt het ook — er wordt nooit een datum uitgerekend of gegokt.
+- Nieuw: `scripts/local-booking-test.mjs`. Draait de échte handlers tegen een mockserver in
+  hetzelfde proces. Harde controle dat `SUPABASE_URL` op `127.0.0.1` staat, Stripe-aanroepen
+  gooien een fout, Resend wordt afgevangen. Zonder Google-sleutel valt hij terug op een
+  proefdraai en zegt welke variabelen ontbreken.
+- Nieuw: `tests/calendar.test.mjs` (10 tests) en `operations/google-agenda-koppeling.md`.
+- `.gitignore` vangt nu `.env` en de gebruikelijke sleutelbestandsnamen af.
+
+**Het scenario, door Robert vastgelegd op 5 september 2026.** Weekend 02 loopt van vrijdag
+6 tot maandag 9 november 2026. De fictieve gasten `TEST – Lewos boeking` komen de donderdag
+ervoor en vertrekken de dinsdag erna: **aankomst 2026-11-05 16:00, vertrek 2026-11-10 09:30,
+Europe/Madrid, vijf overnachtingen** (5, 6, 7, 8 en 9 november). Eén nacht extra voor en één
+erna. De tijden zijn die van de site; Robert heeft bevestigd dat ze ook voor dit
+donderdag-tot-dinsdagpatroon gelden.
+
+**Hoe te controleren.** `node --test tests/*.test.mjs` — 294 tests, 294 groen, gedraaid op
+5 september 2026. En `node scripts/local-booking-test.mjs`, die de hele keten aflegt:
+aanmelding → melding aan Lewos → betaalde webhook → gastbevestiging met twee PDF's → melding
+aan de accommodatie → agenda. Alleen die laatste stap valt nu terug op een proefdraai.
+
+**Niet geverifieerd.** De afspraak staat **niet** in Google Agenda: daar is een sleutel voor
+nodig die alleen Robert kan maken. De koppeling is dus getest tegen een mock van de Calendar
+API, niet tegen Google zelf. De proef is pas geslaagd als de afspraak aantoonbaar in de agenda
+staat, en dat is hij nu niet.
+
+**Wat nu volgt.** Robert doorloopt de zes stappen in `operations/google-agenda-koppeling.md`
+en draait daarna het commando dat daar staat. Ook nog open: het adres van Fontecha is
+`accommodatie@example.invalid` met één m (bevestigd op 5 september 2026); de eerdere
+documenten die de dubbele m gebruikten zijn bijgewerkt.
+
 ### 2026-09-03 · Claude · Migratie tegen echte Supabase gedraaid; tabelrechten gedicht · TE CONTROLEREN
 
 **Wat ik heb gedaan.** Supabase-toegang geregeld via een tijdelijke persoonlijke token (inmiddels

@@ -1,6 +1,9 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
+import {stayLines,STAY_STATUS} from "./_stay.mjs";
 import {bookingDocuments} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
+import {readRecipients} from "./_recipients.mjs";
+import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -42,7 +45,7 @@ const sendBookingEmail=async booking=>{
   // hem nergens anders bevestigd gezien — de ontvangstbevestiging ging al bij de aanmelding
   // de deur uit. Daarom staat hij hier, in beide formaten en met zijn regeleindes.
   const genoteerd=labelledBlock(
-    [["Allergies",booking.allergies],["Dietary requirements",booking.dietary],["Anything else",booking.notes]],
+    [["Allergies & dietary requirements",booking.dietaryNotes],["Anything else",booking.notes]],
     "We have this on file for your weekend. If anything is wrong or missing, reply to this email."
   );
   const gasten=`${booking.seats} guest${booking.seats===1?"":"s"}`;
@@ -55,6 +58,99 @@ const sendBookingEmail=async booking=>{
   if(!response.ok){console.error("Booking email error",response.status,await response.text());return null;}
   const result=await response.json();
   return result.id||"resend-accepted";
+};
+
+// Eén plek voor het versturen. Elke mail uit deze functie heeft precies één ontvanger,
+// en die staat er als los argument bij in plaats van ergens binnenin te worden gekozen:
+// zo is aan de aanroep te zien wie hem krijgt.
+const verstuur=async({to,subject,text,html,idempotencyKey,attachments})=>{
+  if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json","idempotency-key":idempotencyKey},body:JSON.stringify(resendPayload({
+    from:process.env.TAVERN_FROM_EMAIL,to:[to],subject,text,html,attachments
+  }))});
+  if(!response.ok){console.error("Email error",subject,response.status,await response.text());return null;}
+  const result=await response.json();
+  return result.id||"resend-accepted";
+};
+
+// Naar de accommodatie. Bewust alleen wat er nodig is om een kamer klaar te zetten:
+// naam, aantal gasten, weekend, aankomst, vertrek en eventuele extra nachten. Geen
+// allergie, geen dieetwens, geen vrij tekstveld en geen e-mailadres van de gast — die
+// gaan naar Lewos, want Lewos is de verkoper en het aanspreekpunt.
+//
+// Engels én Spaans in dezelfde mail, op verzoek van Robert. De Nederlandse vertaling van
+// beide teksten staat in `operations/mailroutering.md`.
+//
+// `arrivalDate` en `departureDate` komen uit `starts_on` en `ends_on` van het weekend.
+// Levert de database ze niet, dan vallen de twee regels weg en blijft het weekendlabel
+// over; dat draagt de datums al als tekst. Nooit zelf een datum uitrekenen.
+const sendAccommodationEmail=(booking,to)=>{
+  const gasten=`${booking.seats} guest${booking.seats===1?"":"s"}`;
+  const huespedes=`${booking.seats} huésped${booking.seats===1?"":"es"}`;
+  // Eén rij per gegeven, met het kopje in beide talen. Zo staat elke waarde er maar één
+  // keer: twee losse blokken zouden bij een wijziging uit elkaar kunnen lopen, en dan
+  // staat er een aankomstdatum in het Engels en een andere in het Spaans.
+  // Twee blokken, en dat is de hele reden dat deze mail is herschreven. Het eerste blok
+  // is wat vaststaat. Het tweede is een vraag. Ze stonden eerst door elkaar, met "extra
+  // nachten" onder dezelfde kop als de aankomstdatum — dan leest de accommodatie een
+  // aanvraag als een afspraak.
+  const velden=labelledBlock([
+    ["Guest name / Nombre del huésped",booking.name],
+    ["Number of guests / Número de huéspedes",String(booking.seats)],
+    ["Weekend / Fin de semana",booking.weekendLabel],
+    ["Arrival / Llegada",booking.arrivalDate],
+    ["Departure / Salida",booking.departureDate],
+    ["Booking reference / Referencia de la reserva",booking.claimId]
+  ],"Confirmed booking / Reserva confirmada:");
+  // Alleen wanneer er iets gevraagd is. Geen aanvraag, geen blok — dan is er niets te
+  // beantwoorden en hoeft er ook niets te staan.
+  const aanvraag=booking.extraNightsRequest
+    ?labelledBlock([["Requested / Solicitado",booking.extraNightsRequest]],
+       "NOT YET CONFIRMED — extra nights requested / TODAVÍA NO CONFIRMADO — noches adicionales solicitadas:")
+    :{text:"",html:""};
+  const antwoord=booking.extraNightsRequest
+    ?"Please reply to Robert to confirm or decline these extra nights. The dates above are the confirmed stay and do not include them. "
+     +"· Por favor, responda a Robert para confirmar o rechazar estas noches adicionales. Las fechas de arriba son la estancia confirmada y no las incluyen."
+    :"";
+  const kop="A Lewos Tavern booking is confirmed and paid. · Una reserva de The Lewos Tavern está confirmada y pagada.";
+  const vraag=`Accommodation is needed for ${gasten}. · Se necesita alojamiento para ${huespedes}.`;
+  const slot="Questions about this booking go to Robert at Lewos. · Las dudas sobre esta reserva van a Robert, en Lewos.";
+  const tekst=`${kop}\n\n${vraag}${velden.text}${aanvraag.text}${antwoord?`\n\n${antwoord}`:""}\n\n${slot}\n\nThe Lewos Tavern`;
+  return verstuur({
+    to,
+    subject:`Confirmed Tavern booking / Reserva confirmada — ${booking.name}, ${gasten}`,
+    text:tekst,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:22px">${escapeHtml(kop)}</h1><p>${escapeHtml(vraag)}</p>${velden.html}${aanvraag.html}${antwoord?`<p><strong>${escapeHtml(antwoord)}</strong></p>`:""}<p>${escapeHtml(slot)}</p><p>The Lewos Tavern</p></div>`,
+    idempotencyKey:`booking-accommodation-${booking.claimId}`
+  });
+};
+
+// Naar Lewos. Alleen wanneer er iets bijzonders is: een allergie, een dieetwens of een
+// opmerking. Een boeking zonder die drie levert geen mail op — dan is er ook niets te
+// melden dat niet al in de database staat.
+const sendSpecialRequirementsEmail=async(booking,to)=>{
+  const velden=labelledBlock([
+    // Eén veld sinds 5 september 2026. Het staat hier nog steeds apart van "Anything
+    // else": een allergie moet terug te vinden zijn zonder een vrije tekst door te lezen.
+    ["Allergies & dietary requirements",booking.dietaryNotes],
+    ["Anything else",booking.notes]
+  ],"What this guest told us:");
+  if(!velden.text)return "nothing_to_report";
+  const wie=labelledBlock([
+    ["Guest name",booking.name],
+    ["Email",booking.email],
+    ["Number of guests",String(booking.seats)],
+    ["Weekend",booking.weekendLabel],
+    ["Booking reference",booking.claimId]
+  ],"Booking:");
+  const tekst=`A confirmed Tavern booking needs something arranged.${wie.text}${velden.text}\n\nThe Lewos Tavern`;
+  return verstuur({
+    to,
+    subject:`Special requirements — ${booking.name}`,
+    text:tekst,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:24px">A confirmed Tavern booking needs something arranged.</h1>${wie.html}${velden.html}<p>The Lewos Tavern</p></div>`,
+    idempotencyKey:`booking-special-${booking.claimId}`
+  });
 };
 
 export const handler=async event=>{
@@ -85,6 +181,72 @@ export const handler=async event=>{
       const marked=await rpc("mark_tavern_confirmation_email_sent",{p_payment_reference:reference,p_provider_id:providerId});
       if(marked.status!=="marked")return response(500,{error:"confirmation_email_mark_failed"});
     }
+    // Wat vaststaat en wat gevraagd is, uit elkaar getrokken. De regel voor de
+    // accommodatie wordt hier opgebouwd uit de opgeslagen datums; hij wordt niet
+    // overgenomen uit een tekstveld dat iets anders zou kunnen zeggen. Staat er nog een
+    // oude vrije tekst in de database, dan reist die mee als wat hij is: de eigen woorden
+    // van de gast.
+    const verblijf=stayLines({
+      weekendStart:result.weekendStart||result.arrivalDate,
+      weekendEnd:result.weekendEnd||result.departureDate,
+      requestedArrival:result.requestedArrival,requestedDeparture:result.requestedDeparture,
+      status:result.extraNightsStatus,
+      confirmedArrival:result.arrivalDate,confirmedDeparture:result.departureDate,
+      legacyText:result.extraNights||""
+    });
+
+    // De gast heeft zijn bevestiging. Nu de twee interne meldingen, allebei naar één
+    // vast postvak. Ze staan ná de bevestiging omdat de gast voorgaat, en ze geven een
+    // 500 terug als ze niet lukken: Stripe probeert de webhook dan opnieuw. Dat is de
+    // bedoeling — een betaalde boeking waarvan de accommodatie niets weet, is een gast
+    // zonder bed. De herhaling stuurt de gast geen tweede bevestiging: die is in de
+    // database afgevinkt. De `idempotency-key` houdt ook de twee meldingen enkelvoudig.
+    let mailboxes;
+    try{mailboxes=readRecipients();}
+    catch(error){console.error("Recipient configuration error",error);return response(500,{error:"recipient_configuration_invalid"});}
+    if(!mailboxes.accommodation){
+      console.error("Accommodation recipient not configured: set FONTECHA_ACCOMMODATION_EMAIL");
+      return response(500,{error:"accommodation_recipient_not_configured"});
+    }
+    const accommodatieId=await sendAccommodationEmail({...result,extraNightsRequest:verblijf.extraNightsRequest},mailboxes.accommodation);
+    if(!accommodatieId)return response(500,{error:"accommodation_notification_pending"});
+    const bijzonderId=await sendSpecialRequirementsEmail(result,mailboxes.general);
+    if(!bijzonderId)return response(500,{error:"special_requirements_notification_pending"});
+    // Vastleggen dát ze weg zijn, zodat de beheeromgeving "verstuurd" kan zeggen in plaats
+    // van "niet vastgelegd". Lukt het vastleggen niet, dan gaat de boeking gewoon door: de
+    // mail is al de deur uit, en het overzicht toont hem dan als klaargezet. Te weinig
+    // beweren is hier de veilige kant — nooit "verstuurd" claimen zonder registratie.
+    for(const [soort,providerId] of [["accommodation",accommodatieId],["special",bijzonderId]]){
+      if(providerId==="nothing_to_report")continue;
+      try{await rpc("mark_tavern_notification_sent",{p_payment_reference:reference,p_kind:soort,p_provider_id:providerId});}
+      catch(error){console.error("Notification mark error",soort,error);}
+    }
+    // De gedeelde Lewos-agenda. Staat de koppeling niet ingesteld, dan slaan we hem over:
+    // dat is de stand tot Robert de sleutel in Netlify zet, en een boeking mag daar niet
+    // op stuklopen. Is hij wél ingesteld, dan telt hij mee — een boeking die niet in de
+    // agenda staat, bestaat voor Nadine niet. Eén afspraak per boeking, ook bij een
+    // herhaalde webhook: het afspraak-id is afgeleid van het boekingskenmerk.
+    let calendar;
+    try{calendar=calendarConfig();}
+    catch(error){console.error("Calendar configuration error",error);return response(500,{error:"calendar_configuration_invalid"});}
+    if(calendar){
+      if(!result.arrivalDate||!result.departureDate){
+        console.error("Calendar skipped: the database returned no arrival or departure date",{claimId:result.claimId});
+        return response(500,{error:"calendar_dates_missing"});
+      }
+      try{
+        // **`arrivalDate` en `departureDate` zijn het bevestigde verblijf.** Een
+        // aangevraagde nacht rekt de afspraak niet op: Nadine ziet in de agenda wat
+        // vaststaat, en de aanvraag staat in de beheeromgeving en in de mail aan de
+        // accommodatie. Een agenda die een nacht toont die niemand heeft toegezegd, is
+        // een kamer die op de verkeerde dag klaarstaat.
+        await upsertBookingEvent(calendar,bookingEvent({
+          claimId:result.claimId,name:result.name,seats:result.seats,weekendLabel:result.weekendLabel,
+          arrivalDate:result.arrivalDate,departureDate:result.departureDate,
+          extraNights:verblijf.extraNightsStatus===STAY_STATUS.requested?verblijf.extraNightsRequest:""
+        }));
+      }catch(error){console.error("Calendar event error",error);return response(500,{error:"calendar_event_pending"});}
+    }else console.warn("Calendar not configured; no event created for booking",result.claimId);
     return response(200,{received:true,result});
   }catch(error){console.error("Payment confirmation error",error);return response(500,{error:"confirmation_failed"});}
 };

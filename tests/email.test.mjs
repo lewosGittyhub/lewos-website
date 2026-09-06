@@ -14,8 +14,26 @@ const mailpaden=[
   ["First Access-ontvangstbevestiging","netlify/functions/first-access.mjs"],
   ["Stripe-betaalbevestiging","netlify/functions/stripe-webhook.mjs"],
   ["uitnodiging betaalvenster","scripts/issue-first-access.mjs"],
-  ["media-uitnodiging","scripts/issue-media-agreements.mjs"]
+  ["media-uitnodiging","scripts/issue-media-agreements.mjs"],
+  ["vraag van het contactformulier","netlify/functions/contact.mjs"]
 ];
+
+// Bestanden die de naam van Resend noemen zónder er iets heen te sturen. Vandaag is dat
+// er één: de lokale testserver vangt uitgaande post juist áf en schrijft hem naar de
+// postbus op schijf, zodat een lokale proef nooit een echt bericht verstuurt. Zo'n bestand
+// hoort niet in de lijst met verzendpaden — maar het moet wél bewezen worden dat hij
+// alleen onderschept.
+const onderscheppers=["scripts/local-admin-server.mjs"];
+
+test("een onderschepper stuurt zelf niets naar Resend",async()=>{
+  for(const pad of onderscheppers){
+    const bron=await lees(pad);
+    assert.match(bron,/api\.resend\.com/,`${pad} onderschept niets meer — hoort hij hier nog?`);
+    assert.doesNotMatch(bron,/fetch\(\s*["'`]https:\/\/api\.resend\.com/,
+      `${pad} belt Resend zelf; dan is het geen onderschepper maar een verzendpad`);
+    assert.match(bron,/inPostbus\(/,`${pad} schrijft de onderschepte post nergens naartoe`);
+  }
+});
 
 test("elk e-mailpad in de repo is bekend en loopt via resendPayload",async()=>{
   const bestanden=["netlify/functions","scripts"];
@@ -25,7 +43,9 @@ test("elk e-mailpad in de repo is bekend en loopt via resendPayload",async()=>{
     for(const naam of await readdir(path.join(root,map))){
       if(!naam.endsWith(".mjs"))continue;
       const bron=await lees(`${map}/${naam}`);
-      if(/api\.resend\.com|RESEND_API_URL/.test(bron)&&/body:JSON\.stringify\(/.test(bron)&&/from[,:]/.test(bron))gevonden.push(`${map}/${naam}`);
+      const pad=`${map}/${naam}`;
+      if(onderscheppers.includes(pad))continue;
+      if(/api\.resend\.com|RESEND_API_URL/.test(bron)&&/body:JSON\.stringify\(/.test(bron)&&/from[,:]/.test(bron))gevonden.push(pad);
     }
   }
   const bekend=mailpaden.map(([,p])=>p);
@@ -170,22 +190,24 @@ test("een tweede poging op dezelfde claim gebruikt dezelfde sleutel",async()=>{
 test("de betaalbevestiging herhaalt allergie, dieet en opmerkingen",async()=>{
   const bron=await lees("netlify/functions/stripe-webhook.mjs");
   assert.match(bron,/labelledBlock\(/,"de bevestiging bouwt geen gelabeld blok");
-  for(const veld of ["booking.allergies","booking.dietary","booking.notes"]){
+  for(const veld of ["booking.dietaryNotes","booking.notes"]){
     assert.ok(bron.includes(veld),`${veld} komt niet in de bevestiging`);
   }
   assert.match(bron,/\$\{genoteerd\.html\}/,"het blok staat niet in de HTML-versie");
   assert.match(bron,/\$\{genoteerd\.text\}/,"het blok staat niet in de tekstversie");
 });
 
-test("confirm_tavern_payment geeft de drie velden terug",async()=>{
+test("confirm_tavern_payment geeft het gecombineerde veld en de opmerkingen terug",async()=>{
   const migratie=await readFile(new URL("../database/first-access.sql",import.meta.url),"utf8");
   const functie=migratie.slice(migratie.indexOf("function public.confirm_tavern_payment"),migratie.indexOf("revoke all on function public.confirm_tavern_payment"));
   // Twee returns: de gewone en die voor een tweede webhook op dezelfde betaling.
   const returns=functie.match(/jsonb_build_object\('status','paid'[^;]*/g)||[];
   assert.equal(returns.length,2,"het aantal 'paid'-returns is veranderd");
   for(const r of returns){
-    assert.match(r,/'allergies',claim\.allergies/,"een return laat de allergie weg");
-    assert.match(r,/'dietary',claim\.dietary_requirements/);
+    // Eén veld, met terugval op de twee oude kolommen voor boekingen van vóór de
+    // samenvoeging. Nooit allebei: dan staat een allergie er twee keer.
+    assert.match(r,/'dietaryNotes',coalesce\(nullif\(trim\(coalesce\(claim\.dietary_notes,''\)\),''\),private\.merged_dietary_text\(claim\.allergies,claim\.dietary_requirements\)\)/,"een return laat het dieetveld weg of valt niet terug op de oude kolommen");
+    assert.doesNotMatch(r,/'allergies',claim\.allergies/,"de oude velden staan er nog los naast — dan staat een allergie twee keer in de mail");
     assert.match(r,/'notes',claim\.message/);
   }
 });

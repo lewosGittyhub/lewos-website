@@ -9,7 +9,7 @@
 // - het kapt nooit iets af. Tekst weggooien zonder het te zeggen is precies wat we
 //   hier weghalen.
 (function(){
-  var LIMITS={name:120,email:254,allergies:500,dietary:500,message:2000,when:120,idea:1800,question:500};
+  var LIMITS={name:120,email:254,dietaryNotes:1000,allergies:500,dietary:500,extraNights:500,message:2000,when:120,idea:1800,question:500};
   window.LEWOS_FIELD_LIMITS=LIMITS;
 
   var velden=[].slice.call(document.querySelectorAll("[data-limit]"));

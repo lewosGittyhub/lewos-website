@@ -1,2 +1,13 @@
 .claude/
 .internal/
+
+# Nooit een sleutel of een lokaal omgevingsbestand in de repo. De Google-sleutel hoort
+# buiten deze map te staan; zie operations/google-agenda-koppeling.md.
+.env
+.env.*
+*service-account*.json
+*-key.json
+*credentials*.json
+
+# Lokale testgegevens en het lokale ondertekengeheim van de beheeromgeving.
+.local-data/

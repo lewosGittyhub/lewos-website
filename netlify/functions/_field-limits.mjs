@@ -11,12 +11,20 @@
 export const FIELD_LIMITS={
   name:120,        // gelijk aan de bestaande servercontrole en aan tavern_media_participants.full_name
   email:254,       // RFC 5321: de langste adresvorm die een mailserver hoort te accepteren
+  // Sinds 5 september 2026 één veld op alle boekingsformulieren: allergieën en dieetwensen
+  // gaan over hetzelfde gesprek en werden door gasten toch door elkaar ingevuld. 1.000 is
+  // de ruimte van de twee oude velden samen, plus iets extra voor een groep waarin per
+  // persoon staat wat er speelt.
+  dietaryNotes:1000,
+  // De twee oude velden blijven geldig: er staan boekingen in de database die ze gebruiken,
+  // en een oudere pagina in iemands tabblad mag niet stilzwijgend afketsen.
   allergies:500,   // eigen veld, zie hieronder waarom 500
   dietary:500,     // idem, en bewust hetzelfde getal als allergieën
+  extraNights:500, // /tavern/ en /tavern/book/, het enige veld dat naar de accommodatie gaat
   message:2000,    // overige opmerkingen op /tavern/
   when:120,        // /tavern/private/, gaat als regel bovenaan het berichtveld mee
   idea:1800,       // /tavern/private/, de rest van dat berichtveld: 120 + 8 + 1800 blijft onder 2000
-  question:500     // /contact/, gaat naar Netlify Forms en niet langs een functie
+  question:500     // /contact/, gaat sinds 5 september 2026 langs netlify/functions/contact.mjs
 };
 
 // Waarom 500 voor allergieën en dieetwensen, en niet een rond getal uit de lucht:

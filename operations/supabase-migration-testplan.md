@@ -225,3 +225,67 @@ gewijzigd, en die horen bij deze proef:
 Het integratieblok dekt deze drie. Roep in stap 2 dus ook
 `public.revoke_tavern_media_participant_link` en de nieuwe
 `public.get_tavern_media_progress` minstens één keer aan.
+
+---
+
+# Lokaal tegen een echte PostgreSQL (6 september 2026)
+
+**Wat hier voor het eerst is gelukt:** de migraties zijn niet langer alleen gelezen maar
+gedraaid. Er staat op deze Mac geen PostgreSQL, geen Homebrew en geen Docker, en dat was
+maandenlang de reden dat elke migratie "NOG NIET GEVERIFIEERD" bleef. Er is een weg zonder
+installatie en zonder beheerdersrechten.
+
+## Hoe
+
+Native arm64-binaries, ~30 MB, uit de Maven-repository van zonky.io. Ze hoeven nergens
+geïnstalleerd te worden; uitpakken is genoeg.
+
+```bash
+DIR=/tmp/lewos-pg && mkdir -p $DIR && cd $DIR
+curl -sL -o pg.jar https://repo1.maven.org/maven2/io/zonky/test/postgres/embedded-postgres-binaries-darwin-arm64v8/16.4.0/embedded-postgres-binaries-darwin-arm64v8-16.4.0.jar
+unzip -oq pg.jar -d jar && mkdir -p dist && tar -xJf jar/postgres-darwin-arm_64.txz -C dist
+./dist/bin/initdb -D data -U lewos -A trust -E UTF8 --locale=C
+./dist/bin/pg_ctl -D data -o "-p 55432 -c listen_addresses=127.0.0.1 -c unix_socket_directories=''" -l pg.log start
+```
+
+Twee dingen die misgaan als je ze niet weet:
+
+- **Er zit geen `psql` bij.** Alleen `initdb`, `pg_ctl` en `postgres`. Gebruik een client —
+  `npm install pg` in een map búíten de repo, zodat er geen afhankelijkheid in de repo komt.
+- **Het socketpad wordt te lang** in een diepe map. Vandaar `unix_socket_directories=''`:
+  alleen TCP op 127.0.0.1.
+
+## Wat er gedraaid is
+
+Een lege database, de rollen `anon`, `authenticated` en `service_role` erin (die levert
+Supabase, kale PostgreSQL niet), en dan de migraties in deze volgorde:
+
+```
+first-access.sql → filming-consent.sql → admin.sql → seat-holds.sql → stay-dates.sql
+```
+
+**Alle vijf draaien schoon.** Daarna nog een keer alle vijf: ook schoon — ze zijn dus
+idempotent, en de eenmalige samenvoeging van de dieetvelden verdubbelt niets bij een tweede
+run.
+
+Vervolgens `tests/database-integration.sql` erop: **alle controles geslaagd.** Dat bestand
+bevat sinds vandaag ook het verblijfsvenster, het samengevoegde dieetveld en de
+beheerfuncties. Het draait in één transactie en rolt aan het eind terug.
+
+## Wat dat wel en niet bewijst
+
+**Wel:** de SQL is syntactisch geldig, de functies compileren, de constraints doen wat ze
+zeggen, de handtekeningen zijn eenduidig (geen dubbele overloads na het toevoegen van
+parameters), en het gedrag klopt — een te late vertrekdatum wordt geweigerd, een lege
+waarde wist niets, een vreemde kan geen extra nachten bevestigen.
+
+**Niet:** dit is PostgreSQL 16.4, geen Supabase. Wat hier níét getest is:
+
+- Supabase-specifieke rollen en de standaardrechten die Supabase zelf uitdeelt. Op
+  3 september 2026 bleek dat verschil al eerder te bijten: lokaal stond de teller op nul,
+  op Supabase hadden `anon` en `authenticated` alle rechten op alle drie de tabellen.
+- PostgREST: of de RPC's over HTTP dezelfde handtekening vinden.
+- De echte gegevens die er al in staan.
+
+Draai `tests/database-integration.sql` dus alsnog één keer op een Supabase-branch voordat
+het naar productie gaat.

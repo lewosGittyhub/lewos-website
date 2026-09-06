@@ -63,18 +63,36 @@ The limits the site itself enforces:
 
 ## Allergieën en dieetwensen opzoeken
 
-*Toegevoegd 2 september 2026. Ze staan sinds die dag in eigen kolommen en niet meer
-verstopt in het vrije berichtveld.*
+*Toegevoegd 2 september 2026 als twee kolommen. **Samengevoegd tot één veld op
+5 september 2026**, omdat gasten ze toch door elkaar invulden: een notenallergie onder
+"dietary", "geen varkensvlees" onder "allergies".*
 
-`tavern_seat_claims` heeft er twee kolommen voor: `allergies` en `dietary_requirements`,
-elk maximaal 500 tekens. Het veld `message` blijft bestaan voor overige opmerkingen en
-is niet aangeraakt — bestaande aanvragen houden hun tekst precies zoals hij was, en bij
-die rijen zijn de twee nieuwe kolommen `null`.
+`tavern_seat_claims` heeft er nu één kolom voor: **`dietary_notes`**, maximaal 1.000
+tekens. Het formulier heet *Allergies & dietary requirements* en is optioneel.
+
+De twee oude kolommen `allergies` en `dietary_requirements` **blijven staan en worden niet
+gewist**. De migratie voegt ze eenmalig samen naar `dietary_notes`, met een kopje per
+herkomst:
+
+```
+Allergies: severe peanut allergy, carries an EpiPen
+Dietary requirements: one vegetarian, one gluten-free
+```
+
+Overal waar deze tekst getoond wordt geldt dezelfde regel: **`dietary_notes` wint, en dan
+staan de twee oude er niet meer naast.** Nooit allebei — dan leest iemand dezelfde allergie
+twee keer en weet hij niet welke de geldige is.
+
+Het veld `message` blijft bestaan voor overige opmerkingen en is niet aangeraakt.
 
 **De lijst die je vóór elk weekend nodig hebt**, in de SQL-editor van Supabase:
 
 ```sql
-select c.name, c.email, c.party_size, c.allergies, c.dietary_requirements, c.message
+select c.name, c.email, c.party_size,
+       coalesce(nullif(trim(coalesce(c.dietary_notes,'')),''),
+                private.merged_dietary_text(c.allergies, c.dietary_requirements))
+         as dietary_notes,
+       c.message
   from public.tavern_seat_claims c
   join public.tavern_weekends w on w.id = c.assigned_weekend_id
  where w.slug = 'weekend-01'
@@ -83,22 +101,21 @@ select c.name, c.email, c.party_size, c.allergies, c.dietary_requirements, c.mes
 ```
 
 **Wie iets doorgaf, krijgt het terug in zijn ontvangstbevestiging.** De mail herhaalt de
-allergie en de dieetwens letterlijk, met de uitnodiging om te antwoorden als er iets niet
-klopt. Dat is bewust: een typefout in een allergie hoort een gast zelf te kunnen zien,
+tekst letterlijk onder het kopje *Allergies & dietary requirements*, met de uitnodiging om
+te antwoorden als er iets niet klopt. Dat is bewust: een typefout in een allergie hoort een gast zelf te kunnen zien,
 niet pas de kok aan tafel.
 
 **Twee dingen om te weten.**
 
-- Een aanvraag die vóór 2 september is binnengekomen heeft deze kolommen leeg staan, ook
-  als de gast zijn allergie destijds in het berichtveld schreef. Lees bij die rijen dus
-  óók `message`. De query hierboven toont alle drie de kolommen, juist daarom.
-- **De publieke checkout op `/tavern/book/` vraagt er niet naar.** Die weg loopt via
-  `begin_tavern_checkout` en is bewust niet aangepast, omdat dat de betaalfunctie is.
-  Zolang die pagina open staat kan iemand daar boeken zonder ooit een allergie te kunnen
-  melden. Dat is een openstaand punt voor Robert, geen technische fout.
+- Een aanvraag die vóór 2 september is binnengekomen heeft alle drie de kolommen leeg
+  staan, ook als de gast zijn allergie destijds in het berichtveld schreef. Lees bij die
+  rijen dus óók `message`. De query hierboven toont dat veld juist daarom.
+- **Alle vier de boekingsformulieren vragen er sinds 5 september 2026 naar**: `/tavern/`,
+  `/tavern/private/`, `/tavern/book/` en `/tavern/checkout/`. Het eerdere gat op de
+  publieke boekingspagina is daarmee dicht.
 
 **Wat er gebeurt als iemand zich twee keer aanmeldt.** Er komt geen tweede claim en geen
-tweede e-mail. Wél worden allergie, dieetwens en bericht bijgewerkt met wat er nieuw is
+tweede e-mail. Wél worden het dieetveld en het bericht bijgewerkt met wat er nieuw is
 meegestuurd — een lege waarde overschrijft nooit wat er al staat. De pagina zegt dat er
 niets verloren is gegaan. Praktisch: iemand die terugkomt omdat hij zijn allergie vergeten
 was, hoeft niet met je te bellen; hij vult het formulier gewoon opnieuw in.
@@ -107,9 +124,8 @@ was, hoeft niet met je te bellen; hij vult het formulier gewoon opnieuw in.
 
 *Formaat gewijzigd op 2 september 2026.*
 
-De mail herhaalt nu **alle drie** de velden die de gast heeft ingevuld — allergieën,
-dieetwensen en overige opmerkingen — elk onder een eigen kopje, met de regeleindes van de
-gast intact. Een veld dat leeg is gebleven krijgt geen kopje en laat geen lege regel achter.
+De mail herhaalt de velden die de gast heeft ingevuld — *Allergies & dietary requirements*
+en *Anything else* — elk onder een eigen kopje, met de regeleindes van de gast intact. Een veld dat leeg is gebleven krijgt geen kopje en laat geen lege regel achter.
 
 **De mail gaat als HTML én als platte tekst de deur uit.** Dat is nieuw: hiervoor was hij
 HTML-only. Een postvak dat geen HTML toont, of een schermlezer die de tekstversie pakt,
@@ -119,12 +135,9 @@ echte nieuwe regel met twee spaties ervoor zodat hij bij zijn kopje hoort.
 Wat de gast leest:
 
 ```
-Allergies:
-  Peanuts - severe, carries an EpiPen
-  Shellfish - moderate
-
-Dietary requirements:
-  Vegetarian
+Allergies & dietary requirements:
+  Ana: severe peanut allergy, carries an EpiPen
+  Bram: vegetarian, no fish
 ```
 
 Eronder staat: *"If anything here is wrong or incomplete, reply to this email and we will

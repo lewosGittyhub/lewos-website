@@ -23,8 +23,7 @@
       consent:data.consent||'',
       // Allergieën en dieetwensen gaan als eigen velden mee en worden bewust NIET in het
       // bericht geplakt: ze horen in hun eigen kolom, waar de operator ze terugvindt.
-      allergies:String(data.allergies||'').trim(),
-      dietary:String(data.dietary||'').trim(),
+      dietaryNotes:String(data.dietaryNotes||'').trim(),
       message:(when?`When: ${when}\n\n`:'')+idea
     };
     // De twee velden worden hier tot één bericht geplakt, dus de grens van het

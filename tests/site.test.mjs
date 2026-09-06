@@ -4,7 +4,12 @@ import path from "node:path";
 import {test} from "node:test";
 
 const root=path.resolve(import.meta.dirname,"..");
-const walk=async dir=>(await Promise.all((await readdir(dir,{withFileTypes:true})).filter(entry=>entry.name!==".git").map(async entry=>entry.isDirectory()?walk(path.join(dir,entry.name)):path.join(dir,entry.name)))).flat();
+// Wat niet meegaat naar Netlify, hoort ook niet doorzocht te worden. `.local-data` is de
+// testdatabase van `scripts/local-admin-server.mjs`: die staat vol met bedragen in centen
+// en verzonnen gasten, en liet deze controles omvallen zodra iemand de lokale flow had
+// doorlopen. Het gaat om de gepubliceerde site, niet om wat een proef heeft achtergelaten.
+const NIET_GEPUBLICEERD=new Set([".git",".local-data","node_modules",".netlify",".DS_Store"]);
+const walk=async dir=>(await Promise.all((await readdir(dir,{withFileTypes:true})).filter(entry=>!NIET_GEPUBLICEERD.has(entry.name)).map(async entry=>entry.isDirectory()?walk(path.join(dir,entry.name)):path.join(dir,entry.name)))).flat();
 const files=await walk(root);
 const htmlFiles=files.filter(file=>file.endsWith(".html"));
 const read=file=>readFile(file,"utf8");
@@ -45,9 +50,12 @@ test("First Access form keeps its privacy and anti-spam safeguards",async()=>{
 
 test("contact form is separate and limited to 500 characters",async()=>{
   const html=await read(path.join(root,"contact/index.html"));
-  assert.match(html,/name=["']form-name["'][^>]*value=["']tavern-question["']/);
   assert.match(html,/name=["']question["'][^>]*maxlength=["']500["']/);
-  assert.match(html,/action=["']\/contact-thanks\/["']/);
+  // Sinds 5 september 2026 loopt het formulier langs een eigen functie in plaats van
+  // Netlify Forms, zodat de ontvanger uit `LEWOS_GENERAL_EMAIL` komt en niet uit een
+  // instelling in het Netlify-dashboard.
+  assert.match(html,/action=["']\/api\/contact["']/);
+  assert.doesNotMatch(html,/data-netlify/,"het formulier hangt nog aan Netlify Forms");
 });
 
 test("consumer price remains consistent and banned sales wording is absent",async()=>{
@@ -184,7 +192,26 @@ test("the Stripe session and the database hold expire together",async()=>{
   assert.doesNotMatch(checkout,/p_hold_minutes:\d+/,"the database hold must come from CHECKOUT_HOLD_MINUTES, never a separate literal");
   assert.equal(checkout.match(/p_hold_minutes:CHECKOUT_HOLD_MINUTES/g)?.length,2);
   assert.match(sql,/p_paid_at>claim\.hold_expires_at\+interval '5 minutes'/);
-  for(const page of [bookingHtml,terms])assert.match(page,new RegExp(`${holdMinutes} minutes`),"the published hold promise must match the configured hold");
+  // Er lopen sinds 5 september 2026 twee paden naast elkaar, en ze hebben verschillende
+  // termijnen. Dat is geen slordigheid maar de stand van zaken, en deze test legt hem vast:
+  //
+  //   * Het First Access-pad (`/tavern/checkout/`, create-checkout-session.mjs) houdt de
+  //     stoelen CHECKOUT_HOLD_MINUTES vast — veertig minuten, precies zoals `/terms/`
+  //     belooft. Ongewijzigd.
+  //   * Het groepspad (`/tavern/book/`, seat-hold.mjs) werkt met zestig minuten invullen en
+  //     daarna dertig minuten betalen. `/terms/` beschrijft dat nog niet.
+  //
+  // Die tweede regel is het openstaande punt voor de juridische controle; zie
+  // `operations/voorwaarden-verschillen.md`. Zodra de voorwaarden zijn bijgewerkt, hoort de
+  // laatste assertie hieronder mee te veranderen.
+  assert.match(terms,new RegExp(`${holdMinutes} minutes`),"the First Access hold promise must match CHECKOUT_HOLD_MINUTES");
+  const seatHold=await read(path.join(root,"netlify/functions/_seat-hold.mjs"));
+  const fillMinutes=Number(seatHold.match(/FILLING_WINDOW_MINUTES\s*=\s*(\d+)/)?.[1]);
+  assert.equal(fillMinutes,60,"the filling window is fixed at 60 minutes");
+  assert.match(bookingHtml,/60 minutes/,"the booking page must state the filling window it actually uses");
+  assert.match(bookingHtml,/30 minutes/,"the booking page must state the payment window it actually uses");
+  assert.doesNotMatch(bookingHtml,new RegExp(`${holdMinutes} minutes`),
+    "the group booking page must not repeat the First Access hold promise — it uses different windows");
 });
 
 test("internal working documents are never served from the public site",async()=>{
@@ -258,6 +285,9 @@ test("a hidden element is never left visible by a competing display rule",async(
 test("the weekend calendar is driven by real dates and degrades to the menu",async()=>{
   const html=await read(path.join(root,"tavern/index.html"));
   const script=await read(path.join(root,"tavern/first-access.js"));
+  // De kalender is sinds 5 september 2026 één gedeeld onderdeel, gebruikt door /tavern/
+  // en /tavern/book/. De garanties zijn dezelfde; ze staan alleen ergens anders.
+  const component=await read(path.join(root,"assets/weekend-calendar.js"));
   const sql=await read(path.join(root,"database/first-access.sql"));
   // Real dates, not the display label, decide where a weekend sits in a month.
   assert.match(sql,/add column if not exists starts_on date/);
@@ -265,11 +295,12 @@ test("the weekend calendar is driven by real dates and degrades to the menu",asy
   assert.match(sql,/'startsOn',w\.starts_on/);
   assert.match(sql,/'endsOn',w\.ends_on/);
   assert.match(html,/data-weekend-calendar/);
-  assert.match(html,/data-calendar-months/);
+  assert.match(component,/calendar__months/);
+  assert.match(script,/createWeekendCalendar/,"the page must use the shared calendar, not its own copy");
   // The select stays the submitted field, so the form still works without a calendar.
   assert.match(html,/<select id=["']weekend["'] name=["']weekend["'] required>/);
-  assert.match(script,/item\.startsOn/);
-  assert.match(script,/removeAttribute\('data-ready'\)/,"without dated weekends the calendar must hide itself");
+  assert.match(component,/w\.startsOn/);
+  assert.match(component,/removeAttribute\("data-ready"\)/,"without dated weekends the calendar must hide itself");
   assert.match(html,/\.calendar \{ display: none; \}/,"the calendar stays hidden until the script marks it ready");
   // A private Tavern is not a dated weekend and must remain reachable in the menu.
   assert.match(html,/value=["']private["']/);
@@ -301,15 +332,15 @@ test("the weekend menu becomes a read-out and a private Tavern has its own route
 
 test("a day cell shows only its date, and the seat count is read out below",async()=>{
   const html=await read(path.join(root,"tavern/index.html"));
-  const script=await read(path.join(root,"tavern/first-access.js"));
+  const script=await read(path.join(root,"assets/weekend-calendar.js"));
   // A number or a row of shapes inside a 38 pixel cell could not be read; the count
   // belongs in the line under the calendar and in the button's own label.
   assert.doesNotMatch(html,/calday__gauge|calday__seats/);
   assert.doesNotMatch(script,/calday__gauge|calday__seats/);
-  assert.match(script,/<span class="calday__n">\$\{day\}<\/span><\/button>/);
+  assert.match(script,/<span class="calday__n">\$\{dagnummer\}<\/span><\/button>/);
   assert.match(script,/aria-label="\$\{label\}" title="\$\{label\}"/);
   assert.match(script,/seats free/);
-  assert.match(script,/of \$\{item\.capacity\} seats free/);
+  assert.match(script,/of \$\{blok\.capacity\} seats free/);
   assert.match(html,/\.calendar__chosen \{[^}]*font: 700/,"the read-out carries the count, so it is set larger and bold");
 });
 test("the price shown with a weekend comes from the database and follows the party size",async()=>{
@@ -352,11 +383,11 @@ test("the party size sits next to a total that follows it",async()=>{
   assert.match(script,/'On request'/,"a weekend without a price must still say so instead of showing a total");
   // En nooit een bedrag voor een boeking die niet kan.
   assert.match(script,/if\(hasPrice&&fits\)\{[^}]*partyPrice\.textContent=money/,"a total may only appear when the party actually fits");
-  // De prijsberekening zit binnen paintCalendar, die stopt zodra er geen beschikbaarheid is.
+  // De prijsberekening zit binnen paintChoice, die stopt zodra er geen beschikbaarheid is.
   // Zonder deze twee takken bleef het totaal daar hangen op zijn beginwaarde, wat de gast
   // ook intikte: een dood vak zonder uitleg.
   assert.match(script,/partyPrice\.textContent='Unavailable'/,"a failed availability call must say so instead of leaving a dead total");
-  assert.match(script,/data-ready'\)\)\{priceUnavailable\(\);return;\}/,"the early return must set the total before it bails out");
+  assert.match(script,/if\(!gereed\)\{priceUnavailable\(\);return;\}/,"the early return must set the total before it bails out");
   assert.match(script,/partyPrice\.textContent='Pick a weekend'/,"with no weekend chosen the total must say what is missing");
 });
 
@@ -379,13 +410,14 @@ test("a deadline is judged on the clock, not on when the transaction started",as
 });
 
 test("the calendar refuses a weekend that cannot hold the whole party",async()=>{
+  const component=await read(path.join(root,"assets/weekend-calendar.js"));
   const script=await read(path.join(root,"tavern/first-access.js"));
   // The group is never split, so a weekend with two seats left is unavailable to three.
-  assert.match(script,/const full=item\.remaining<wanted/);
-  assert.doesNotMatch(script,/const full=item\.remaining<=0/);
-  assert.match(script,/items\.find\(item=>item\.remaining>=wantedSeats\(\)\)/);
-  assert.match(script,/current\.remaining<wantedSeats\(\)/,"a chosen weekend must be let go when the party grows");
-  assert.match(script,/not enough for \$\{wanted\}/,"the reason belongs in the accessible label");
+  assert.match(component,/const past=blok\.remaining>=gewenst/);
+  assert.doesNotMatch(component,/remaining===0\?" disabled"/,"a weekend must close as soon as the whole party no longer fits, not only when the last seat goes");
+  assert.match(script,/dated\(\)\.find\(item=>item\.remaining>=wantedSeats\(\)\)/);
+  assert.match(component,/week\.remaining<gewenst/,"a chosen weekend must be let go when the party grows");
+  assert.match(component,/not enough for \$\{gewenst\}/,"the reason belongs in the accessible label");
 });
 
 test("the surroundings are real photographs, credited and described",async()=>{

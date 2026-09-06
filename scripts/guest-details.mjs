@@ -39,7 +39,7 @@ const [{id:weekendId,label,date_label:datum}]=weekends;
 
 // Alleen wie er echt bij is: een geweigerde of verlopen claim hoort niet op de keukenlijst.
 const actief="('first_access_held','payment_pending','paid')";
-const claims=await api(`tavern_seat_claims?select=name,email,party_size,status,allergies,dietary_requirements,message,created_at`
+const claims=await api(`tavern_seat_claims?select=name,email,party_size,status,dietary_notes,allergies,dietary_requirements,message,created_at`
   +`&assigned_weekend_id=eq.${weekendId}&status=in.${actief}&order=created_at`);
 
 if(heeft("json")){
@@ -61,15 +61,21 @@ const toon=(kop,waarde)=>{
 let metAllergie=0;
 for(const claim of claims){
   console.log(`  ${claim.name} <${claim.email}> — ${claim.party_size} seat${claim.party_size===1?"":"s"} · ${claim.status}`);
-  if(claim.allergies){metAllergie+=1;toon("ALLERGIES",claim.allergies);}
-  toon("Dietary",claim.dietary_requirements);
+  // Eén veld sinds 5 september 2026, met terugval op de twee oude kolommen voor
+  // boekingen van daarvoor. Nooit allebei: dan staat een allergie er twee keer.
+  const dieet=String(claim.dietary_notes||"").trim()||[
+    String(claim.allergies||"").trim()?`Allergies: ${claim.allergies.trim()}`:"",
+    String(claim.dietary_requirements||"").trim()?`Dietary requirements: ${claim.dietary_requirements.trim()}`:""
+  ].filter(Boolean).join("\n");
+  if(/allerg/i.test(dieet))metAllergie+=1;
+  toon("ALLERGIES & DIETARY",dieet);
   toon("Notes",claim.message);
-  if(!claim.allergies&&!claim.dietary_requirements&&!claim.message)console.log("    (nothing reported)");
+  if(!dieet&&!claim.message)console.log("    (nothing reported)");
   console.log("");
 }
 
 console.log(`${metAllergie} of ${claims.length} booking${claims.length===1?"":"s"} reported an allergy.`);
-const oud=claims.filter(c=>!c.allergies&&!c.dietary_requirements&&c.message);
+const oud=claims.filter(c=>!c.dietary_notes&&!c.allergies&&!c.dietary_requirements&&c.message);
 if(oud.length){
   console.log(`\n⚠  ${oud.length} booking${oud.length===1?" has":"s have"} no allergy or dietary field but do have a note.`);
   console.log("   Requests from before 2 September 2026 kept everything in that one field.");

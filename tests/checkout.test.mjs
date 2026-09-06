@@ -39,8 +39,14 @@ before(async()=>{
   process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";
   process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";
   process.env.NODE_ENV="test";
+  process.env.LEWOS_GENERAL_EMAIL="lewos.co@gmail.com";
+  process.env.FONTECHA_ACCOMMODATION_EMAIL="accommodation@example.invalid";
 });
-beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,priceCents:202500,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
+
+// De payloads die daadwerkelijk naar Resend gingen, op ontvanger. Niet de broncode:
+// welk postvak welke mail krijgt is precies wat hier fout kan gaan.
+const mailsAan=adres=>calls.filter(call=>call.url==="/emails").map(call=>JSON.parse(call.body)).filter(mail=>[].concat(mail.to).includes(adres));
+beforeEach(()=>{calls=[];stripeFails=false;attachFails=false;emailFails=false;markFails=false;emailRequests=0;process.env.TAVERN_PAYMENTS_ENABLED="true";process.env.BOOKING_TERMS_VERSION="booking-test-v1";process.env.BOOKING_TERMS_DOCUMENT_URL="/documents/terms.pdf";process.env.TRAVEL_INFORMATION_DOCUMENT_URL="/documents/travel.pdf";process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";holdResult={status:"payment_pending",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,priceCents:202500,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",holdExpiresAt:"2026-08-27T18:00:00Z"};confirmationResult={status:"paid",claimId:"claim-1",name:"Robert",email:"robert@example.com",seats:3,weekendLabel:"Weekend 01",arrivalDate:"2026-10-30",departureDate:"2026-11-02",termsVersion:"booking-test-v1",confirmationEmailSent:false};});
 beforeEach(()=>{attachResult={status:"attached"};});
 // Sluit de mockserver echt af. Zonder de open verbindingen te verbreken blijft het
 // proces na de laatste test wachten en lijkt de suite te hangen.
@@ -228,8 +234,14 @@ test("paid Stripe webhook confirms the matching claim",async()=>{
   const body=JSON.stringify({type:"checkout.session.completed",created:Math.floor(Date.now()/1000),data:{object:{payment_status:"paid",metadata:{payment_reference:"payment-1"}}}});
   const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
   const result=await handler({httpMethod:"POST",headers:{"Stripe-Signature":`t=${timestamp},v1=${signature}`},body});
-  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).result.status,"paid");assert.equal(emailRequests,1);assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/mark_tavern_confirmation_email_sent"),true);
-  const email=JSON.parse(calls.find(call=>call.url==="/emails").body);assert.equal(email.attachments.length,2);assert.match(email.attachments[0].content,/^[A-Za-z0-9+/]+=*$/);
+  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).result.status,"paid");assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/mark_tavern_confirmation_email_sent"),true);
+  // De gast krijgt zijn bevestiging met de twee PDF's; de accommodatie krijgt haar eigen
+  // melding. Zonder bijzonderheden gaat er niets naar Lewos: dat scheelt een leeg bericht.
+  const aanGast=mailsAan("robert@example.com");
+  assert.equal(aanGast.length,1);assert.equal(aanGast[0].attachments.length,2);assert.match(aanGast[0].attachments[0].content,/^[A-Za-z0-9+/]+=*$/);
+  assert.equal(mailsAan("accommodation@example.invalid").length,1);
+  assert.equal(mailsAan("lewos.co@gmail.com").length,0);
+  assert.equal(emailRequests,2);
 });
 
 test("a confirmation email failure makes Stripe retry the webhook",async()=>{
@@ -247,10 +259,16 @@ test("a duplicate paid webhook retries an unsent confirmation without duplicatin
   const body=JSON.stringify({type:"checkout.session.completed",created:Math.floor(Date.now()/1000),data:{object:{payment_status:"paid",metadata:{payment_reference:"payment-1"}}}});
   const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
   const retry=await handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=bad,v1=${signature}`},body});
-  assert.equal(retry.statusCode,200);assert.equal(emailRequests,1);
+  assert.equal(retry.statusCode,200);assert.equal(mailsAan("robert@example.com").length,1);
   confirmationResult={...confirmationResult,confirmationEmailSent:true};
   const done=await handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=${signature}`},body});
-  assert.equal(done.statusCode,200);assert.equal(emailRequests,1);
+  // Tweede poging: de gast krijgt niets nieuws. De melding aan de accommodatie gaat wél
+  // opnieuw de deur uit; Resend houdt hem tegen op de `idempotency-key`, die per boeking
+  // vastligt. Zie HANDOVER: een eigen kolom in de database zou dat harder maken.
+  assert.equal(done.statusCode,200);assert.equal(mailsAan("robert@example.com").length,1);
+  const naarAccommodatie=mailsAan("accommodation@example.invalid");
+  assert.equal(naarAccommodatie.length,2);
+  assert.equal(new Set(calls.filter(call=>call.url==="/emails"&&[].concat(JSON.parse(call.body).to).includes("accommodation@example.invalid")).map(call=>call.headers["idempotency-key"])).size,1,"twee meldingen over dezelfde boeking dragen niet dezelfde idempotency-key");
 });
 
 test("paid Stripe checkout that cannot be confirmed is retried and never emails a false confirmation",async()=>{
@@ -260,6 +278,169 @@ test("paid Stripe checkout that cannot be confirmed is retried and never emails 
   const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
   const result=await handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=${signature}`},body});
   assert.equal(result.statusCode,500);assert.equal(emailRequests,0);
+});
+
+// ── De mailroutering, gevraagd door Robert op 5 september 2026 ───────────────
+// Vier controles, letterlijk de vier die hij noemde: een gewone boeking gaat naar
+// Fontecha, een bijzondere vraag gaat naar Lewos, de twee lopen nooit door elkaar, en
+// de gast houdt zijn eigen bevestiging.
+
+const betaaldeWebhook=async()=>{
+  const {handler}=await import("../netlify/functions/stripe-webhook.mjs");
+  const body=JSON.stringify({type:"checkout.session.completed",created:Math.floor(Date.now()/1000),data:{object:{payment_status:"paid",metadata:{payment_reference:"payment-1"}}}});
+  const timestamp=Math.floor(Date.now()/1000);const signature=createHmac("sha256","whsec_test").update(`${timestamp}.${body}`).digest("hex");
+  return handler({httpMethod:"POST",headers:{"stripe-signature":`t=${timestamp},v1=${signature}`},body});
+};
+
+test("a normal Tavern booking reaches Fontecha with what a room needs and nothing more",async()=>{
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const naarFontecha=mailsAan("accommodation@example.invalid");
+  assert.equal(naarFontecha.length,1,"de accommodatie kreeg geen melding van een betaalde boeking");
+  const mail=naarFontecha[0];
+  assert.deepEqual(mail.to,["accommodation@example.invalid"],"de melding heeft meer dan één ontvanger");
+  for(const [kop,waarde] of [["Guest name / Nombre del huésped","Robert"],["Number of guests / Número de huéspedes","3"],["Weekend / Fin de semana","Weekend 01"],["Arrival / Llegada","2026-10-30"],["Departure / Salida","2026-11-02"]]){
+    assert.ok(mail.text.includes(`${kop}:\n  ${waarde}`),`${kop} ontbreekt in de melding aan de accommodatie`);
+  }
+  // Engels én Spaans, op verzoek van Robert. Elk gegeven staat maar één keer, met het
+  // kopje in beide talen: twee losse blokken zouden uit elkaar kunnen lopen.
+  assert.match(mail.text,/A Lewos Tavern booking is confirmed and paid\./);
+  assert.match(mail.text,/Una reserva de The Lewos Tavern está confirmada y pagada\./);
+  assert.match(mail.text,/Se necesita alojamiento para 3 huéspedes\./);
+});
+
+// Bijgewerkt op 5 september 2026. De aanvraag reist als datums en de zin wordt daaruit
+// afgeleid. Het belangrijkste dat deze test bewaakt is niet dát hij meekomt, maar dat hij
+// in een ander blok staat dan het bevestigde verblijf — een aanvraag onder dezelfde kop
+// als de aankomstdatum leest als een afspraak.
+test("an extra-night request travels as dates, in its own block, marked not confirmed",async()=>{
+  confirmationResult={...confirmationResult,
+    weekendStart:"2026-10-30",weekendEnd:"2026-11-02",
+    requestedArrival:"2026-10-28",requestedDeparture:"2026-11-03",
+    extraNightsStatus:"requested"};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const mail=mailsAan("accommodation@example.invalid")[0];
+
+  // Het bevestigde verblijf blijft het weekend zelf.
+  assert.match(mail.text,/Confirmed booking \/ Reserva confirmada:/);
+  assert.match(mail.text,/Arrival \/ Llegada:\n {2}2026-10-30/);
+  assert.match(mail.text,/Departure \/ Salida:\n {2}2026-11-02/);
+  assert.equal(mail.text.includes("2026-10-28\n"),false,"de aangevraagde aankomst staat tussen de bevestigde gegevens");
+
+  // En de aanvraag staat eronder, als aanvraag, met de vraag om te antwoorden.
+  assert.match(mail.text,/NOT YET CONFIRMED — extra nights requested/);
+  assert.match(mail.text,/2 nights before the weekend and 1 night after the weekend/);
+  assert.match(mail.text,/Not confirmed — subject to accommodation availability\./);
+  assert.match(mail.text,/Please reply to Robert to confirm or decline these extra nights\./);
+});
+
+test("an older booking keeps the guest's own words when there are no dates",async()=>{
+  // Boekingen van vóór de kalender hebben hun aanvraag als vrije tekst. Die mag niet
+  // stilzwijgend uit de mail verdwijnen omdat het formaat veranderd is.
+  confirmationResult={...confirmationResult,extraNights:"Two nights before, one after."};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const mail=mailsAan("accommodation@example.invalid")[0];
+  assert.match(mail.text,/NOT YET CONFIRMED — extra nights requested/);
+  assert.match(mail.text,/Requested \(as written by the guest\): Two nights before, one after\./);
+});
+
+test("a calendar entry never covers a night nobody confirmed",async()=>{
+  // De agenda-afspraak hangt aan het bevestigde verblijf. Staat er een aanvraag open,
+  // dan blijft de afspraak op de weekenddatums en wordt de aanvraag alleen genoemd.
+  const {bookingEvent}=await import("../netlify/functions/_calendar.mjs");
+  const afspraak=bookingEvent({claimId:"claim-0001",name:"Robert",seats:3,
+    weekendLabel:"Weekend 01",arrivalDate:"2026-10-30",departureDate:"2026-11-02",
+    extraNights:"Requested: 2 nights before the weekend. Not confirmed — subject to accommodation availability."});
+  assert.match(afspraak.startDateTime,/^2026-10-30T/,"de afspraak begint op een aangevraagde nacht");
+  assert.match(afspraak.endDateTime,/^2026-11-02T/);
+  assert.match(afspraak.description,/NOT part of this entry — extra nights still to be confirmed/);
+});
+
+test("a booking without extra nights leaves the block out instead of writing 'none'",async()=>{
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const mail=mailsAan("accommodation@example.invalid")[0];
+  assert.equal(mail.text.includes("extra nights requested"),false);
+  assert.equal(mail.text.includes("Please reply to Robert"),false,"er valt niets te beantwoorden, dus die vraag hoort er niet te staan");
+});
+
+test("Fontecha never receives what belongs to Lewos",async()=>{
+  confirmationResult={...confirmationResult,allergies:"Peanuts - severe",dietary:"Vegetarian",notes:"Wheelchair user, ground floor please."};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const naarFontecha=mailsAan("accommodation@example.invalid")[0];
+  for(const geheim of ["Peanuts","Vegetarian","Wheelchair","robert@example.com"]){
+    assert.equal(naarFontecha.text.includes(geheim),false,`"${geheim}" hoort niet in de melding aan de accommodatie`);
+    assert.equal(naarFontecha.html.includes(geheim),false,`"${geheim}" hoort niet in de HTML aan de accommodatie`);
+  }
+});
+
+test("a special requirement on a confirmed booking goes to Lewos, not to the accommodation",async()=>{
+  // Eén veld sinds 5 september 2026, en het blijft los van het algemene berichtveld
+  // staan: een allergie moet terug te vinden zijn zonder een vrije tekst door te lezen.
+  confirmationResult={...confirmationResult,dietaryNotes:"Peanuts - severe. Vegetarian.",notes:"Wheelchair user, ground floor please."};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const naarLewos=mailsAan("lewos.co@gmail.com");
+  assert.equal(naarLewos.length,1,"Lewos kreeg geen melding van de allergie");
+  assert.deepEqual(naarLewos[0].to,["lewos.co@gmail.com"]);
+  assert.match(naarLewos[0].text,/Allergies & dietary requirements:\n {2}Peanuts - severe\. Vegetarian\./);
+  assert.match(naarLewos[0].text,/Anything else:\n {2}Wheelchair user/);
+});
+
+test("the guest still receives the confirmation, whoever else is notified",async()=>{
+  confirmationResult={...confirmationResult,dietaryNotes:"Peanuts - severe"};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const aanGast=mailsAan("robert@example.com");
+  assert.equal(aanGast.length,1);
+  assert.deepEqual(aanGast[0].to,["robert@example.com"],"de bevestiging van de gast draagt een tweede ontvanger");
+  assert.match(aanGast[0].subject,/booking is confirmed/);
+  assert.equal(aanGast[0].attachments.length,2);
+});
+
+test("no email ever carries both mailboxes at once",async()=>{
+  confirmationResult={...confirmationResult,allergies:"Peanuts - severe"};
+  await betaaldeWebhook();
+  for(const mail of calls.filter(call=>call.url==="/emails").map(call=>JSON.parse(call.body))){
+    const ontvangers=[].concat(mail.to);
+    assert.equal(ontvangers.length,1,`een mail heeft ${ontvangers.length} ontvangers: ${ontvangers.join(", ")}`);
+    assert.equal(ontvangers.includes("lewos.co@gmail.com")&&ontvangers.includes("accommodation@example.invalid"),false);
+  }
+});
+
+test("an extra-night request before payment reaches nobody at the accommodation",async()=>{
+  // Regel 1 van Robert: een verzoek om extra nachten vóór de betaling is een vraag aan
+  // Lewos, geen boeking. De accommodatie hoort pas iets bij een bevestigde, betaalde
+  // boeking — deze functie opent alleen een betaling en verstuurt zelf geen mail.
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:3,adultConfirmed:true,privacyAccepted:true,extraNights:"Two nights before."})});
+  assert.equal(result.statusCode,200);
+  const begin=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body);
+  assert.equal(begin.p_extra_nights,"Two nights before.","de extra nachten komen niet in de database");
+  assert.equal(calls.some(call=>call.url==="/emails"),false,"er ging een mail uit vóór de betaling");
+});
+
+test("without a configured accommodation address nothing is sent quietly",async()=>{
+  delete process.env.FONTECHA_ACCOMMODATION_EMAIL;
+  const result=await betaaldeWebhook();
+  // Stripe probeert het opnieuw en Robert ziet de fout. Een betaalde boeking waarvan de
+  // accommodatie niets weet, is een gast zonder bed; die mag niet stil weglopen.
+  assert.equal(result.statusCode,500);
+  assert.equal(JSON.parse(result.body).error,"accommodation_recipient_not_configured");
+  assert.equal(mailsAan("robert@example.com").length,1,"de gast hoort zijn bevestiging wél te krijgen");
+  process.env.FONTECHA_ACCOMMODATION_EMAIL="accommodation@example.invalid";
+});
+
+test("one address for both mailboxes stops the notification instead of mixing them",async()=>{
+  process.env.FONTECHA_ACCOMMODATION_EMAIL="lewos.co@gmail.com";
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,500);
+  assert.equal(JSON.parse(result.body).error,"recipient_configuration_invalid");
+  assert.equal(mailsAan("lewos.co@gmail.com").length,0);
+  process.env.FONTECHA_ACCOMMODATION_EMAIL="accommodation@example.invalid";
 });
 
 test("an expired Stripe session releases its seats",async()=>{
@@ -312,10 +493,36 @@ test("the public checkout sends allergies, dietary needs and notes as separate f
   assert.equal(body.p_message,"We arrive late.","the note is polluted with the other fields");
 });
 
+test("both checkout paths store the combined field as its own parameter",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const tekst="Ana: severe peanut allergy, carries an EpiPen.\nBram: vegetarian.";
+  await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",
+    weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    dietaryNotes:tekst,message:"We arrive late."})});
+  const publiek=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout").body);
+  assert.equal(publiek.p_dietary_notes,tekst);
+  assert.equal(publiek.p_message,"We arrive late.","the note is polluted with the dietary field");
+
+  calls.length=0;
+  await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"a".repeat(43),
+    adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,dietaryNotes:tekst})});
+  const uitnodiging=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);
+  assert.equal(uitnodiging.p_dietary_notes,tekst);
+});
+
+test("an older checkout page sending two fields is merged on the way in",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"a".repeat(43),
+    adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
+    allergies:"Peanuts - severe",dietary:"Vegetarian"})});
+  const body=JSON.parse(calls.find(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout").body);
+  assert.equal(body.p_dietary_notes,"Allergies: Peanuts - severe\nDietary requirements: Vegetarian");
+});
+
 test("the public checkout refuses an over-long field instead of trimming it",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-01",people:3,adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
-    allergies:"p".repeat(501)})});
+    dietaryNotes:"p".repeat(1001)})});
   assert.equal(result.statusCode,400);
   assert.equal(JSON.parse(result.body).error,"field_too_long");
   assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_checkout"),false,"an over-long allergy reached the database");
@@ -343,7 +550,7 @@ test("the First Access checkout forwards added allergies without erasing anythin
 test("the First Access checkout refuses an over-long field instead of trimming it",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"a".repeat(43),adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true,
-    allergies:"p".repeat(501)})});
+    dietaryNotes:"p".repeat(1001)})});
   assert.equal(result.statusCode,400);
   assert.equal(JSON.parse(result.body).error,"field_too_long");
   assert.equal(calls.some(call=>call.url==="/rest/v1/rpc/begin_tavern_first_access_checkout"),false,"an over-long allergy reached the database");
