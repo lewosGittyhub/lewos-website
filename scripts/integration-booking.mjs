@@ -3,8 +3,10 @@
 //   node scripts/local-admin-server.mjs        (in een tweede venster)
 //   node scripts/integration-booking.mjs
 //
-// Let op: de blokkeringslimiet is vier per IP per uur. Draai zo nodig eerst
-//   curl -X POST http://127.0.0.1:8790/api/test/reset -d "{\"resetLimits\":true}" -H "content-type: application/json"
+// De blokkeringslimiet is vier per IP per uur en dit script doet er vijf. Het wist die
+// grens daarom zelf vóór elke boeking, via `/api/test/clock` — niet via `/api/test/reset`,
+// want dat eindpunt zaait alleen de gegevens opnieuw en raakt de grenzen niet. Dat verschil
+// kostte op 6 september 2026 drie mislukte runs met elke keer een andere rode regel.
 
 // Boekingsintegratie tegen de draaiende lokale server. Geen nagebootste functies: dit
 // loopt over HTTP door dezelfde Netlify-handlers die in productie draaien.
@@ -21,7 +23,16 @@ const check=(naam,voorwaarde,extra="")=>{
 
 const deelnemers=n=>Array.from({length:n},(_,i)=>({name:`TEST – Gast ${i+1}`,email:`t${Date.now()}${i}@example.invalid`}));
 
+// Wist de blokkeringslimiet. Zonder dit valt het script halverwege om op `too_many_holds`,
+// en dan lijkt een controle te falen die nooit is uitgevoerd.
+const wisGrens=()=>post("/api/test/clock",{resetLimits:true});
+
+// En zaai de gegevens opnieuw: elke run verbruikt stoelen, dus zonder dit loopt een tweede
+// run vast op `not_available` in plaats van op de zaak die hij wil controleren.
+await post("/api/test/reset",{});
+
 const boek=async({arrival,departure,seats=1,weekend="weekend-01",dietaryNotes=""})=>{
+  await wisGrens();
   const t=token();
   const hold=await post("/api/hold",{sessionToken:t,weekend,people:seats});
   if(hold.status!==200)return {stap:"hold",...hold};
@@ -53,6 +64,7 @@ check("aankomst op 25 oktober wordt door de server geweigerd",
   `opgeslagen ${teVroeg.body.extraNightsStored}`);
 
 // 4. Onleesbare datum komt niet eens tot de database.
+await wisGrens();
 const onzin=await post("/api/hold",{sessionToken:token(),weekend:"weekend-01",people:1});
 const onzin2=await post("/api/hold/promote",{sessionToken:"x".repeat(40),
   name:"TEST",email:"x@example.invalid",requestedArrival:"26-10-2026",

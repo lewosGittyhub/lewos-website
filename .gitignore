@@ -10,4 +10,6 @@
 *credentials*.json
 
 # Lokale testgegevens en het lokale ondertekengeheim van de beheeromgeving.
-.local-data/
+# Alles wat met .local-data begint: ook reservekopieen zoals .local-data.oud-2210.
+# Op 6 september 2026 belandde zo'n map per ongeluk in een commit via `git add -A`.
+.local-data*

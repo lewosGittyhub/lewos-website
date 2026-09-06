@@ -73,7 +73,11 @@ for(const id of ids){
 if(onbetaald){
   const doe=(wie,actie,body)=>vraag(`/api/admin/participants/${onbetaald.id}/${actie}`,wie,
     {method:"POST",body:JSON.stringify(body)});
-  check("Nadine mag herinneren",(await doe(nadine,"remind",{})).status===200);
+  // Toon de status en het antwoord bij een mislukking: zonder dat is een rode regel hier
+  // niet te herleiden, en dat kostte op 6 september 2026 een half uur.
+  const herinnering=await doe(nadine,"remind",{});
+  check("Nadine mag herinneren",herinnering.status===200,
+    `status ${herinnering.status}: ${herinnering.tekst.slice(0,200)}`);
   check("Nadine mag niet vrijgeven",(await doe(nadine,"release",{reason:"proef"})).status===403);
   check("Nadine mag niet verlengen",
     (await doe(nadine,"extend",{reason:"proef",newDeadline:new Date(Date.now()+7200e3).toISOString()})).status===403);
