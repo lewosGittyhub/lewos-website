@@ -115,6 +115,7 @@ bevestigde boeking vanzelf in de agenda komt:
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `…@….iam.gserviceaccount.com` uit het JSON-bestand |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | het veld `private_key` uit het JSON-bestand, inclusief `-----BEGIN PRIVATE KEY-----` |
 | `LEWOS_CALENDAR_ID` | het Calendar ID uit stap 6 |
+| `LEWOS_ACCOMMODATION_EMAILS` | het adres waarmee Nadine boekingen invoert; meerdere mag, gescheiden door komma's |
 
 Optioneel: `TAVERN_TIMEZONE` (standaard `Europe/Madrid`).
 
@@ -188,14 +189,39 @@ blokkeert standaard één nacht te veel. `tests/house-calendar.test.mjs` bewaakt
 
 ## Wat Robert nog moet doen
 
-1. **Controleer welk Calendar ID er staat.** `c_...@group.calendar.google.com` is een eigen
-   agenda; `lewos.co@gmail.com` is je **persoonlijke** agenda. In dat tweede geval ziet
-   Nadine straks al je afspraken en kan ze erin schrijven. Maak dan een aparte agenda
-   *Lewos — Tavern & huis* en zet dat ID in `LEWOS_CALENDAR_ID`.
-2. **Nadine schrijfrechten geven**: *Wijzigingen aanbrengen in afspraken*. Niet
-   *Wijzigingen aanbrengen en delen beheren* — dan kan ze de agenda ook weggeven.
-3. **Eén keer `scripts/sync-weekend-blocks.mjs --dry-run`** draaien om te zien wat er zou
+**Afgehandeld op 6 september 2026.** Er staat nu een eigen agenda *Lewos — Tavern & huis*
+(`...@group.calendar.google.com`), eigendom van het Lewos-account en gedeeld met Nadine, met
+*Wijzigingen aanbrengen in afspraken*. De persoonlijke agenda wordt niet meer gebruikt voor
+automatische boekingen. Het id staat in `LEWOS_CALENDAR_ID` en niet in deze repo.
+
+Wat nog moet:
+
+1. **Zet `LEWOS_ACCOMMODATION_EMAILS`** op het adres waarmee Nadine haar boekingen invoert.
+   Zonder die variabele blokkeert elke vreemde afspraak voorraad — ook je tandarts. Zie
+   "Wat telt als bezet" hieronder.
+2. **Eén keer `scripts/sync-weekend-blocks.mjs --dry-run`** draaien om te zien wat er zou
    komen, en pas daarna zonder `--dry-run`.
+
+## Wat telt als bezet
+
+Sinds de koppeling op een eigen agenda staat, mag daar ook gewoon iets persoonlijks in. Dus
+blokkeert niet meer alles wat er staat. De regel, in volgorde:
+
+| Afspraak | Blokkeert | Waarom |
+| --- | --- | --- |
+| Van ons (`lewosSource = tavern-booking`) | nee | staat al in onze eigen administratie; dubbel tellen zou een weekend tegen zijn eigen boeking blokkeren |
+| Afgezegd, of op **Vrij** gezet | nee | er slaapt niemand |
+| Gemaakt vanaf een adres uit `LEWOS_ACCOMMODATION_EMAILS` | **ja** | dit is een boeking van de accommodatie |
+| Handmatig gemarkeerd `lewosSource = accommodation` | **ja** | voor een boeking die telefonisch binnenkomt |
+| Al het overige | nee | privéafspraak of onherkenbaar |
+
+**Uitzondering, en met opzet:** staat `LEWOS_ACCOMMODATION_EMAILS` niet ingesteld, dan
+blokkeert álles wat niet van ons is. Een lege instelling zou anders stilzwijgend de hele
+bescherming uitzetten. Een gemiste verkoop bel je recht; twee groepen voor hetzelfde bed
+niet.
+
+Een afspraak die nachten beslaat maar niet is meegeteld, verdwijnt niet: hij komt als
+waarschuwing in de beheeromgeving zodra hij een verkochte boeking raakt, met de reden erbij.
 
 ## Hoe snel een boeking van Nadine doorkomt
 

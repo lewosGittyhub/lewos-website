@@ -599,12 +599,29 @@ const start=async()=>{
     privateKeyEncoding:{type:"pkcs8",format:"pem"},publicKeyEncoding:{type:"spki",format:"pem"}});
   process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=testSleutel;
   process.env.LEWOS_CALENDAR_ID="lokale-testagenda";
+  // Zonder deze variabele valt de koppeling terug op "alles blokkeert" en test je de
+  // herkenning nooit. Een verzonnen adres; het echte staat alleen in Netlify.
+  const HUISADRES="accommodatie@lokale-test.invalid";
+  process.env.LEWOS_ACCOMMODATION_EMAILS=HUISADRES;
   const AGENDA=join(DATA,"calendar.json");
   const leesAgenda=()=>{try{return JSON.parse(readFileSync(AGENDA,"utf8"));}catch{return {items:[]};}};
   const schrijfAgenda=d=>writeFileSync(AGENDA,JSON.stringify(d,null,2));
+  // Twee voorbeelden, en het verschil ertussen is de hele wijziging van 6 september 2026:
+  // de boeking van de accommodatie haalt nachten van de site, de privéafspraak niet.
   if(!existsSync(AGENDA))schrijfAgenda({items:[{
     id:"nadine-voorbeeld",summary:"TEST — Familie Jansen (boeking van Nadine)",
+    creator:{email:HUISADRES},organizer:{email:HUISADRES},
     start:{date:"2026-11-10"},end:{date:"2026-11-13"}
+  },{
+    id:"prive-voorbeeld",summary:"TEST — Tandarts (privé, mag niets blokkeren)",
+    creator:{email:"robert@lokale-test.invalid"},
+    start:{date:"2026-11-17"},end:{date:"2026-11-18"}
+  },{
+    // En onze eigen boeking, die nooit tegen zichzelf mag meetellen.
+    id:"eigen-voorbeeld",summary:"TEST — Tavern-boeking (van ons)",
+    creator:{email:"lokaal-test@example.invalid"},
+    start:{date:"2026-11-19"},end:{date:"2026-11-21"},
+    extendedProperties:{private:{lewosSource:"tavern-booking",lewosClaimId:"voorbeeld"}}
   }]});
 
   const echteFetch=globalThis.fetch;

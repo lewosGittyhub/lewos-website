@@ -60,7 +60,7 @@ export const handler=async event=>{
 
   try{
     const afspraken=await listEvents(config,{from,to});
-    const nachten=[...busyNights(afspraken)].sort();
+    const nachten=[...busyNights(afspraken,config)].sort();
     onthoud(sleutel,{tijd:Date.now(),nachten});
     return json(200,{configured:true,from,to,busyNights:nachten});
   }catch(error){

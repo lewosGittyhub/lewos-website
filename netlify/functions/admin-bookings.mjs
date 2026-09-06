@@ -40,7 +40,7 @@ const rpc=async(naam,body)=>{
 const agendaBotsingen=async boekingen=>{
   if(!boekingen.length)return [];
   try{
-    const {calendarConfig,listEvents,nightsOf}=await import("./_calendar.mjs");
+    const {calendarConfig,listEvents,classifyEvent}=await import("./_calendar.mjs");
     const config=calendarConfig();
     if(!config)return [];
     const datums=boekingen.flatMap(b=>[b.arrival,b.departure]).filter(Boolean).sort();
@@ -55,7 +55,12 @@ const agendaBotsingen=async boekingen=>{
         // De nachten van een boeking: aankomst tot en met de dag vóór vertrek.
         const raakt=(afspraak.nights||[]).filter(n=>n>=boeking.arrival&&n<boeking.departure);
         if(!raakt.length)continue;
+        // Ook een afspraak die géén voorraad blokkeert komt hier terecht. Juist die:
+        // hij is niet herkend als accommodatieboeking, dus de site heeft die nachten
+        // gewoon doorverkocht. Dat moet Robert zien.
+        const oordeel=classifyEvent(afspraak,config.accommodationEmails);
         botsingen.push({eventId:afspraak.id,summary:afspraak.summary,
+          blocks:oordeel.blocks,reason:oordeel.reason,
           claimId:boeking.claimId,name:boeking.name,weekendLabel:boeking.weekendLabel,nights:raakt});
       }
     }

@@ -27,7 +27,8 @@ const lees=p=>readFile(path.join(root,p),"utf8");
 const heeftOpmaak=(html,klasse)=>
   [...html.matchAll(/([^{}]+)\{[^}]*\}/g)].some(m=>new RegExp(`\\.calday\\.${klasse}(?![a-z-])`).test(m[1]));
 
-const {nightsOf,busyNights,weekendBlockEvent,weekendBlockIdFor,LEWOS_MARKER,bookingEvent}
+const {nightsOf,busyNights,weekendBlockEvent,weekendBlockIdFor,LEWOS_MARKER,bookingEvent,
+  classifyEvent,accommodationAddresses,unrecognisedEvents,ACCOMMODATION_MARKER,TAVERN_TIMEZONE}
   =await import("../netlify/functions/_calendar.mjs");
 
 // ── Nachten tellen ──────────────────────────────────────────────────────────
@@ -215,4 +216,97 @@ test("de dode hover-klasse van de oude kalender is opgeruimd",async()=>{
   assert.doesNotMatch(component,/is-hot/);
   for(const pagina of ["tavern/index.html","tavern/book/index.html"])
     assert.doesNotMatch(await lees(pagina),/is-hot/,`${pagina} draagt nog dode opmaak`);
+});
+
+
+// ── Wie blokkeert er voorraad? ──────────────────────────────────────────────
+//
+// Robert, 6 september 2026: de koppeling staat op een eigen agenda, en daarin mag ook een
+// privéafspraak staan. Die mag geen nacht meer van de site halen.
+
+// Een verzonnen accommodatieadres. Het echte staat in `LEWOS_ACCOMMODATION_EMAILS`, niet
+// hier — het is een persoonsgegeven en dat hoort niet in de repo.
+const HUIS=["huis@voorbeeld.test"];
+const nacht=["2026-11-20"];
+
+test("een privéafspraak in de gedeelde agenda blokkeert niets",()=>{
+  const prive={summary:"Tandarts",creator:"robert@voorbeeld.test",nights:nacht};
+  assert.equal(classifyEvent(prive,HUIS).blocks,false);
+  assert.equal(classifyEvent(prive,HUIS).reason,"niet_herkend");
+  assert.equal(busyNights([prive],{accommodationEmails:HUIS}).size,0);
+});
+
+test("een boeking van de accommodatie blokkeert wel",()=>{
+  const vanNadine={summary:"Familie de Vries",creator:"huis@voorbeeld.test",nights:nacht};
+  assert.equal(classifyEvent(vanNadine,HUIS).reason,"accommodatie_adres");
+  assert.deepEqual([...busyNights([vanNadine],{accommodationEmails:HUIS})],nacht);
+});
+
+test("het organisatoradres telt net zo goed als de maker",()=>{
+  // Wie een afspraak van een andere agenda kopieert, blijft maker maar niet organisator.
+  const gekopieerd={creator:"iemand@voorbeeld.test",organizer:"HUIS@Voorbeeld.TEST",nights:nacht};
+  assert.equal(classifyEvent(gekopieerd,HUIS).blocks,true,"hoofdletters mogen niets uitmaken");
+});
+
+test("zonder ingestelde herkenning blokkeert alles wat niet van ons is",()=>{
+  // De gevaarlijkste stand: iemand vergeet `LEWOS_ACCOMMODATION_EMAILS` te zetten. Dan valt
+  // de koppeling terug op het oude, strenge gedrag in plaats van stilzwijgend alles door te
+  // laten. Een gemiste verkoop bel je recht; twee groepen voor hetzelfde bed niet.
+  const onbekend={summary:"?",creator:"wie-dan-ook@voorbeeld.test",nights:nacht};
+  assert.equal(classifyEvent(onbekend,[]).reason,"herkenning_niet_ingesteld");
+  assert.equal(classifyEvent(onbekend,[]).blocks,true);
+  assert.equal(accommodationAddresses("").length,0);
+});
+
+test("de expliciete markering blokkeert ook zonder bekend adres",()=>{
+  // Voor een boeking die Robert zelf telefonisch aanneemt en in de agenda zet.
+  const handmatig={summary:"Telefonisch",creator:"robert@voorbeeld.test",
+    source:ACCOMMODATION_MARKER,nights:nacht};
+  assert.equal(classifyEvent(handmatig,HUIS).reason,"gemarkeerd_als_accommodatie");
+});
+
+test("onze eigen boeking wordt niet dubbel afgetrokken",()=>{
+  const eigen={summary:"Tavern",ours:true,source:LEWOS_MARKER,
+    creator:"serviceaccount@voorbeeld.test",nights:nacht};
+  assert.equal(classifyEvent(eigen,HUIS).reason,"eigen_afspraak");
+  assert.equal(busyNights([eigen],{accommodationEmails:HUIS}).size,0);
+});
+
+test("een niet-herkende afspraak verdwijnt niet uit het zicht",()=>{
+  const prive={summary:"Tandarts",creator:"robert@voorbeeld.test",nights:nacht};
+  const vanNadine={summary:"Gasten",creator:"huis@voorbeeld.test",nights:nacht};
+  const eigen={ours:true,nights:nacht};
+  const over=unrecognisedEvents([prive,vanNadine,eigen],{accommodationEmails:HUIS});
+  assert.equal(over.length,1);
+  assert.equal(over[0].summary,"Tandarts");
+});
+
+test("een lege of afgezegde afspraak telt nergens mee",()=>{
+  assert.equal(classifyEvent(null,HUIS).blocks,false);
+  assert.equal(classifyEvent({creator:"huis@voorbeeld.test",nights:[]},HUIS).reason,"geen_nachten");
+});
+
+test("de site leest wie de afspraak maakte",async()=>{
+  // Zonder deze velden kan `classifyEvent` niets herkennen en blokkeert alles.
+  const bron=await lees("netlify/functions/_calendar.mjs");
+  assert.match(bron,/creator:item\.creator\?\.email/);
+  assert.match(bron,/organizer:item\.organizer\?\.email/);
+});
+
+test("de tijdzone van de agenda blijft Europe/Madrid",()=>{
+  assert.equal(TAVERN_TIMEZONE,"Europe/Madrid");
+});
+
+test("het agenda-id en Nadine's adres staan niet in de repo",async()=>{
+  // Harde grens 4 uit CLAUDE.md: geen persoonsgegevens in de repo. Roberts eigen
+  // inlogadres mag wel in zijn eigen handleiding staan — zonder dat is die onbruikbaar.
+  // Het gaat om het adres van een ander en om het agenda-id: allebei instellingen.
+  for(const pad of ["netlify/functions/_calendar.mjs","netlify/functions/house-availability.mjs",
+    "operations/google-agenda-koppeling.md","operations/werkafspraak-gedeelde-agenda.md"]){
+    const inhoud=await lees(pad);
+    assert.doesNotMatch(inhoud,/[0-9a-f]{32,}@group\.calendar\.google\.com/,`${pad} bevat een agenda-id`);
+    // De naam van het huis mag; het e-mailadres van de accommodatie niet.
+    assert.doesNotMatch(inhoud,/[a-z0-9._%+-]*fontecha[a-z0-9._%+-]*@/i,
+      `${pad} bevat het e-mailadres van de accommodatie`);
+  }
 });

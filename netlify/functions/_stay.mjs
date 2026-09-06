@@ -93,7 +93,7 @@ export const houseNightsFree=async({arrival,departure,weekendStart,weekendEnd})=
 
   try{
     const {listEvents,busyNights}=await import("./_calendar.mjs");
-    const bezet=busyNights(await listEvents(config,{from:van,to:tot}));
+    const bezet=busyNights(await listEvents(config,{from:van,to:tot}),config);
     const conflicts=[];
     // Alleen de nachten die je écht slaapt: de vertrekdag telt niet mee.
     for(let d=parseDay(van);formatDay(d)<tot;d=addDays(d,1)){

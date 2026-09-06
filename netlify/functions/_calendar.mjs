@@ -42,7 +42,9 @@ export const calendarConfig=()=>{
   const calendarId=String(process.env.LEWOS_CALENDAR_ID||"").trim();
   if(!clientEmail||!privateKey||!calendarId)return null;
   if(!privateKey.includes("BEGIN"))throw new Error("calendar_private_key_malformed");
-  return {clientEmail,privateKey,calendarId,timeZone:String(process.env.TAVERN_TIMEZONE||TAVERN_TIMEZONE)};
+  return {clientEmail,privateKey,calendarId,
+    timeZone:String(process.env.TAVERN_TIMEZONE||TAVERN_TIMEZONE),
+    accommodationEmails:accommodationAddresses()};
 };
 
 const accessToken=async({clientEmail,privateKey})=>{
@@ -171,9 +173,10 @@ export const bookingEvent=({claimId,name,seats,weekendLabel,arrivalDate,departur
 //  agenda's — die loopt vroeg of laat uit de pas, en juist op dat moment verkoop je een
 //  weekend twee keer.
 //
-//  Het onderscheid is simpel en betrouwbaar: **alles wat wij schrijven draagt
-//  `extendedProperties.private.lewosSource = "tavern-booking"`. Alles zonder dat merkteken
-//  is van Nadine en betekent: die nachten zijn bezet.**
+//  Alles wat wij schrijven draagt `extendedProperties.private.lewosSource =
+//  "tavern-booking"` en telt daarom nooit tegen onszelf mee. Welke van de overige afspraken
+//  wél voorraad blokkeren, staat bij `classifyEvent` verderop — sinds 6 september 2026 is
+//  dat niet meer "alles".
 //
 //  Wie het eerst boekt, heeft het. Boekt Nadine een weekend vol, dan gaat dat weekend van
 //  de site af. Boekt er een gast, dan blokkeert de site het hele weekend — zie
@@ -228,22 +231,68 @@ export const listEvents=async(config,{from,to})=>{
     id:item.id,
     summary:item.summary||"",
     ours:item.extendedProperties?.private?.lewosSource===LEWOS_MARKER,
+    // Wie de afspraak maakte bepaalt of hij voorraad blokkeert; zie `classifyEvent`.
+    creator:item.creator?.email||"",
+    organizer:item.organizer?.email||"",
+    source:item.extendedProperties?.private?.lewosSource||"",
     claimId:item.extendedProperties?.private?.lewosClaimId||null,
     weekendSlug:item.extendedProperties?.private?.lewosWeekendSlug||null,
     nights:nightsOf(item)
   }));
 };
 
-// Welke nachten zijn bezet door iemand anders dan wij? Onze eigen afspraken tellen hier
-// niet mee: die staan al in onze eigen administratie, en dubbel tellen zou een weekend
-// blokkeren tegen zijn eigen boeking.
-export const busyNights=events=>{
+// ── Wat telt als bezet? ────────────────────────────────────────────────────
+//
+// Robert, 6 september 2026: de koppeling staat sindsdien op een eigen agenda
+// (*Lewos — Tavern & huis*) in plaats van op zijn persoonlijke. Daarmee verandert de regel:
+// **gewone privéafspraken en niet-herkenbare afspraken blokkeren geen voorraad meer.**
+// Alleen wat herkenbaar over het huis gaat, haalt nachten van de site.
+//
+// Herkenbaar is: aangemaakt door een adres van de accommodatie, of expliciet gemarkeerd met
+// `lewosSource = "accommodation"`. Die adressen staan in `LEWOS_ACCOMMODATION_EMAILS` en
+// bewust niet in deze repo — het zijn persoonsgegevens.
+//
+// **Is die variabele niet ingesteld, dan blokkeert alles wat niet van ons is.** Dat is met
+// opzet. Een lege instelling zou anders stilzwijgend elke bescherming uitzetten, en precies
+// dan verkoop je een nacht die allang vergeven is. Een gemiste verkoop herstel je met een
+// telefoontje; twee groepen voor hetzelfde bed niet.
+export const ACCOMMODATION_MARKER="accommodation";
+
+export const accommodationAddresses=value=>
+  String(value??process.env.LEWOS_ACCOMMODATION_EMAILS??"")
+    .split(/[,;\s]+/).map(deel=>deel.trim().toLowerCase()).filter(Boolean);
+
+export const classifyEvent=(event,addresses=[])=>{
+  if(!event)return {blocks:false,reason:"leeg"};
+  // Onze eigen boekingen en weekendblokkades staan al in onze administratie. Ze hier
+  // meetellen zou een weekend blokkeren tegen zijn eigen boeking.
+  if(event.ours)return {blocks:false,reason:"eigen_afspraak"};
+  // Afgezegd, op "vrij" gezet of zonder nachten: er slaapt niemand.
+  if(!(event.nights||[]).length)return {blocks:false,reason:"geen_nachten"};
+  if(event.source===ACCOMMODATION_MARKER)return {blocks:true,reason:"gemarkeerd_als_accommodatie"};
+  if(!addresses.length)return {blocks:true,reason:"herkenning_niet_ingesteld"};
+  const wie=[event.creator,event.organizer].map(a=>String(a||"").trim().toLowerCase()).filter(Boolean);
+  if(wie.some(adres=>addresses.includes(adres)))return {blocks:true,reason:"accommodatie_adres"};
+  return {blocks:false,reason:"niet_herkend"};
+};
+
+export const busyNights=(events,options={})=>{
+  const adressen=options.accommodationEmails??accommodationAddresses();
   const bezet=new Set();
   for(const e of events||[]){
-    if(e.ours)continue;
+    if(!classifyEvent(e,adressen).blocks)continue;
     for(const nacht of e.nights||[])bezet.add(nacht);
   }
   return bezet;
+};
+
+// Afspraken die wél nachten beslaan maar niet zijn meegeteld. Ze blokkeren niets — dat is
+// de afspraak — maar ze verdwijnen ook niet uit het zicht: de beheeromgeving toont ze, zodat
+// een boeking die vanaf een onbekend adres is ingevoerd opvalt vóórdat er twee groepen voor
+// hetzelfde bed staan.
+export const unrecognisedEvents=(events,options={})=>{
+  const adressen=options.accommodationEmails??accommodationAddresses();
+  return (events||[]).filter(e=>classifyEvent(e,adressen).reason==="niet_herkend");
 };
 
 // ── De weekendblokkade ─────────────────────────────────────────────────────
