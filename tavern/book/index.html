@@ -58,8 +58,10 @@
     .callegend__swatch.is-unavailable{border-color:rgba(247,243,236,.2);background:none}
     .callegend__clear{width:auto;min-height:38px;padding:7px 13px;border:1px solid rgba(247,243,236,.42);border-radius:10px;background:transparent;color:var(--cream);font:inherit;font-size:.8rem;cursor:pointer;justify-self:auto}
     .calendar__hint{margin:0;font-size:.85rem;color:rgba(247,243,236,.78)}
-    /* Zonder deze regel wordt de link standaard browserblauw op donkergroen. */
-    .calendar__hint a{color:#ff9a78;font-weight:700}
+    /* Zonder deze regel wordt een link standaard browserblauw op donkergroen. Geldt voor
+       elke hint op deze pagina, niet alleen die onder de kalender — dat vergat ik bij de
+       contactregel onder de knop. */
+    .calendar__hint a,.field-hint a{color:#ff9a78;font-weight:700}
     .calendar__chosen{margin:0;font-weight:700}
     .calendar__stay{margin:0;font-weight:700;line-height:1.5}
     @media(max-width:460px){.calmonth{padding:11px}.calday{aspect-ratio:auto;min-height:44px;font-size:.66rem}}
@@ -101,7 +103,8 @@
           <div data-weekend-field><label for="weekend">Which weekend?</label><select id="weekend" name="weekend" required><option value="">Choose a weekend</option><option value="weekend-01">Weekend 01 &middot; 30 Oct to 2 Nov 2026</option><option value="weekend-02">Weekend 02 &middot; 6 to 9 Nov 2026</option></select></div>
           <p class="error" data-hold-error hidden></p>
           <button type="button" data-hold-button>Hold these seats &rarr;</button>
-          <small>Nothing is charged now. Your seats are held for 60 minutes while you fill in the details, and released again if you do not finish.</small>
+          <p class="field-hint">Dates not working, or planning something else? <a href="/contact/">Ask us</a> &mdash; special arrangements may be possible.</p>
+        <small>Nothing is charged now. Your seats are held for 60 minutes while you fill in the details, and released again if you do not finish.</small>
         </fieldset>
 
         <!-- De afteller. Verschijnt zodra de stoelen vastgezet zijn. -->

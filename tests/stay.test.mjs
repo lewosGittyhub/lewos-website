@@ -107,17 +107,29 @@ test("de kalender laat alleen kiezen wat de pagina belooft",async()=>{
     "het venster wordt niet afgeknipt op het vorige weekend");
   assert.match(rekenwerk,/if\(aStart>=eind&&aStart<tot\)tot=aStart;/,
     "het venster wordt niet afgeknipt op het volgende weekend");
-  // Wie langer wil, loopt niet dood: er staat wat je dan wél kunt doen, met de weg ernaartoe.
-  // De bewaakte garantie is dat er een wég is voor wie meer wil — niet de precieze zin.
-  assert.match(component,/join two Tavern weekends\?/);
-  assert.match(component,/href="\/contact\/"/,"er staat geen weg naar Robert bij");
+  // Wie langer wil, loopt niet dood. **Die uitnodiging hoort bij de pagina, niet bij de
+  // kalender**: onder de kalender was hij op /tavern/ de derde kopie, en op /tavern/book/
+  // een uitnodiging om weg te klikken op het moment van beslissen. De garantie blijft: op
+  // elke pagina met de kalender staat een weg naar Robert.
+  // Kijk naar wat hij tékent, niet naar wat er in het commentaar staat: de kop van het
+  // bestand citeert de afspraak van /tavern/ en dat hoort daar juist.
+  assert.doesNotMatch(component,/<a href="\/contact\//,"de kalender tekent de uitnodiging weer zelf");
+  for(const paginaPad of ["tavern/index.html","tavern/book/index.html"]){
+    const html=await lees(paginaPad);
+    assert.match(html,/href="\/contact\/"/,`${paginaPad} heeft geen weg naar Robert`);
+  }
   for(const paginaPad of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(paginaPad);
     assert.match(html,/\.calday\.is-outside(?![a-z-])/,`${paginaPad} geeft een dag buiten het venster geen opmaak`);
     // De link naar Robert moet leesbaar zijn. Zonder eigen regel wordt hij standaard
     // browserblauw op een donkergroene achtergrond — gevonden op 5 september 2026.
-    assert.match(html,/\.calendar__hint a\s*\{[^}]*color/,
-      `${paginaPad}: de link in de zin onder de kalender krijgt geen eigen kleur`);
+    // Elke link in een hint op deze pagina moet een eigen kleur hebben, niet alleen die
+    // onder de kalender: zonder regel wordt hij browserblauw op donkergroen.
+    for(const m of html.matchAll(/<p class="(?:calendar__hint|field-hint)"[^>]*>[\s\S]*?<\/p>/g)){
+      if(!/<a /.test(m[0]))continue;
+      assert.match(html,/(?:calendar__hint|field-hint)[^{]*a[^{]*\{[^}]*color/,
+        `${paginaPad}: een link in een hint krijgt geen eigen kleur`);
+    }
   }
 });
 

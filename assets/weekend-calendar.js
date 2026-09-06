@@ -235,17 +235,13 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
 
   const legenda=verblijf=>{
     if(!verblijf?.valid)return `<p class="calendar__hint">Pick a weekend first. You can add nights before or after once a weekend is chosen.</p>`;
-    const grens=venster();
-    // **Pas zeggen wanneer het waar wordt.** Deze regel gaat over de grenzen van een
-    // aanvraag; iemand die alleen het weekend boekt heeft er niets aan en leest hem toch.
-    // Zodra er één nacht is aangeklikt, is het een antwoord op een vraag die net gesteld is.
-    // Welke dagen je kunt kiezen laat de kalender zelf zien; dat hoeft er niet ook nog in
-    // datums onder te staan. Wat je daar níét kunt zien is dat er een weg is voor wie meer
-    // wil — en dát is het enige dat deze regel hoeft te zeggen.
-    const ruimte=grens&&verblijf.extraNights
-      ? `<p class="calendar__hint">Want to stay longer, or join two Tavern weekends? `
-        +`<a href="/contact/">Ask us</a> &mdash; special arrangements may be possible.</p>`
-      : "";
+    // **Geen "wil je langer blijven?" meer onder de kalender.** Op /tavern/ staat die
+    // uitnodiging al twee keer — in "Not ready to leave Asturias behind?" en in het kaartje
+    // "Staying longer" — en dit was de derde. Op /tavern/book/ hoort hij helemaal niet: dat
+    // is de pagina waar iemand beslist, en een uitnodiging om weg te klikken is daar geen
+    // dienst. Die pagina heeft nu een eigen contactregel onderaan het formulier, los van
+    // de kalender, want er stond geen enkele weg naar Robert op.
+    const ruimte="";
     return `<div class="callegend">`
       +`<span class="callegend__item"><span class="callegend__swatch is-chosen"></span>Your weekend &mdash; included</span>`
       +`<span class="callegend__item"><span class="callegend__swatch is-requested"></span>Extra night &mdash; on request, not confirmed</span>`
