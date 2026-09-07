@@ -5,6 +5,7 @@ import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const redirect=location=>({statusCode:303,headers:{location,"cache-control":"no-store"},body:""});
@@ -113,6 +114,8 @@ const sendOperatorEmail=async({email,name,people,weekend,result,dietaryNotes,ext
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   const supabaseUrl=process.env.SUPABASE_URL;
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!supabaseUrl||!serviceKey) return json(503,{error:"booking_service_not_configured"});

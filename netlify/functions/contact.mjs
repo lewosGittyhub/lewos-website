@@ -13,6 +13,7 @@ import {createHash} from "node:crypto";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {escapeHtml,escapeLines,resendPayload} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const redirect=location=>({statusCode:303,headers:{location,"cache-control":"no-store"},body:""});
@@ -22,6 +23,8 @@ const clientAddress=event=>header(event,"x-nf-client-connection-ip")||header(eve
 const rateKey=value=>createHash("sha256").update(`${process.env.RATE_LIMIT_SECRET||""}|${value}`).digest("hex");
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
   let input;
   try{input=parseBody(event);}catch{return json(400,{error:"invalid_request"});}

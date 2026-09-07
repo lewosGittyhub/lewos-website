@@ -16,6 +16,7 @@
 // keer klikken levert dus één betaling op, niet twee.
 
 import {paymentsAreEnabled} from "./_booking-config.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,
   headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},
@@ -73,6 +74,8 @@ const stripeSessie=async({reference,bedragCenten,naam,weekendLabel,basis})=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(!["GET","POST"].includes(event.httpMethod))return json(405,{error:"method_not_allowed"});
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)
     return json(503,{error:"payment_service_unavailable"});

@@ -1,5 +1,6 @@
 import {createHash} from "node:crypto";
 import {mediaAgreement,mediaConsentBlockers,mediaConsentIsEnabled} from "./_media-config.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -55,6 +56,8 @@ const limitOrNull=async(event,identity)=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(!mediaConsentIsEnabled())return closedResponse();
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)return json(503,{error:"media_consent_unavailable"});
   const agreement=mediaAgreement();

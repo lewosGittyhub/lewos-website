@@ -3,6 +3,7 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const tokenHash=token=>createHash("sha256").update(token).digest("hex");
@@ -60,6 +61,8 @@ const expireStripeSession=async sessionId=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
   if(!paymentsAreEnabled())return json(503,{error:"checkout_not_open"});
   const termsVersion=String(process.env.BOOKING_TERMS_VERSION||"").trim();

@@ -18,6 +18,7 @@
 
 import {createHash,createSign} from "node:crypto";
 import {parseDay,formatDay,addDays} from "../../assets/stay.js";
+import {environmentIsSafe,deployContext} from "./_deploy-context.mjs";
 
 const TOKEN_URL="https://oauth2.googleapis.com/token";
 const API="https://www.googleapis.com/calendar/v3";
@@ -37,6 +38,13 @@ const base64url=value=>Buffer.from(value).toString("base64").replace(/\+/g,"-").
 // meerregelige waarden prima, maar wie hem via een shell zet houdt vaak `\n` als twee
 // tekens over; daarom worden die hier teruggezet naar echte regeleindes.
 export const calendarConfig=()=>{
+  // Dezelfde reden als bij de mail: een preview met het productie-agenda-id zou echte
+  // afspraken in de gedeelde agenda zetten. Geen configuratie betekent hier: geen agenda,
+  // en de site meldt dan `configured:false` — onbekend is niet vrij.
+  if(!environmentIsSafe()){
+    console.warn(`Calendar skipped: deploy context "${deployContext()}" is not marked preview-safe`);
+    return null;
+  }
   const clientEmail=String(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL||"").trim();
   const privateKey=String(process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY||"").replace(/\\n/g,"\n").trim();
   const calendarId=String(process.env.LEWOS_CALENDAR_ID||"").trim();

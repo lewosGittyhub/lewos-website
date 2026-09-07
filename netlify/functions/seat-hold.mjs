@@ -28,6 +28,7 @@ import {sendEmail} from "./_email.mjs";
 import {paymentsAreEnabled} from "./_booking-config.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const header=(event,naam)=>Object.entries(event.headers||{}).find(([k])=>k.toLowerCase()===naam.toLowerCase())?.[1]||"";
@@ -75,6 +76,8 @@ const publiekeStand=(hold,vrij)=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.RATE_LIMIT_SECRET)
     return json(503,{error:"booking_service_not_configured"});
 

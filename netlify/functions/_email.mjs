@@ -11,6 +11,7 @@
 // `escapeHtml` stond viermaal los in de repo; hij staat nu hier.
 
 import {recipientsAreMixed} from "./_recipients.mjs";
+import {environmentIsSafe,deployContext} from "./_deploy-context.mjs";
 
 export const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 
@@ -60,6 +61,12 @@ export const resendPayload=({from,to,replyTo="lewos.co@gmail.com",subject,html,t
 // geen mail de deur uit.** Wie deze functie aanroept moet dat afhandelen en mag nooit
 // "verstuurd" melden op een `null`.
 export const sendEmail=async({to,subject,text,html,idempotencyKey,attachments})=>{
+  // Een preview die de productiesleutel erft zou echte mail naar echte gasten sturen.
+  // Zolang die context niet uitdrukkelijk als veilig is gemarkeerd, gaat er niets uit.
+  if(!environmentIsSafe()){
+    console.warn(`Email withheld: deploy context "${deployContext()}" is not marked preview-safe`);
+    return null;
+  }
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
   const response=await fetch("https://api.resend.com/emails",{method:"POST",
     headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json",

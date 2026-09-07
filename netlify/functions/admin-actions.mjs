@@ -26,6 +26,7 @@
 import {authenticate,authErrorResponse} from "./_admin-auth.mjs";
 import {sendEmail} from "./_email.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const ID=/^[0-9a-z-]{6,64}$/i;
@@ -53,6 +54,8 @@ const GEEN_BETAALLINK={error:"no_payment_link",
   message:"This guest has no payment link yet, so there is nothing to remind them about. The payment request has to go out first."};
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)return json(503,{error:"admin_not_configured"});
 

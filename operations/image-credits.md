@@ -28,6 +28,7 @@ committed to `tavern/assets/` or `assets/`.
 | --- | --- | --- | --- |
 | `tavern/assets/evan-game-master.jpg` | The Game Master | Supplied by Robert | Robert confirmed on 29 August 2026 that name, biography, photograph and the quoted line were seen and approved by the person himself |
 | `assets/robert-founder-lewos.jpg` | Robert | Robert's own photograph | Owned by Lewos |
+| `tavern/assets/manifesto-lewos.jpg` | The manifesto background on the Tavern page | Supplied by Robert (`main`, 7 September 2026, commit 0bb3102) | Owned by Lewos. Replaced the earlier bear illustration |
 
 ## Illustrations — origin not recorded
 

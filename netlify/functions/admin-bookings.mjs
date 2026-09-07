@@ -13,6 +13,7 @@
 
 import {authenticate,authErrorResponse} from "./_admin-auth.mjs";
 import {readStayRequest,STAY_ERRORS} from "./_stay.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const DATUM=/^\d{4}-\d{2}-\d{2}$/;
@@ -69,6 +70,8 @@ const agendaBotsingen=async boekingen=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return json(503,unsafeEnvironmentBody());
   // Lezen mag met GET. Er is één schrijfhandeling: het oordeel van de accommodatie over
   // aangevraagde extra nachten. Die staat hier en niet bij de deelnemersacties, omdat hij
   // over de boeking gaat en niet over één betaler.
