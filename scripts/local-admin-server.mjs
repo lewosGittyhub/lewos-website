@@ -477,27 +477,44 @@ const zoekDeelnemer=(data,id)=>{
 };
 const logboek=(data,regel)=>{(data.adminActions=data.adminActions||[]).unshift({...regel,created_at:nu().toISOString()});};
 
+// Wat er in een herinnering hoort. Verandert niets — net als de echte RPC. Sinds
+// 6 september 2026 bouwt en verstuurt de Netlify-functie de mail zelf, via dezelfde
+// `sendEmail` als de rest van de boekingsflow; deze server onderschept die verzending en
+// schrijft hem naar de postbus. Deed de shim het nog zelf, dan gingen er twee mails uit.
+const adminReminderPayload=({p_email,p_participant_id})=>onderSlot(async()=>{
+  if(!isAdmin(p_email))throw Object.assign(new Error("not_an_administrator"),{rpc:true});
+  const data=db();const gevonden=zoekDeelnemer(data,p_participant_id);
+  if(!gevonden)return {status:"not_found"};
+  if(gevonden.deelnemer.status==="paid")return {status:"already_paid"};
+  if(!gevonden.claim.hold_expires_at)return {status:"no_deadline",participantId:p_participant_id};
+  if(!String(gevonden.deelnemer.checkout_session_url||"").trim())
+    return {status:"no_payment_link",participantId:p_participant_id};
+  return {status:"ready",participantId:p_participant_id,
+    participant:{full_name:gevonden.deelnemer.full_name,email:gevonden.deelnemer.email,
+      amount_cents:gevonden.deelnemer.amount_cents},
+    booking:{name:gevonden.claim.name,seats:gevonden.claim.party_size,
+      weekendLabel:weekendLabel(data,gevonden.claim.weekend)},
+    deadline:gevonden.claim.hold_expires_at,
+    paymentUrl:gevonden.deelnemer.checkout_session_url,
+    lastSentAt:gevonden.deelnemer.payment_link_sent_at||null};
+});
+
 const adminRemind=({p_email,p_participant_id,p_reason})=>onderSlot(async()=>{
   if(!isAdmin(p_email))throw Object.assign(new Error("not_an_administrator"),{rpc:true});
   const data=db();const gevonden=zoekDeelnemer(data,p_participant_id);
   if(!gevonden)return {status:"not_found"};
   if(gevonden.deelnemer.status==="paid")return {status:"already_paid"};
-  // Geen termijn, geen herinnering. Dit staat vóór het opbouwen van de mail: die eist een
-  // deadline en gooit anders op, en dat kwam er als "beheeromgeving niet beschikbaar" uit.
   if(!gevonden.claim.hold_expires_at)return {status:"no_deadline",participantId:p_participant_id};
-  // De deadline blijft staan; een herinnering geeft nooit extra tijd.
+  // Alleen vastleggen. De deadline blijft staan; een herinnering geeft nooit extra tijd.
   gevonden.deelnemer.payment_link_sent_at=nu().toISOString();
-  const bestand=inPostbus(buildPaymentRequestEmail({participant:gevonden.deelnemer,
-    booking:{name:gevonden.claim.name,seats:gevonden.claim.party_size,weekendLabel:weekendLabel(data,gevonden.claim.weekend)},
-    deadline:gevonden.claim.hold_expires_at,paymentUrl:gevonden.deelnemer.checkout_session_url,reminder:true}),"reminder");
   logboek(data,{actor_email:p_email,action:"remind",claim_id:gevonden.claim.id,participant_id:p_participant_id,reason:p_reason||null});
   bewaar(data);
-  return {status:"reminded",participantId:p_participant_id,email:gevonden.deelnemer.email,preview:bestand};
+  return {status:"reminded",participantId:p_participant_id,email:gevonden.deelnemer.email};
 });
 
 const adminExtend=({p_email,p_participant_id,p_new_deadline,p_reason})=>onderSlot(async()=>{
+  // Verlengen mag sinds 6 september 2026 ook de accommodatie; vrijgeven blijft van Robert.
   if(!isAdmin(p_email))throw Object.assign(new Error("not_an_administrator"),{rpc:true});
-  if(rolVan(p_email)!=="admin")throw Object.assign(new Error("requires_owner"),{rpc:true});
   const data=db();const gevonden=zoekDeelnemer(data,p_participant_id);
   if(!gevonden)return {status:"not_found"};
   gevonden.claim.hold_expires_at=p_new_deadline;
@@ -550,6 +567,7 @@ const nepSupabase=http.createServer((request,response)=>{
         return response.end(JSON.stringify(checkLimit(invoer)));
       const holdRpcs={begin_seat_hold:beginSeatHold,get_seat_hold:getSeatHold,
         release_seat_hold:releaseSeatHold,promote_seat_hold_to_payment:promoteSeatHold,
+        admin_reminder_payload:adminReminderPayload,
         admin_remind_participant:adminRemind,admin_extend_participant:adminExtend,
         admin_release_participant:adminRelease};
       const naam=Object.keys(holdRpcs).find(n=>request.url.endsWith("/"+n));
@@ -671,7 +689,14 @@ const start=async()=>{
     if(url.startsWith("https://api.resend.com")){
       let mail={};
       try{mail=JSON.parse(opties?.body||"{}");}catch{}
-      const bestand=inPostbus(mail,"resend");
+      // Noem het beestje bij de naam in de postbus. "resend" zegt niets als je nakijkt of
+      // een herinnering eruit is gegaan; het onderwerp weet dat wel.
+      const onderwerp=String(mail.subject||"");
+      const soort=/^Reminder\b/i.test(onderwerp)?"reminder"
+        :/payment link/i.test(onderwerp)?"payment-request"
+        :/booking is confirmed/i.test(onderwerp)?"booking-confirmation"
+        :"resend";
+      const bestand=inPostbus(mail,soort);
       console.log(`  postbus: ${bestand}  →  ${[].concat(mail.to||[]).join(", ")}`);
       return new Response(JSON.stringify({id:`local-${bestand}`}),
         {status:200,headers:{"content-type":"application/json"}});

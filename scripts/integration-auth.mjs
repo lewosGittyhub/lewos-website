@@ -90,8 +90,13 @@ if(onbetaald){
     /Extend/.test(herinnering.tekst)&&/payment request/i.test(herinnering.tekst),
     herinnering.tekst.slice(0,200));
   check("Nadine mag niet vrijgeven",(await doe(nadine,"release",{reason:"proef"})).status===403);
-  check("Nadine mag niet verlengen",
-    (await doe(nadine,"extend",{reason:"proef",newDeadline:new Date(Date.now()+7200e3).toISOString()})).status===403);
+  // Sinds 6 september 2026 mag de accommodatie wél verlengen: zij weet als eerste of een
+  // gast nog onderweg is. Vrijgeven blijft van Robert.
+  const verlengd=await doe(nadine,"extend",{reason:"proef",newDeadline:new Date(Date.now()+7200e3).toISOString()});
+  check("Nadine mag wel verlengen",verlengd.status===200,`status ${verlengd.status}: ${verlengd.tekst.slice(0,160)}`);
+  const vreemdeVerlengt=await doe(vreemde,"extend",{reason:"proef",newDeadline:new Date(Date.now()+7200e3).toISOString()});
+  check("een vreemde mag nog steeds niet verlengen",[401,403].includes(vreemdeVerlengt.status),
+    `status ${vreemdeVerlengt.status}`);
   check("vrijgeven zonder reden wordt geweigerd",(await doe(robert,"release",{})).status===400);
 }else check("er was een onbetaalde deelnemer om de rollen op te proeven",false,"geen gevonden");
 

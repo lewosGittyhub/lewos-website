@@ -9,7 +9,14 @@ import {escapeHtml,escapeLines,labelledBlock,resendPayload} from "../netlify/fun
 const root=path.resolve(import.meta.dirname,"..");
 const lees=p=>readFile(path.join(root,p),"utf8");
 
-// Elk bestand dat een mail verstuurt. Komt er een vijfde bij, dan valt de eerste test om.
+// **Eén verzendpad, sinds 6 september 2026.** Het versturen zelf stond in
+// `stripe-webhook.mjs`, waardoor de beheeromgeving geen mail kón versturen: de knop
+// "Herinneren" legde iets vast en stuurde niets. `sendEmail` staat nu in `_email.mjs` en
+// iedereen gebruikt hem. Dat maakt de garantie strenger in plaats van losser: er is nog
+// maar één plek die Resend belt, en die gaat door `resendPayload`.
+const VERZENDPAD="netlify/functions/_email.mjs";
+
+// Elk bestand dat een mail opbouwt en aanbiedt. Komt er een bij, dan valt de eerste test om.
 const mailpaden=[
   ["First Access-ontvangstbevestiging","netlify/functions/first-access.mjs"],
   ["Stripe-betaalbevestiging","netlify/functions/stripe-webhook.mjs"],
@@ -35,29 +42,60 @@ test("een onderschepper stuurt zelf niets naar Resend",async()=>{
   }
 });
 
-test("elk e-mailpad in de repo is bekend en loopt via resendPayload",async()=>{
-  const bestanden=["netlify/functions","scripts"];
-  const gevonden=[];
-  for(const map of bestanden){
-    const {readdir}=await import("node:fs/promises");
+// Nog niet samengevoegd: contact, First Access en de twee losse scripts bellen Resend zelf.
+// Ze gaan wél alle vier door `resendPayload`, dus de garantie over `text`/`html` en de
+// gescheiden postvakken geldt overal. Samenvoegen is voorgesteld, niet gedaan — het raakt
+// werkende paden en viel buiten de opdracht van 6 september 2026.
+const eigenVerzenders=[
+  "netlify/functions/contact.mjs",
+  "netlify/functions/first-access.mjs"
+];
+
+test("elke plek die Resend belt is bekend en gaat door resendPayload",async()=>{
+  const {readdir}=await import("node:fs/promises");
+  const belt=[];
+  for(const map of ["netlify/functions","scripts"]){
     for(const naam of await readdir(path.join(root,map))){
       if(!naam.endsWith(".mjs"))continue;
-      const bron=await lees(`${map}/${naam}`);
       const pad=`${map}/${naam}`;
       if(onderscheppers.includes(pad))continue;
-      if(/api\.resend\.com|RESEND_API_URL/.test(bron)&&/body:JSON\.stringify\(/.test(bron)&&/from[,:]/.test(bron))gevonden.push(pad);
+      if(/fetch\(\s*["'`]https:\/\/api\.resend\.com/.test(await lees(pad)))belt.push(pad);
     }
   }
-  const bekend=mailpaden.map(([,p])=>p);
-  for(const pad of gevonden)assert.ok(bekend.includes(pad),`onbekend e-mailpad: ${pad} — voeg het toe aan deze test`);
-  for(const pad of bekend)assert.ok(gevonden.includes(pad),`${pad} verstuurt geen mail meer`);
+  assert.deepEqual(belt.sort(),[VERZENDPAD,...eigenVerzenders].sort(),
+    "er belt een onbekend bestand Resend, of een bekend bestand doet het niet meer");
+  for(const pad of belt)
+    assert.match(await lees(pad),/body:JSON\.stringify\(resendPayload\(/,
+      `${pad} bouwt zijn payload buiten resendPayload om`);
+});
+
+test("dat ene verzendpad gaat door resendPayload",async()=>{
+  const bron=await lees(VERZENDPAD);
+  assert.match(bron,/body:JSON\.stringify\(resendPayload\(/,
+    "het verzendpad bouwt zijn payload buiten resendPayload om");
+  // Niets versturen is toegestaan; "verstuurd" beweren zonder verzending niet.
+  assert.match(bron,/if\(!process\.env\.RESEND_API_KEY\|\|!process\.env\.TAVERN_FROM_EMAIL\)return null;/,
+    "het verzendpad meldt niet dat er niets is ingesteld");
+});
+
+// De boekingsflow zelf — betaalbevestiging en herinnering — deelt wél één weg. Dat is de
+// hele reden dat `sendEmail` bestaat: zonder dat kon de beheeromgeving geen mail versturen.
+const boekingsflow=["netlify/functions/stripe-webhook.mjs","netlify/functions/admin-actions.mjs"];
+
+test("de boekingsflow verstuurt via het gedeelde verzendpad",async()=>{
+  for(const pad of boekingsflow){
+    const bron=await lees(pad);
+    assert.match(bron,/sendEmail/,`${pad} gebruikt het gedeelde verzendpad niet`);
+    assert.doesNotMatch(bron,/fetch\(\s*["'`]https:\/\/api\.resend\.com/,
+      `${pad} belt Resend zelf in plaats van via ${VERZENDPAD}`);
+  }
 });
 
 for(const [naam,pad] of mailpaden){
   test(`${naam}: de payload gaat door resendPayload en draagt text én html`,async()=>{
     const bron=await lees(pad);
-    assert.match(bron,/import \{[^}]*resendPayload[^}]*\} from ".*_email\.mjs";/,`${pad} importeert resendPayload niet`);
-    assert.match(bron,/body:JSON\.stringify\(resendPayload\(/,`${pad} bouwt zijn payload buiten resendPayload om`);
+    assert.match(bron,/import \{[^}]*(sendEmail|resendPayload)[^}]*\} from ".*_email\.mjs";/,
+      `${pad} haalt zijn verzending niet uit _email.mjs`);
     // `html` en `text` mogen als verkorte eigenschap worden meegegeven (`{...,html}`),
     // dus accepteer beide schrijfwijzen.
     assert.match(bron,/[,{]\s*text\s*[,:}]/,`${pad} geeft geen tekstversie mee`);
@@ -170,7 +208,7 @@ test("elk e-mailpad stuurt een idempotentiesleutel mee die aan één ding hangt"
   };
   for(const [pad,patroon] of Object.entries(verwacht)){
     const bron=await lees(pad);
-    assert.match(bron,/"idempotency-key":/,`${pad} stuurt geen idempotentiesleutel mee`);
+    assert.match(bron,/"idempotency-key":|idempotencyKey:/,`${pad} stuurt geen idempotentiesleutel mee`);
     assert.match(bron,patroon,`${pad} heeft een andere idempotentiesleutel dan verwacht`);
   }
 });

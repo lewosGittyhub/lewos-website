@@ -268,6 +268,47 @@ returns text language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function private.admin_role(text) from public, anon, authenticated;
 
+-- Wat er in een herinnering hoort te staan, en niets meer. Deze functie **verandert niets**:
+-- ze kijkt alleen of er herinnerd kán worden en levert de gegevens voor de mail. Het
+-- vastleggen gebeurt pas ná verzending, met `admin_remind_participant`. Die volgorde is met
+-- opzet: mislukt de verzending, dan staat er ook geen herinnering in het logboek die nooit
+-- de deur uit is gegaan.
+--
+-- Bewust níét meegeleverd: allergieën, dieetwensen, het vrije tekstveld en de gegevens van
+-- de andere deelnemers. Een betaalverzoek gaat over één persoon en één bedrag.
+create or replace function public.admin_reminder_payload(p_email text, p_participant_id uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare p public.tavern_booking_participants%rowtype;
+        c public.tavern_seat_claims%rowtype;
+        w public.tavern_weekends%rowtype;
+begin
+  if not public.admin_is_allowed(p_email) then raise exception 'not_an_administrator'; end if;
+  select * into p from public.tavern_booking_participants where id=p_participant_id;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  if p.status='paid' then return jsonb_build_object('status','already_paid'); end if;
+  select * into c from public.tavern_seat_claims where id=p.claim_id;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  if c.hold_expires_at is null then
+    return jsonb_build_object('status','no_deadline','participantId',p.id);
+  end if;
+  if nullif(trim(coalesce(p.checkout_session_url,'')),'') is null then
+    return jsonb_build_object('status','no_payment_link','participantId',p.id);
+  end if;
+  select * into w from public.tavern_weekends where id=c.assigned_weekend_id;
+  return jsonb_build_object(
+    'status','ready','participantId',p.id,
+    'participant',jsonb_build_object('full_name',p.full_name,'email',p.email,'amount_cents',p.amount_cents),
+    'booking',jsonb_build_object('name',c.name,'seats',c.party_size,
+      'weekendLabel',coalesce(w.label||' · '||w.date_label,'the Tavern')),
+    'deadline',c.hold_expires_at,
+    'paymentUrl',p.checkout_session_url,
+    -- Waar de idempotentiesleutel aan hangt: twee pogingen na een netwerkfout leveren bij
+    -- Resend één bericht op, een volgende herinnering krijgt een nieuwe sleutel.
+    'lastSentAt',p.payment_link_sent_at);
+end; $$;
+revoke all on function public.admin_reminder_payload(text,uuid) from public, anon, authenticated;
+grant execute on function public.admin_reminder_payload(text,uuid) to service_role;
+
 create or replace function public.admin_remind_participant(p_email text, p_participant_id uuid, p_reason text default null)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare p public.tavern_booking_participants%rowtype;
@@ -297,12 +338,17 @@ end; $$;
 revoke all on function public.admin_remind_participant(text,uuid,text) from public, anon, authenticated;
 grant execute on function public.admin_remind_participant(text,uuid,text) to service_role;
 
+-- Robert, 6 september 2026: **verlengen mag ook de accommodatie.** Tot die dag stond deze
+-- functie op alleen-Robert, met als reden "een commerciële beslissing over geld en
+-- voorraad". Robert heeft dat herzien: Nadine weet als eerste of een gast nog onderweg is,
+-- en iemand laten omvallen op een termijn terwijl zij dat had kunnen voorkomen is duurder
+-- dan de beslissing zelf. **Vrijgeven blijft uitsluitend van Robert** — dat is het
+-- onomkeerbare deel, want daar gaat een stoel terug naar de voorraad.
 create or replace function public.admin_extend_participant(p_email text, p_participant_id uuid, p_new_deadline timestamptz, p_reason text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare p public.tavern_booking_participants%rowtype;
 begin
   if not public.admin_is_allowed(p_email) then raise exception 'not_an_administrator'; end if;
-  if private.admin_role(p_email) is distinct from 'admin' then raise exception 'requires_owner'; end if;
   select * into p from public.tavern_booking_participants where id=p_participant_id for update;
   if not found then return jsonb_build_object('status','not_found'); end if;
   update public.tavern_seat_claims set hold_expires_at=p_new_deadline where id=p.claim_id;

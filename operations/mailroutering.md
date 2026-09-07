@@ -50,6 +50,23 @@ niets van weet, is een gast zonder bed, en dat mag niet stil misgaan.
 
 - De ontvangstbevestiging bij aanmelding, en de boekingsbevestiging met de twee PDF's na
   betaling. Daar verandert niets aan; de meldingen hierboven komen er los naast.
+- **De betaalherinnering**, sinds 6 september 2026 ook echt vanuit de beheeromgeving. Tot
+  die dag legde de knop *Send reminder* alleen vast dát er herinnerd was en ging er niets de
+  deur uit: het opbouwen van die mail zat alleen in de lokale testserver. Nu loopt hij langs
+  dezelfde `sendEmail` in `netlify/functions/_email.mjs` als de rest van de boekingsflow.
+
+  Inhoud: naam van de gast, **zijn eigen aandeel** (niet het groepstotaal), het weekend, het
+  aantal gasten in de groep, de betaaltermijn en zijn eigen betaallink. **Niet**: allergieën
+  en dieetwensen, het vrije tekstveld, of de gegevens van de andere deelnemers. Eén
+  ontvanger per mail.
+
+  De volgorde is: kijken óf het kan → versturen → pas dan vastleggen. Mislukt de verzending,
+  dan staat er geen herinnering in het logboek die nooit is verstuurd, en meldt de
+  beheeromgeving `reminder_not_sent` in plaats van "verstuurd".
+
+  Kan er niet herinnerd worden, dan zegt de beheeromgeving waaróm: geen betaaltermijn
+  (`no_payment_deadline`) of nog geen betaallink (`no_payment_link`). Allebei een 409 met een
+  leesbare zin, nooit een 503.
 
 ## De melding aan de accommodatie, vertaald
 

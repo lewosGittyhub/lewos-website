@@ -51,3 +51,21 @@ export const resendPayload=({from,to,replyTo="lewos.co@gmail.com",subject,html,t
   if(attachments)payload.attachments=attachments;
   return payload;
 };
+
+// Eén plek voor het daadwerkelijk versturen. Stond tot 6 september 2026 alleen in
+// `stripe-webhook.mjs`, waardoor de beheeromgeving geen enkele mail kón versturen: de knop
+// "Herinneren" legde iets vast en stuurde niets. Nu delen beide dezelfde weg.
+//
+// Geeft de provider-id terug, of `null` als er niets verstuurd is. **`null` betekent: er is
+// geen mail de deur uit.** Wie deze functie aanroept moet dat afhandelen en mag nooit
+// "verstuurd" melden op een `null`.
+export const sendEmail=async({to,subject,text,html,idempotencyKey,attachments})=>{
+  if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",
+    headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json",
+      ...(idempotencyKey?{"idempotency-key":idempotencyKey}:{})},
+    body:JSON.stringify(resendPayload({from:process.env.TAVERN_FROM_EMAIL,to:[to],subject,text,html,attachments}))});
+  if(!response.ok){console.error("Email error",subject,response.status,await response.text());return null;}
+  const result=await response.json();
+  return result.id||"resend-accepted";
+};

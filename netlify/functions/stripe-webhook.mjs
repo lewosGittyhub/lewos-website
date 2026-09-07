@@ -1,7 +1,7 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {stayLines,STAY_STATUS} from "./_stay.mjs";
 import {bookingDocuments} from "./_booking-config.mjs";
-import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
+import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
 
@@ -51,27 +51,16 @@ const sendBookingEmail=async booking=>{
   const gasten=`${booking.seats} guest${booking.seats===1?"":"s"}`;
   const termsVersie=booking.termsVersion||"not recorded";
   const tekst=`Your party has a table.\n\nHi ${booking.name},\n\nPayment has been received for ${gasten} at ${booking.weekendLabel}. Your booking is confirmed.${genoteerd.text}\n\nBooking terms accepted: ${termsVersie}. Keep this email and its two PDF attachments with your booking records.\n\nWe will contact you with the guest details and everything you need before the weekend.\n\nRobert\nThe Lewos Tavern`;
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json","idempotency-key":`booking-confirmation-${booking.claimId}`},body:JSON.stringify(resendPayload({
-    from:process.env.TAVERN_FROM_EMAIL,to:[booking.email],subject:`Your Lewos Tavern booking is confirmed`,text:tekst,attachments,
-    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${gasten} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p>${genoteerd.html}<p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`
-  }))});
-  if(!response.ok){console.error("Booking email error",response.status,await response.text());return null;}
-  const result=await response.json();
-  return result.id||"resend-accepted";
+  return sendEmail({to:booking.email,subject:`Your Lewos Tavern booking is confirmed`,
+    idempotencyKey:`booking-confirmation-${booking.claimId}`,text:tekst,attachments,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${gasten} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p>${genoteerd.html}<p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`});
 };
 
 // Eén plek voor het versturen. Elke mail uit deze functie heeft precies één ontvanger,
 // en die staat er als los argument bij in plaats van ergens binnenin te worden gekozen:
 // zo is aan de aanroep te zien wie hem krijgt.
-const verstuur=async({to,subject,text,html,idempotencyKey,attachments})=>{
-  if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json","idempotency-key":idempotencyKey},body:JSON.stringify(resendPayload({
-    from:process.env.TAVERN_FROM_EMAIL,to:[to],subject,text,html,attachments
-  }))});
-  if(!response.ok){console.error("Email error",subject,response.status,await response.text());return null;}
-  const result=await response.json();
-  return result.id||"resend-accepted";
-};
+// Staat sinds 6 september 2026 in `_email.mjs`, zodat de beheeromgeving dezelfde weg neemt.
+const verstuur=sendEmail;
 
 // Naar de accommodatie. Bewust alleen wat er nodig is om een kamer klaar te zetten:
 // naam, aantal gasten, weekend, aankomst, vertrek en eventuele extra nachten. Geen

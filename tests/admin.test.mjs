@@ -23,6 +23,13 @@ const ADMIN="lewos.co@gmail.com";
 const NADINE="accommodatie@example.invalid";
 const DB_ADMINS=[ADMIN,NADINE];
 
+const ZONDER_TERMIJN="00000000-0000-4000-8000-00000000dead";
+const ZONDER_LINK="00000000-0000-4000-8000-00000000face";
+const GEWOON="00000000-0000-4000-8000-00000000beef";
+
+// Wat er naar Resend zou gaan. De verzending zelf wordt onderschept; er gaat niets weg.
+let verstuurdeMail=[];
+
 before(async()=>{
   server=http.createServer((request,response)=>{
     let body="";request.on("data",c=>body+=c);request.on("end",()=>{
@@ -57,6 +64,18 @@ before(async()=>{
         return response.end(JSON.stringify({status:"ok",claimId:invoer.p_claim_id,decision:invoer.p_decision,
           confirmedArrival:invoer.p_arrival,confirmedDeparture:invoer.p_departure}));
       }
+      if(request.url.endsWith("/admin_reminder_payload")){
+        if(invoer.p_participant_id===ZONDER_TERMIJN)
+          return response.end(JSON.stringify({status:"no_deadline",participantId:invoer.p_participant_id}));
+        if(invoer.p_participant_id===ZONDER_LINK)
+          return response.end(JSON.stringify({status:"no_payment_link",participantId:invoer.p_participant_id}));
+        return response.end(JSON.stringify({status:"ready",participantId:invoer.p_participant_id,
+          participant:{full_name:"TEST – Gast",email:"gast@example.invalid",amount_cents:202500},
+          booking:{name:"TEST – Group",seats:4,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026"},
+          deadline:"2026-11-01T12:00:00.000Z",
+          paymentUrl:"https://example.invalid/pay/test",
+          lastSentAt:null}));
+      }
       if(request.url.endsWith("/admin_remind_participant")){
         // Een deelnemer zonder betaaltermijn. De database meldt dat als eigen uitkomst en
         // legt géén herinnering vast — er is er ook geen verstuurd.
@@ -72,8 +91,18 @@ before(async()=>{
   globalThis.fetch=(input,options)=>{
     const url=String(input);
     if(url.startsWith(base))return nativeFetch(input,options);
+    // Resend wordt onderschept, niet gebeld. Zo loopt de hele keten — opbouwen, payload,
+    // verzenden, vastleggen — zonder dat er ooit een bericht de deur uit gaat.
+    if(url.startsWith("https://api.resend.com/emails")){
+      verstuurdeMail.push({...JSON.parse(options?.body||"{}"),
+        idempotencyKey:options?.headers?.["idempotency-key"]||null});
+      return Promise.resolve(new Response(JSON.stringify({id:"test-bericht-1"}),
+        {status:200,headers:{"content-type":"application/json"}}));
+    }
     return Promise.reject(new Error(`test_reached_the_network: ${url}`));
   };
+  process.env.RESEND_API_KEY="test-sleutel";
+  process.env.TAVERN_FROM_EMAIL="tavern@example.invalid";
   process.env.SUPABASE_URL=base;
   process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
   process.env.SUPABASE_JWT_SECRET=GEHEIM;
@@ -254,13 +283,14 @@ test("er zijn precies drie beheeracties, en geen ervan raakt geld of een boeking
   assert.doesNotMatch(bron,/api\/admin\/bookings[^)]*method:\s*"(POST|PUT|PATCH|DELETE)"/);
 });
 
-test("verlengen en vrijgeven staan achter de rol, herinneren niet",async()=>{
+test("alleen vrijgeven staat achter de rol; herinneren en verlengen niet",async()=>{
   const {readFile}=await import("node:fs/promises");
   const bron=await readFile(new URL("../admin/admin.js",import.meta.url),"utf8");
   const blok=bron.slice(bron.indexOf('viewerRole==="admin"'),bron.indexOf("lijst.append"));
-  assert.match(blok,/extend/,"verlengen hoort achter de rolcontrole");
   assert.match(blok,/release/,"vrijgeven hoort achter de rolcontrole");
   assert.equal(blok.includes("/remind"),false,"herinneren mag Nadine ook");
+  // Robert, 6 september 2026: verlengen mag de accommodatie voortaan ook.
+  assert.equal(blok.includes("/extend"),false,"verlengen mag Nadine ook");
   // En de server gelooft de browser niet.
   const functie=await readFile(new URL("../netlify/functions/admin-actions.mjs",import.meta.url),"utf8");
   assert.match(functie,/requires_owner/,"de functie kent de rolweigering niet");
@@ -348,7 +378,7 @@ const herinner=async(deelnemerId,email=ADMIN)=>{
 };
 
 test("herinneren zonder betaaltermijn is geen storing",async()=>{
-  const uit=await herinner("00000000-0000-4000-8000-00000000dead");
+  const uit=await herinner(ZONDER_TERMIJN);
   assert.equal(uit.statusCode,409,"een ontbrekende termijn is geen 503");
   const body=JSON.parse(uit.body);
   assert.equal(body.error,"no_payment_deadline");
@@ -357,16 +387,68 @@ test("herinneren zonder betaaltermijn is geen storing",async()=>{
 
 test("de melding zegt wat de beheerder nu moet doen",async()=>{
   // Zonder herstelactie is een nette foutmelding nog steeds een doodlopende weg.
-  const {message}=JSON.parse((await herinner("00000000-0000-4000-8000-00000000dead")).body);
+  const {message}=JSON.parse((await herinner(ZONDER_TERMIJN)).body);
   assert.match(message,/payment request/i,"noemt het betaalverzoek niet");
   assert.match(message,/Extend/,"noemt de handeling niet die wél een termijn zet");
   assert.doesNotMatch(message,/unavailable/i);
 });
 
-test("een gewone herinnering blijft gewoon slagen",async()=>{
-  const uit=await herinner("00000000-0000-4000-8000-00000000beef");
+test("een gewone herinnering wordt echt verstuurd en dan pas vastgelegd",async()=>{
+  verstuurdeMail=[];
+  const uit=await herinner(GEWOON);
   assert.equal(uit.statusCode,200);
-  assert.equal(JSON.parse(uit.body).status,"reminded");
+  const body=JSON.parse(uit.body);
+  assert.equal(body.status,"reminded");
+  assert.equal(body.emailSent,true,"de knop meldt verstuurd zonder verzending");
+  assert.equal(verstuurdeMail.length,1,"er ging geen mail uit, of er gingen er twee");
+});
+
+test("zonder betaallink komt er geen mail met een knop die nergens heen gaat",async()=>{
+  verstuurdeMail=[];
+  const uit=await herinner(ZONDER_LINK);
+  assert.equal(uit.statusCode,409);
+  assert.equal(JSON.parse(uit.body).error,"no_payment_link");
+  assert.equal(verstuurdeMail.length,0);
+});
+
+test("mislukt de verzending, dan wordt er niets vastgelegd",async()=>{
+  // Geen sleutel ingesteld: `sendEmail` verstuurt niets en geeft null terug. Dan mag de
+  // beheeromgeving geen "verstuurd" melden en mag er geen herinnering in het logboek staan.
+  const sleutel=process.env.RESEND_API_KEY;
+  delete process.env.RESEND_API_KEY;
+  rpcAanroepen=[];
+  const uit=await herinner(GEWOON);
+  process.env.RESEND_API_KEY=sleutel;
+  assert.equal(uit.statusCode,502);
+  assert.equal(JSON.parse(uit.body).error,"reminder_not_sent");
+  assert.equal(rpcAanroepen.filter(a=>a.url.endsWith("/admin_remind_participant")).length,0,
+    "er is een herinnering vastgelegd die nooit is verstuurd");
+});
+
+test("de herinnering draagt alleen wat nodig is",async()=>{
+  verstuurdeMail=[];
+  await herinner(GEWOON);
+  const mail=verstuurdeMail[0];
+  const alles=JSON.stringify(mail);
+  // Wat er wél in hoort: wie, hoeveel, welk weekend, tot wanneer, en de betaallink.
+  assert.match(alles,/TEST – Gast/);
+  assert.match(alles,/2,025\.00/,"het eigen bedrag ontbreekt");
+  assert.match(alles,/example\.invalid\/pay\/test/,"de betaallink ontbreekt");
+  // Wat er nooit in hoort.
+  assert.doesNotMatch(alles,/peanut|allergy|allerg|vegetarian|dietary/i,
+    "een allergie of dieetwens reist mee in een betaalherinnering");
+  assert.equal(mail.to.length,1,"een betaalverzoek gaat over één persoon");
+  assert.ok(mail.text&&mail.html,"elke mail gaat als tekst én HTML de deur uit");
+});
+
+test("twee pogingen op dezelfde herinnering gebruiken dezelfde sleutel",async()=>{
+  // Anders levert een netwerkfout twee berichten op bij de gast.
+  verstuurdeMail=[];
+  await herinner(GEWOON);
+  await herinner(GEWOON);
+  assert.equal(verstuurdeMail[0].idempotencyKey,verstuurdeMail[1].idempotencyKey);
+  assert.match(verstuurdeMail[0].idempotencyKey,/^reminder-/);
+  assert.doesNotMatch(verstuurdeMail[0].idempotencyKey,/\d{13}/,"de sleutel hangt aan het moment");
 });
 
 test("de database verzint geen termijn en legt niets vast zonder termijn",async()=>{

@@ -13,7 +13,8 @@ invulling is geen antwoord.
 | Punt | Stand nu | Waarom het wacht |
 | --- | --- | --- |
 | **18+-wegwijzer** | Voorstel ligt klaar, niets gebouwd | Featured weekenden zijn 18+, maar op `/tavern/` staat dat nergens — je leest het pas bij het afrekenen. Het voorstel voegt één kaartje en twee regels toe die zeggen wat je dan wél kunt doen. Geen "open weekenden" aangekondigd: die bestaan niet |
-| **Mag Nadine extra nachten bevestigen?** | Ja, zo staat het nu | Zij is de accommodatie en weet of er een kamer vrij is. Verlengen en vrijgeven blijven alleen van jou. Wil je dit ook alleen zelf, dan is het één regel in `admin_decide_extra_nights` |
+| **Mag Nadine extra nachten bevestigen?** | Ja, zo staat het nu | Zij is de accommodatie en weet of er een kamer vrij is. Wil je dit alleen zelf, dan is het één regel in `admin_decide_extra_nights` |
+| **Mag Nadine betaaltermijnen verlengen?** | Ja, sinds 6 september 2026 | Stond eerst dicht. Robert heeft het herzien: zij weet als eerste of een gast nog onderweg is, en iemand laten omvallen op een termijn is duurder dan de beslissing zelf. **Vrijgeven blijft uitsluitend van Robert** — daar gaat een stoel terug naar de voorraad |
 | **Aangevraagde nachten identiek oranje?** | Nu een tint lichter | Jij vroeg om mee-kleuren met het weekend; ik hield één tint verschil vast omdat ze nog niet bevestigd zijn. Identiek maken is één regel CSS |
 | **Voorbeeldtekst op `/tavern/checkout/`** | *"Leave empty if none"* | Op die pagina betekent leeg laten juist "houd wat je bij je aanmelding zei". De regel eronder zegt dat wél. Eigen tekst voor die pagina? |
 

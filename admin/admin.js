@@ -267,7 +267,7 @@ const actie=async(pad,body,knop)=>{
   if(knop)knop.disabled=false;
   if(!response.ok){
     alert(uitkomst.message||{
-      requires_owner:"Only Robert can extend a deadline or release a seat.",
+      requires_owner:"Only Robert can release a seat.",
       already_paid:"This guest has paid. Cancelling and refunding a paid seat is a separate step.",
       reason_required:"Please give a reason — it is recorded with the action."
     }[uitkomst.error]||`That did not work (${uitkomst.error||response.status}).`);
@@ -375,16 +375,18 @@ const toonDetail=async claimId=>{
         };
         acties.append(knop("Send reminder",async b=>{
           b.disabled=true;await actie(`${p.id}/remind`,{},b);}));
-        // Verlengen en vrijgeven zijn beslissingen van Robert. Nadine ziet ze niet, en de
-        // server weigert ze ook als iemand ze alsnog aanroept.
+        // Verlengen mag sinds 6 september 2026 ook de accommodatie: Nadine weet als eerste
+        // of een gast nog onderweg is.
+        acties.append(knop("Extend deadline",async b=>{
+          const reden=prompt("Why is this deadline being extended?");
+          if(!reden)return;
+          const uren=Number(prompt("Extend by how many hours?","2"));
+          if(!Number.isFinite(uren)||uren<=0)return;
+          b.disabled=true;
+          await actie(`${p.id}/extend`,{reason:reden,newDeadline:new Date(Date.now()+uren*3600e3).toISOString()},b);}));
+        // Vrijgeven blijft van Robert: daar gaat een stoel terug naar de voorraad. Nadine
+        // ziet de knop niet, en de server weigert hem ook als iemand hem alsnog aanroept.
         if(d.viewerRole==="admin"){
-          acties.append(knop("Extend deadline",async b=>{
-            const reden=prompt("Why is this deadline being extended?");
-            if(!reden)return;
-            const uren=Number(prompt("Extend by how many hours?","2"));
-            if(!Number.isFinite(uren)||uren<=0)return;
-            b.disabled=true;
-            await actie(`${p.id}/extend`,{reason:reden,newDeadline:new Date(Date.now()+uren*3600e3).toISOString()},b);}));
           acties.append(knop("Release seat",async b=>{
             const reden=prompt("Why is this seat being released? This is recorded.");
             if(!reden)return;
