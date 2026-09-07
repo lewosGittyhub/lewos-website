@@ -87,8 +87,11 @@ export const handler=async event=>{
       if(klaar?.status==="no_payment_link")return json(409,GEEN_BETAALLINK);
       if(klaar?.status!=="ready")return json(503,{error:"admin_unavailable"});
 
+      // Dezelfde link als in het eerste betaalverzoek, uit hetzelfde kenmerk opgebouwd.
+      const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+      const betaalUrl=`${basis}/tavern/pay/?ref=${encodeURIComponent(klaar.paymentReference)}`;
       const mail=buildPaymentRequestEmail({participant:klaar.participant,booking:klaar.booking,
-        deadline:klaar.deadline,paymentUrl:klaar.paymentUrl,reminder:true});
+        deadline:klaar.deadline,paymentUrl:betaalUrl,reminder:true});
       // De sleutel hangt aan de deelnemer en aan wanneer hij voor het laatst iets kreeg,
       // niet aan het moment van deze poging. Twee pogingen na een netwerkfout leveren bij
       // Resend één bericht op; een volgende herinnering krijgt vanzelf een nieuwe sleutel.

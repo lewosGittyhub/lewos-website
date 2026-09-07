@@ -384,11 +384,15 @@ begin
         payment_started_at=clock_timestamp(), hold_expires_at=v_deadline
     where id=c.id;
 
+  -- Alleen vastleggen dát het verzoek eruit is, en met welk bericht-id. **De betaallink
+  -- wordt hier bewust niet opgeslagen.** Die is af te leiden uit `payment_reference`, en
+  -- `checkout_session_url` betekent één ding: de sessie bij Stripe. Stond onze eigen link
+  -- daar, dan zou de betaalpagina denken dat er al een sessie was en naar zichzelf
+  -- doorverwijzen.
   update public.tavern_booking_participants p
     set payment_link_sent_at=now(),
-        payment_link_provider_id=s.provider_id,
-        checkout_session_url=s.url
-  from (select (e->>'participantId')::uuid as id, e->>'providerId' as provider_id, e->>'url' as url
+        payment_link_provider_id=s.provider_id
+  from (select (e->>'participantId')::uuid as id, e->>'providerId' as provider_id
         from jsonb_array_elements(coalesce(p_sent,'[]'::jsonb)) e) s
   where p.claim_id=c.id and p.id=s.id;
 
@@ -416,3 +420,81 @@ begin
 end; $$;
 revoke all on function public.abandon_seat_hold_payment(uuid) from public, anon, authenticated;
 grant execute on function public.abandon_seat_hold_payment(uuid) to service_role;
+
+-- ── De persoonlijke betaalpagina ─────────────────────────────────────────────
+--
+-- Elke deelnemer krijgt een eigen betaalkenmerk in zijn betaalverzoek. Dat kenmerk is het
+-- enige dat `/tavern/pay/` nodig heeft, en het geeft toegang tot **precies één deelnemer**:
+-- zijn eigen naam, zijn eigen bedrag, zijn eigen termijn. Niet de andere gasten, niet het
+-- groepstotaal, en niets over allergieën of dieetwensen.
+--
+-- Het kenmerk is geen wachtwoord maar wel een geheim: wie het heeft, heeft het uit zijn
+-- eigen mail. Daarom staat er niets in dat gevoeliger is dan wat er al in die mail stond.
+
+create or replace function public.tavern_payment_request(p_reference text)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare p public.tavern_booking_participants%rowtype;
+        c public.tavern_seat_claims%rowtype;
+        w public.tavern_weekends%rowtype;
+begin
+  if p_reference is null or char_length(trim(p_reference)) < 8 then
+    return jsonb_build_object('status','not_found');
+  end if;
+  select * into p from public.tavern_booking_participants
+    where payment_reference = trim(p_reference);
+  if not found then return jsonb_build_object('status','not_found'); end if;
+
+  select * into c from public.tavern_seat_claims where id=p.claim_id;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+
+  -- Al betaald: geen tweede betaling, en dat moet de pagina kunnen zeggen.
+  if p.status='paid' then
+    return jsonb_build_object('status','already_paid','fullName',p.full_name,
+      'amountCents',p.amount_cents);
+  end if;
+  if p.status='cancelled' or c.status in ('cancelled','expired') then
+    return jsonb_build_object('status','cancelled');
+  end if;
+  if c.hold_expires_at is null or c.hold_expires_at <= clock_timestamp() then
+    return jsonb_build_object('status','expired','fullName',p.full_name);
+  end if;
+
+  select * into w from public.tavern_weekends where id=c.assigned_weekend_id;
+  return jsonb_build_object('status','ok',
+    'participantId',p.id,
+    'fullName',p.full_name,
+    'amountCents',p.amount_cents,
+    'deadline',c.hold_expires_at,
+    'bookingName',c.name,
+    'weekendLabel',coalesce(w.label||' · '||w.date_label,'The Lewos Tavern'),
+    -- Bestaat er al een betaalsessie, dan hergebruiken we die. Twee keer op de link klikken
+    -- hoort niet twee betalingen op te leveren.
+    'checkoutSessionId',p.checkout_session_id,
+    'checkoutSessionUrl',p.checkout_session_url);
+end; $$;
+revoke all on function public.tavern_payment_request(text) from public, anon, authenticated;
+grant execute on function public.tavern_payment_request(text) to service_role;
+
+create or replace function public.attach_participant_checkout_session(
+  p_reference text, p_session_id text, p_session_url text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.tavern_booking_participants%rowtype;
+begin
+  select * into p from public.tavern_booking_participants
+    where payment_reference = trim(p_reference) for update;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  if p.status='paid' then return jsonb_build_object('status','already_paid'); end if;
+  -- Er is er al een: die blijft staan. Anders krijgt een gast die twee keer klikt twee
+  -- betaalsessies, en dan is niet meer te zeggen welke de zijne is.
+  if p.checkout_session_id is not null then
+    return jsonb_build_object('status','already_attached',
+      'checkoutSessionId',p.checkout_session_id,'checkoutSessionUrl',p.checkout_session_url);
+  end if;
+  update public.tavern_booking_participants
+    set checkout_session_id=p_session_id, checkout_session_url=p_session_url
+    where id=p.id;
+  return jsonb_build_object('status','attached',
+    'checkoutSessionId',p_session_id,'checkoutSessionUrl',p_session_url);
+end; $$;
+revoke all on function public.attach_participant_checkout_session(text,text,text) from public, anon, authenticated;
+grant execute on function public.attach_participant_checkout_session(text,text,text) to service_role;

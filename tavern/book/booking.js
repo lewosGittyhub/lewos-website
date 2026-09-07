@@ -162,11 +162,26 @@ weekend?.addEventListener("change",()=>{if(kalender&&weekend.value)kalender.sele
     const gegevens=await antwoord.json();
     weekends=Array.isArray(gegevens.weekends)?gegevens.weekends:[];
     bouwKalender();
+    // De server bepaalt of er geboekt kan worden, niet deze pagina. Staat de poort dicht,
+    // dan gaat het formulier op slot vóórdat iemand iets invult — de server weigert het
+    // toch, en dat pas na tien velden te horen krijgen is geen fijne ervaring.
+    if(gegevens.publicBookingOpen!==true)sluitBoeking();
   }catch{/* Geen kalender is beter dan een kalender met verzonnen datums. */}
 })();
 
 let hold=null;
 let tikker=null;
+
+// Het formulier op slot, met uitleg erboven. Alles blijft leesbaar: prijzen, weekenden en
+// de kalender mogen gewoon getoond worden, alleen boeken kan niet.
+const sluitBoeking=()=>{
+  const melding=document.querySelector("[data-booking-closed]");
+  if(melding)melding.hidden=false;
+  const formulier=document.querySelector("[data-public-booking-form]");
+  if(!formulier)return;
+  for(const veld of formulier.querySelectorAll("input,select,textarea,button"))veld.disabled=true;
+  formulier.setAttribute("aria-disabled","true");
+};
 
 const toon=(vak,tekst)=>{if(!vak)return;vak.textContent=tekst;vak.hidden=!tekst;};
 const tijd=s=>{const n=Math.max(0,Math.floor(s));return `${String(Math.floor(n/60)).padStart(2,"0")}:${String(n%60).padStart(2,"0")}`;};

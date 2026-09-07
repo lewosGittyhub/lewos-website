@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Your payment | The Lewos Tavern</title><meta name="description" content="Pay your own share of a Lewos Tavern booking."><link rel="canonical" href="https://lewos.co/tavern/pay/"><style>[hidden]{display:none!important}body{margin:0;background:#0b3d36;color:#f7f2e8;font:18px/1.7 Arial,sans-serif}main{max-width:720px;margin:0 auto;padding:12vh 24px}p.eyebrow{color:#ef653b;font-weight:700;text-transform:uppercase;letter-spacing:.15em;margin:0}h1{font-size:clamp(2.2rem,7vw,4rem);line-height:1.05;margin:.25em 0 .5em}a{color:#ff9a78;font-weight:700}dl{margin:1.5em 0;padding:0}dt{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;opacity:.72;margin-top:1.1em}dd{margin:.15em 0 0;font-size:1.15rem;font-weight:700}dd.bedrag{font-size:2rem}button{font:inherit;font-weight:700;background:#ef653b;color:#fff;border:0;border-radius:9px;padding:16px 26px;cursor:pointer;margin-top:1.5em}button[disabled]{opacity:.5;cursor:not-allowed}.melding{border-left:3px solid #ef653b;padding:.2em 0 .2em 1em;margin:1.5em 0}.stil{opacity:.72;font-size:.92rem}footer{max-width:720px;margin:0 auto;padding:0 24px 10vh;font-size:.82rem;opacity:.72}footer a{font-weight:400}</style></head>
+<body>
+<main>
+  <p class="eyebrow">The Lewos Tavern</p>
+  <h1 id="kop">Your payment</h1>
+  <div id="laden"><p>Looking up your booking…</p></div>
+
+  <div id="gevonden" hidden>
+    <dl>
+      <dt>Guest</dt><dd id="naam"></dd>
+      <dt>Weekend</dt><dd id="weekend"></dd>
+      <dt>Your share</dt><dd class="bedrag" id="bedrag"></dd>
+      <dt>Pay before</dt><dd id="termijn"></dd>
+    </dl>
+    <p class="stil">This is your own share, not the group total. Everyone in the group pays separately.</p>
+    <div id="poortdicht" class="melding" hidden>
+      <p><strong>Payment is not open yet.</strong> Your place is held and nothing has been charged. We will let you know the moment it opens.</p>
+    </div>
+    <button id="betaal" hidden>Pay my share →</button>
+    <p id="knopfout" class="melding" hidden></p>
+  </div>
+
+  <div id="fout" class="melding" hidden><p id="foutregel"></p><p>Questions? <a href="/contact/">Get in touch</a>.</p></div>
+</main>
+<footer><small><a href="/legal/">Legal notice</a> &middot; <a href="/privacy/">Privacy</a></small></footer>
+<script src="/tavern/pay/pay.js" defer></script>
+</body>
+</html>

@@ -493,12 +493,44 @@ const confirmSeatHold=({p_claim_id,p_deadline,p_sent})=>onderSlot(async()=>{
   for(const p of c.participants||[]){
     const e=verstuurd.get(p.id);
     p.payment_link_sent_at=nu().toISOString();
-    p.payment_link_provider_id=e.providerId;p.checkout_session_url=e.url;
+    // De betaallink niet opslaan: `checkout_session_url` is voor de Stripe-sessie.
+    p.payment_link_provider_id=e.providerId;
   }
   bewaar(data);
   return {status:"in_payment",claimId:c.id,seats:c.party_size,
     paymentStartedAt:c.payment_started_at,deadline:c.hold_expires_at,
     participants:(c.participants||[]).length};
+});
+
+// De persoonlijke betaalpagina. Spiegel van `tavern_payment_request` in seat-holds.sql:
+// precies één deelnemer, nooit de groep.
+const betaalVerzoek=({p_reference})=>onderSlot(async()=>{
+  const data=db();
+  const ref=String(p_reference||"").trim();
+  for(const c of data.claims)for(const p of c.participants||[]){
+    if(p.payment_reference!==ref)continue;
+    if(p.status==="paid")return {status:"already_paid",fullName:p.full_name,amountCents:p.amount_cents};
+    if(p.status==="cancelled"||["cancelled","expired"].includes(c.status))return {status:"cancelled"};
+    if(!c.hold_expires_at||new Date(c.hold_expires_at)<=nu())return {status:"expired",fullName:p.full_name};
+    return {status:"ok",participantId:p.id,fullName:p.full_name,amountCents:p.amount_cents,
+      deadline:c.hold_expires_at,bookingName:c.name,weekendLabel:weekendLabel(data,c.weekend),
+      checkoutSessionId:p.checkout_session_id||null,checkoutSessionUrl:p.checkout_session_url||null};
+  }
+  return {status:"not_found"};
+});
+
+const koppelSessie=({p_reference,p_session_id,p_session_url})=>onderSlot(async()=>{
+  const data=db();const ref=String(p_reference||"").trim();
+  for(const c of data.claims)for(const p of c.participants||[]){
+    if(p.payment_reference!==ref)continue;
+    if(p.status==="paid")return {status:"already_paid"};
+    if(p.checkout_session_id)return {status:"already_attached",
+      checkoutSessionId:p.checkout_session_id,checkoutSessionUrl:p.checkout_session_url};
+    p.checkout_session_id=p_session_id;p.checkout_session_url=p_session_url;
+    bewaar(data);
+    return {status:"attached",checkoutSessionId:p_session_id,checkoutSessionUrl:p_session_url};
+  }
+  return {status:"not_found"};
 });
 
 const abandonSeatHold=({p_claim_id})=>onderSlot(async()=>{
@@ -529,7 +561,7 @@ const adminReminderPayload=({p_email,p_participant_id})=>onderSlot(async()=>{
   if(!gevonden)return {status:"not_found"};
   if(gevonden.deelnemer.status==="paid")return {status:"already_paid"};
   if(!gevonden.claim.hold_expires_at)return {status:"no_deadline",participantId:p_participant_id};
-  if(!String(gevonden.deelnemer.checkout_session_url||"").trim())
+  if(!String(gevonden.deelnemer.payment_reference||"").trim())
     return {status:"no_payment_link",participantId:p_participant_id};
   return {status:"ready",participantId:p_participant_id,
     participant:{full_name:gevonden.deelnemer.full_name,email:gevonden.deelnemer.email,
@@ -537,7 +569,7 @@ const adminReminderPayload=({p_email,p_participant_id})=>onderSlot(async()=>{
     booking:{name:gevonden.claim.name,seats:gevonden.claim.party_size,
       weekendLabel:weekendLabel(data,gevonden.claim.weekend)},
     deadline:gevonden.claim.hold_expires_at,
-    paymentUrl:gevonden.deelnemer.checkout_session_url,
+    paymentReference:gevonden.deelnemer.payment_reference,
     lastSentAt:gevonden.deelnemer.payment_link_sent_at||null};
 });
 
@@ -619,6 +651,8 @@ const nepSupabase=http.createServer((request,response)=>{
         return response.end(JSON.stringify(checkLimit(invoer)));
       const holdRpcs={begin_seat_hold:beginSeatHold,get_seat_hold:getSeatHold,
         release_seat_hold:releaseSeatHold,
+        tavern_payment_request:betaalVerzoek,
+        attach_participant_checkout_session:koppelSessie,
         prepare_seat_hold_payment:prepareSeatHold,
         confirm_seat_hold_payment:confirmSeatHold,
         abandon_seat_hold_payment:abandonSeatHold,
@@ -712,6 +746,10 @@ const start=async()=>{
     extendedProperties:{private:{lewosSource:"tavern-booking",lewosClaimId:"voorbeeld"}}
   }]});
 
+  // Wat Stripe zou hebben teruggegeven, per idempotentiesleutel. Zo levert twee keer
+  // klikken hier dezelfde sessie op, net als bij de echte Stripe.
+  const stripeSessies=new Map();
+
   const echteFetch=globalThis.fetch;
   globalThis.fetch=async(invoer,opties)=>{
     const url=String(invoer?.url||invoer||"");
@@ -753,6 +791,22 @@ const start=async()=>{
       }
       return new Response(JSON.stringify({error:"unsupported"}),{status:400,headers:{"content-type":"application/json"}});
     }
+    // Stripe wordt onderschept, nooit gebeld. De sessie krijgt een herkenbaar nep-id en een
+    // URL naar een pagina op deze server, zodat de hele betaalweg lokaal te volgen is
+    // zonder dat er ooit een echte betaling ontstaat.
+    if(url.startsWith("https://api.stripe.com/v1/checkout/sessions")){
+      const sleutel=String(opties?.headers?.["idempotency-key"]||"onbekend");
+      const bestaand=stripeSessies.get(sleutel);
+      if(bestaand){
+        console.log(`  stripe: bestaande sessie hergebruikt voor ${sleutel}`);
+        return new Response(JSON.stringify(bestaand),{status:200,headers:{"content-type":"application/json"}});
+      }
+      const sessie={id:`cs_test_${sleutel}`,url:`http://127.0.0.1:${POORT}/tavern/pay/test-checkout/?sessie=${sleutel}`};
+      stripeSessies.set(sleutel,sessie);
+      console.log(`  stripe: nagebootste sessie ${sessie.id}`);
+      return new Response(JSON.stringify(sessie),{status:200,headers:{"content-type":"application/json"}});
+    }
+
     if(url.startsWith("https://api.resend.com")){
       let mail={};
       try{mail=JSON.parse(opties?.body||"{}");}catch{}
@@ -804,6 +858,13 @@ const start=async()=>{
     // vastgehouden, want dat is voor de beheeromgeving.
     // Het contactformulier loopt sinds 5 september 2026 langs een eigen functie in plaats
     // van Netlify Forms. Hier draait diezelfde functie, met de postbus als bestemming.
+    if(url.pathname==="/api/pay"){
+      const {handler:h}=await import("../netlify/functions/pay.mjs");
+      const r=await h({httpMethod:request.method,path:url.pathname,
+        headers:{...request.headers},queryStringParameters:Object.fromEntries(url.searchParams)});
+      return stuur(r.statusCode,r.body);
+    }
+
     if(url.pathname==="/api/house-availability"){
       const {handler:h}=await import("../netlify/functions/house-availability.mjs");
       const r=await h({httpMethod:request.method,path:url.pathname,headers:{...request.headers},

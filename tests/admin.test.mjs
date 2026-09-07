@@ -75,7 +75,7 @@ before(async()=>{
           participant:{full_name:"TEST – Gast",email:"gast@example.invalid",amount_cents:202500},
           booking:{name:"TEST – Group",seats:4,weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026"},
           deadline:"2026-11-01T12:00:00.000Z",
-          paymentUrl:"https://example.invalid/pay/test",
+          paymentReference:"tav_testkenmerk0123456789abcdef",
           lastSentAt:null}));
       }
       if(request.url.endsWith("/admin_remind_participant")){
@@ -435,7 +435,7 @@ test("de herinnering draagt alleen wat nodig is",async()=>{
   // Wat er wél in hoort: wie, hoeveel, welk weekend, tot wanneer, en de betaallink.
   assert.match(alles,/TEST – Gast/);
   assert.match(alles,/2,025\.00/,"het eigen bedrag ontbreekt");
-  assert.match(alles,/example\.invalid\/pay\/test/,"de betaallink ontbreekt");
+  assert.match(alles,/tavern\/pay\/\?ref=tav_testkenmerk/,"de betaallink ontbreekt");
   // Wat er nooit in hoort.
   assert.doesNotMatch(alles,/peanut|allergy|allerg|vegetarian|dietary/i,
     "een allergie of dieetwens reist mee in een betaalherinnering");

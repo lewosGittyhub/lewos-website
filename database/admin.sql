@@ -302,7 +302,9 @@ begin
   if c.hold_expires_at is null then
     return jsonb_build_object('status','no_deadline','participantId',p.id);
   end if;
-  if nullif(trim(coalesce(p.checkout_session_url,'')),'') is null then
+  -- Zonder betaalkenmerk is er geen link om aan te herinneren. Het kenmerk komt uit
+  -- `prepare_seat_hold_payment`; de functie bouwt de URL eromheen.
+  if nullif(trim(coalesce(p.payment_reference,'')),'') is null then
     return jsonb_build_object('status','no_payment_link','participantId',p.id);
   end if;
   select * into w from public.tavern_weekends where id=c.assigned_weekend_id;
@@ -312,7 +314,7 @@ begin
     'booking',jsonb_build_object('name',c.name,'seats',c.party_size,
       'weekendLabel',coalesce(w.label||' · '||w.date_label,'the Tavern')),
     'deadline',c.hold_expires_at,
-    'paymentUrl',p.checkout_session_url,
+    'paymentReference',p.payment_reference,
     -- Waar de idempotentiesleutel aan hangt: twee pogingen na een netwerkfout leveren bij
     -- Resend één bericht op, een volgende herinnering krijgt een nieuwe sleutel.
     'lastSentAt',p.payment_link_sent_at);
