@@ -419,3 +419,45 @@ De SQL-snippet in de editor is verwijderd.
 - **`tests/database-integration.sql` op Supabase.** Dat bestand controleert het gedrag van de
   functies en draaide alleen lokaal.
 - Stripe, Supabase Auth, Resend en Google Agenda: onaangeroerd.
+
+
+## "Unhealthy" in het dashboard — onderzocht 7 september 2026, geen echte fout
+
+Op 7 september toonden zowel productie als de preview-branch **STATUS: Unhealthy**. Dat is
+onderzocht en het is **een verouderde meting in het dashboard, geen storing.**
+
+**Wat er gebeurt.** De projectpagina rendert het statusveld in drie fasen: eerst
+`Checking...` met `COMPUTE: Unknown`, dan de uitkomst. Laadt de pagina traag — en dat doet
+hij hier, tot ruim twintig seconden — dan valt het veld in dat gat terug op `Unhealthy`.
+Blijf je wachten, dan springt het naar `Healthy`. Beide projecten deden dat, beide keren.
+
+**Onafhankelijk bewijs dat de databases in orde zijn**, buiten het dashboard om gemeten:
+
+| | Productie (`main`) | Preview (`rece-migratie-test`) |
+| --- | --- | --- |
+| Database antwoordt | ja, direct | ja, direct |
+| Omvang | 11 MB | 11 MB |
+| Verbindingen | 15 van 60 | 15 van 60 |
+| Hangende transacties | 0 | 0 |
+| Wachtend op een slot | 0 | 0 |
+| Deadlocks | **0** | 0 |
+| Teruggedraaide transacties | 27 op 466.380 vastgelegde | — |
+| REST-API | HTTP 401 in 0,10 s (correcte JSON-fout) | idem |
+| Advisors | *"No security, performance or health issues found"* | idem |
+
+Een database met nul deadlocks, nul hangende transacties en 27 rollbacks op bijna een half
+miljoen commits is gezond. Er is niets gerepareerd, want er was niets kapot.
+
+**Wat dit tegelijk bevestigde over productie** — alleen gelezen, niets gewijzigd:
+
+- 3 tabellen in `public` en **0 beheerfuncties**. `admin.sql`, `seat-holds.sql` en
+  `stay-dates.sql` staan daar dus nog niet. Dat is de stand van vóór deze branch.
+- Laatste migratie in het logboek: `20260828132738` (28 augustus 2026).
+
+**Eén ding om te weten voor de deploy.** Op de preview-branch staat de schema er wél
+(6 tabellen, 8 beheerfuncties), maar het migratielogboek van Supabase noemt nog steeds
+28 augustus. Dat komt doordat SQL die je in de **SQL-editor** draait niet in
+`supabase_migrations.schema_migrations` wordt bijgeschreven — alleen de CLI en
+branch-deployments doen dat. De schema en het logboek lopen daar dus uit de pas. Voor een
+handmatige productie-migratie maakt dat niets uit, maar wie later met de CLI gaat werken,
+moet dat weten.
