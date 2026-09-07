@@ -1,7 +1,14 @@
 # Reviewrapport — eindcontrole `mailroutering-fontecha`
 
 6 september 2026, commit `119ca44`. **Niets gepusht, niets gedeployd, geen productiegegevens
-aangeraakt.** Elf commits, 77 bestanden, 11.647 regels erbij tegenover `origin/main`.
+aangeraakt.** Twaalf commits, 78 bestanden, 11.918 regels erbij tegenover `origin/main`.
+
+**Opnieuw nagelopen na afronding**, op verzoek en volledig opnieuw uitgevoerd — niet
+overgenomen uit de vorige ronde: 428 tests, de vijf migraties tweemaal op een verse database,
+de integratietest, de gelijktijdigheidsproef, beide HTTP-integratiescripts op een verse
+database, en de alleen-lezen agendacontrole. Alles opnieuw geslaagd. De enige correctie die
+die ronde opleverde staat hieronder bij de dieetgegevens: mijn eerdere meting was te grof
+afgebakend en liep door in de volgende functie.
 
 ---
 
@@ -67,9 +74,12 @@ er is vandaag niets aangemaakt, gewijzigd of verwijderd.
   primaire agenda niet met hem gedeeld is, blijft Casa Cepa buiten bereik. **Zie bevinding C.**
 - **Nadines adres** — overal `accommodatie@example.invalid`, met één m in "accomodation",
   op alle vijf plekken gelijk. Geen tikfoutvariant. **Zie bevinding B.**
-- **Allergieën en dieetwensen** — komen niet in `_calendar.mjs` voor en niet in
-  `admin_bookings_in_range` (het maandoverzicht). Wel in `admin_booking_detail`, achter de
-  inlogcontrole; een vreemde krijgt daar 403.
+- **Allergieën en dieetwensen** — `_calendar.mjs` kent het veld niet; er is geen weg naar
+  Google Agenda. `admin_bookings_in_range` (het maandoverzicht) geeft **de inhoud niet
+  terug**: het leest de kolommen alleen om te bepalen óf er iets klaarstaat, en levert
+  daaruit één woord op (`prepared` of `example`). Dat is geen gezondheidsgegeven, dat is een
+  vinkje. De inhoud komt alleen uit `admin_booking_detail`, achter de inlogcontrole; een
+  vreemde krijgt daar 403.
 
 ## 3. Nog gesimuleerd
 
