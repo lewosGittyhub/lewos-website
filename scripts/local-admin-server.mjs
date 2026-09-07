@@ -574,11 +574,21 @@ const adminRelease=({p_email,p_participant_id,p_reason})=>onderSlot(async()=>{
   if(gevonden.deelnemer.status==="paid")return {status:"already_paid"};
   // Alleen deze plaats. De rij blijft bestaan, er wordt niets verwijderd en niets terugbetaald.
   gevonden.deelnemer.status="cancelled";
-  gevonden.claim.party_size=Math.max(0,gevonden.claim.party_size-1);
+  // Was dit de laatste gast, dan gaat de boeking zelf terug naar de voorraad. `party_size`
+  // op nul zetten kan in de database niet (die eist 1 tot 12) en zou hier een lege boeking
+  // laten staan. Zie `admin_release_participant` in database/admin.sql.
+  if(gevonden.claim.party_size<=1){
+    gevonden.claim.party_size=1;
+    gevonden.claim.status="cancelled";gevonden.claim.hold_phase="released";
+    gevonden.claim.hold_expires_at=null;gevonden.claim.released_at=nu().toISOString();
+    gevonden.claim.released_by=String(p_email||"").toLowerCase();
+    gevonden.claim.release_reason=(p_reason||"").trim()||null;
+  }else gevonden.claim.party_size=gevonden.claim.party_size-1;
   logboek(data,{actor_email:p_email,action:"release",claim_id:gevonden.claim.id,participant_id:p_participant_id,
     reason:p_reason,details:{releasedEmail:gevonden.deelnemer.email,seatsRemaining:gevonden.claim.party_size}});
   bewaar(data);
-  return {status:"released",participantId:p_participant_id,seatsRemaining:gevonden.claim.party_size};
+  const over=gevonden.claim.hold_phase==="released"?0:gevonden.claim.party_size;
+  return {status:"released",participantId:p_participant_id,seatsRemaining:over};
 });
 
 // De snelheidsbegrenzer, met dezelfde vorm als in Supabase.

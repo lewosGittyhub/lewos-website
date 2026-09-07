@@ -816,3 +816,43 @@ begin
 end $$;
 
 rollback;
+
+-- ── De laatste stoel vrijgeven ───────────────────────────────────────────────
+--
+-- Robert, 7 september 2026: `admin_release_participant` deed `party_size-1` zonder
+-- ondergrens. Bij een boeking van één gast werd dat nul, en `party_size` moet tussen 1 en 12
+-- liggen — de vrijgave brak af op de check-constraint en de beheeromgeving meldde
+-- "beheeromgeving niet beschikbaar". Draai dit blok alleen in een testomgeving.
+begin;
+do $$
+declare v_week uuid; v_claim uuid; v_deelnemer uuid; uit jsonb; v_status text; v_grootte integer;
+begin
+  insert into public.lewos_admins(email,display_name,role)
+    values('lewos.co@gmail.com','TEST – Robert','admin')
+    on conflict (email) do update set role=excluded.role;
+  select id into v_week from public.tavern_weekends order by sort_order, slug limit 1;
+
+  insert into public.tavern_seat_claims
+    (name,email,party_size,requested_weekend_id,assigned_weekend_id,status,hold_expires_at,consented_at)
+    values('TEST – Laatste stoel','laatste@example.invalid',1,v_week,v_week,'payment_pending',
+           now()+interval '30 minutes',now())
+    returning id into v_claim;
+  insert into public.tavern_booking_participants(claim_id,full_name,email,amount_cents,status)
+    values(v_claim,'TEST – Enige gast','enige@example.invalid',202500,'awaiting_payment')
+    returning id into v_deelnemer;
+
+  uit := public.admin_release_participant('lewos.co@gmail.com', v_deelnemer, 'TEST – laatste stoel');
+  if uit->>'status' <> 'released' then
+    raise exception 'de laatste stoel kon niet worden vrijgegeven: %', uit;
+  end if;
+
+  select status, party_size into v_status, v_grootte
+    from public.tavern_seat_claims where id=v_claim;
+  if v_grootte < 1 then raise exception 'party_size werd % — dat mag de constraint niet toelaten', v_grootte; end if;
+  if v_status <> 'cancelled' then
+    raise exception 'de lege boeking bleef staan als %, en houdt dan stoelen bezet', v_status;
+  end if;
+
+  raise notice 'OK  de laatste stoel vrijgeven geeft de hele boeking terug aan de voorraad';
+end $$;
+rollback;

@@ -377,6 +377,7 @@ grant execute on function public.admin_extend_participant(text,uuid,timestamptz,
 create or replace function public.admin_release_participant(p_email text, p_participant_id uuid, p_reason text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare p public.tavern_booking_participants%rowtype; over integer;
+        c public.tavern_seat_claims%rowtype;
 begin
   if not public.admin_is_allowed(p_email) then raise exception 'not_an_administrator'; end if;
   if private.admin_role(p_email) is distinct from 'admin' then raise exception 'requires_owner'; end if;
@@ -385,9 +386,26 @@ begin
   if not found then return jsonb_build_object('status','not_found'); end if;
   if p.status='paid' then return jsonb_build_object('status','already_paid'); end if;
   update public.tavern_booking_participants set status='cancelled' where id=p.id;
+
   -- Eén stoel terug naar de voorraad. De boeking zelf blijft staan met de overige gasten.
-  update public.tavern_seat_claims set party_size=greatest(party_size-1,0) where id=p.claim_id
-    returning party_size into over;
+  --
+  -- Robert, 7 september 2026: dit deed `party_size-1` zonder ondergrens. Bij een boeking van
+  -- één gast werd dat nul, en `party_size` moet tussen 1 en 12 liggen — de hele vrijgave
+  -- brak dan af op een check-constraint, en de beheeromgeving meldde "beheeromgeving niet
+  -- beschikbaar". Was de laatste gast weg, dan hoort de boeking zelf terug naar de voorraad
+  -- te gaan; een boeking met nul gasten bestaat niet.
+  select * into c from public.tavern_seat_claims where id=p.claim_id for update;
+  if c.party_size <= 1 then
+    update public.tavern_seat_claims
+      set party_size=1, status='cancelled', hold_phase='released', hold_expires_at=null,
+          released_at=clock_timestamp(), released_by=lower(trim(p_email)),
+          release_reason=nullif(trim(p_reason),'')
+      where id=p.claim_id;
+    over := 0;
+  else
+    update public.tavern_seat_claims set party_size=party_size-1 where id=p.claim_id
+      returning party_size into over;
+  end if;
   insert into public.lewos_admin_actions(actor_email,action,claim_id,participant_id,reason,details)
     values(lower(trim(p_email)),'release',p.claim_id,p.id,trim(p_reason),
            jsonb_build_object('releasedEmail',p.email,'seatsRemaining',over));
