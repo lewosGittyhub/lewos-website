@@ -144,3 +144,42 @@ test("een onbruikbaar starttijdstip levert een fout op, geen gegokte deadline",(
   assert.throws(()=>holdState({phase:HOLD_PHASES.filling,holdStartedAt:"ooit"}),/seat_hold_hold_started_at_invalid/);
   assert.throws(()=>holdState({phase:"iets anders"}),/seat_hold_phase_unknown/);
 });
+
+
+// ── Dezelfde termijnen in de code én in de database ─────────────────────────
+//
+// De invulfase en de betaaltermijn staan op twee plekken: als constante in de functies, en
+// als standaardwaarde van de RPC's. De functies geven ze expliciet mee, dus vandaag wint de
+// JavaScript-waarde — maar wie de RPC ooit zonder argument aanroept, krijgt de SQL-waarde.
+// Lopen die twee uit elkaar, dan houdt de ene helft van het systeem 60 minuten aan en de
+// andere iets anders, en dat merk je pas als een gast omvalt op een termijn die hij niet
+// gekregen heeft.
+test("de SQL-standaardwaarden zijn dezelfde termijnen als in de code",async()=>{
+  const {readFile}=await import("node:fs/promises");
+  const sql=await readFile(new URL("../database/seat-holds.sql",import.meta.url),"utf8");
+
+  const invul=Number(sql.match(/p_window_minutes integer default (\d+)/i)?.[1]);
+  assert.equal(invul,FILLING_WINDOW_MINUTES,
+    `begin_seat_hold houdt ${invul} minuten aan, de code ${FILLING_WINDOW_MINUTES}`);
+
+  const betaal=Number(sql.match(/p_payment_window_minutes integer default (\d+)/i)?.[1]);
+  const {GROUP_WINDOW_MINUTES}=await import("../netlify/functions/_group-payment.mjs");
+  assert.equal(betaal,GROUP_WINDOW_MINUTES,
+    `promote_seat_hold_to_payment houdt ${betaal} minuten aan, de code ${GROUP_WINDOW_MINUTES}`);
+});
+
+test("de verlengingsladder telt op tot twee uur en staat op één plek",async()=>{
+  const {GROUP_WINDOW_MINUTES,FIRST_EXTENSION_MINUTES,FINAL_EXTENSION_MINUTES,MAX_AUTOMATIC_MINUTES}
+    =await import("../netlify/functions/_group-payment.mjs");
+  assert.equal(GROUP_WINDOW_MINUTES+FIRST_EXTENSION_MINUTES+FINAL_EXTENSION_MINUTES,MAX_AUTOMATIC_MINUTES);
+  assert.equal(MAX_AUTOMATIC_MINUTES,120);
+  // Geen tweede kopie van de ladder elders in de functies.
+  const {readFile,readdir}=await import("node:fs/promises");
+  const map=new URL("../netlify/functions/",import.meta.url);
+  for(const naam of await readdir(map)){
+    if(!naam.endsWith(".mjs")||naam==="_group-payment.mjs")continue;
+    const bron=await readFile(new URL(naam,map),"utf8");
+    assert.doesNotMatch(bron,/(FIRST|FINAL)_EXTENSION_MINUTES\s*=/,
+      `${naam} heeft een eigen kopie van de verlengingsladder`);
+  }
+});

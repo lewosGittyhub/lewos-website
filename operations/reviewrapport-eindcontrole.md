@@ -98,7 +98,12 @@ er is vandaag niets aangemaakt, gewijzigd of verwijderd.
 
 ## 4. Resterende fouten en openstaande punten
 
-### A. De herinneringsmail wordt in productie nergens verstuurd — **niet gerepareerd**
+### A. De herinneringsmail wordt in productie nergens verstuurd — ~~niet gerepareerd~~ **OPGELOST 6 september 2026, commit `582c6ec`**
+
+> `sendEmail` staat sindsdien in `_email.mjs` en de beheeromgeving verstuurt de herinnering
+> langs dezelfde weg als de rest van de boekingsflow. De volgorde is kijken → versturen →
+> vastleggen, dus een mislukte verzending laat geen valse herinnering in het logboek achter.
+> Wat hieronder stond, beschrijft de situatie van vóór die commit.
 
 `netlify/functions/_payment-request.mjs` bouwt zowel het betaalverzoek als de herinnering,
 maar wordt **alleen door de lokale testserver geïmporteerd.** Geen enkele Netlify-functie
