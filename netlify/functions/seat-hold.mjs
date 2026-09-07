@@ -25,6 +25,7 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {FILLING_WINDOW_MINUTES,holdState,HOLD_PHASES} from "./_seat-hold.mjs";
 import {sendEmail} from "./_email.mjs";
+import {paymentsAreEnabled} from "./_booking-config.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 
@@ -134,6 +135,17 @@ export const handler=async event=>{
       let stayRequest;
       try{stayRequest=readStayRequest(invoer);}
       catch(error){return json(422,{error:error.message,message:STAY_ERRORS[error.message]||"We could not read those dates."});}
+
+      // ── De betaalpoort ───────────────────────────────────────────────────
+      //
+      // Robert, harde grens 1: geen betalingen en geen definitieve boekingen zolang de
+      // reisbureauregistratie niet rond is. Tot 7 september 2026 kende deze functie die
+      // grens niet — je kon een boeking afronden en een betaalverzoek ontvangen terwijl
+      // `TAVERN_PAYMENTS_ENABLED` uit stond. Stoelen vasthouden mag: dat vervalt vanzelf na
+      // zestig minuten en verplicht niemand tot iets. Een boeking afronden en om geld
+      // vragen mag niet.
+      if(!paymentsAreEnabled())return json(503,{error:"booking_not_open",
+        message:"Bookings cannot be completed yet. Your seats are not charged and nothing has been confirmed. Leave your details through the contact page and we will let you know the moment booking opens."});
 
       // ── Het eerste betaalverzoek, in drie stappen ────────────────────────
       //

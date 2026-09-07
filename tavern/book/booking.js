@@ -321,6 +321,7 @@ form.addEventListener("submit",async event=>{
       invalid_participant:"One of the guests is missing a name or a valid email address. Each guest needs both, because that is where their own payment link goes.",
       duplicate_participant_email:"Two guests share an email address. Each guest needs their own, because that is where their own payment link goes.",
       confirmations_required:"Please tick the confirmations before continuing. Nothing was charged.",
+      booking_not_open:"Booking is not open yet. Nothing was charged and nothing has been confirmed. Leave your details through the contact page and we will let you know the moment it opens.",
       payment_requests_not_sent:"We could not send everyone their payment link, so nothing has been confirmed and nothing was charged. Your seats are still held — please try again.",
       invalid_details:"Something in the form was not accepted. Check the name and email, then try again. Nothing was charged."
     };

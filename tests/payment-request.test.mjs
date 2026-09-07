@@ -69,8 +69,16 @@ before(async()=>{
   process.env.SUPABASE_SERVICE_ROLE_KEY="test-service-key";
   process.env.RESEND_API_KEY="test-sleutel";
   process.env.TAVERN_FROM_EMAIL="tavern@example.invalid";
-  process.env.URL="https://lewos.co";
   process.env.RATE_LIMIT_SECRET="test-limiet-geheim";
+  // De betaalpoort. `paymentsAreEnabled()` laat een testomgeving alleen door als NODE_ENV
+  // op "test" staat én URL naar localhost wijst — daarom staan ze hier allebei. In
+  // productie kan deze combinatie niet ontstaan.
+  process.env.NODE_ENV="test";
+  process.env.URL="http://127.0.0.1";
+  process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.BOOKING_TERMS_VERSION="test-voorwaarden-1";
+  process.env.BOOKING_TERMS_DOCUMENT_URL="http://127.0.0.1/voorwaarden.pdf";
+  process.env.TRAVEL_INFORMATION_DOCUMENT_URL="http://127.0.0.1/reisinformatie.pdf";
 });
 after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);});
 beforeEach(()=>{rpcAanroepen=[];verstuurd=[];mailFaaltVanaf=null;});
@@ -188,4 +196,29 @@ test("een boeking die al in de betaalfase staat stuurt niets opnieuw",async()=>{
   assert.equal(uit.statusCode,200);
   assert.equal(verstuurd.length,0,"er ging een tweede ronde betaalverzoeken uit");
   assert.ok(echteServer);
+});
+
+
+test("staat de betaalpoort dicht, dan wordt er niets geboekt en niets verstuurd",async()=>{
+  // Harde grens 1: geen definitieve boekingen zolang de reisbureauregistratie niet rond is.
+  // Tot 7 september 2026 kende deze functie die grens niet.
+  const eerder=process.env.TAVERN_PAYMENTS_ENABLED;
+  process.env.TAVERN_PAYMENTS_ENABLED="false";
+  rpcAanroepen=[];verstuurd=[];
+  const uit=await boek();
+  process.env.TAVERN_PAYMENTS_ENABLED=eerder;
+  assert.equal(uit.statusCode,503);
+  assert.equal(JSON.parse(uit.body).error,"booking_not_open");
+  assert.equal(verstuurd.length,0,"er ging een betaalverzoek uit terwijl de poort dicht staat");
+  assert.equal(rpcAanroepen.some(a=>a.url.endsWith("/prepare_seat_hold_payment")),false,
+    "er werd een boeking voorbereid terwijl de poort dicht staat");
+});
+
+test("de melding zegt dat er niets is afgeschreven",async()=>{
+  const eerder=process.env.TAVERN_PAYMENTS_ENABLED;
+  process.env.TAVERN_PAYMENTS_ENABLED="false";
+  const {message}=JSON.parse((await boek()).body);
+  process.env.TAVERN_PAYMENTS_ENABLED=eerder;
+  assert.match(message,/not charged/i);
+  assert.match(message,/nothing has been confirmed/i);
 });

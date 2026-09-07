@@ -672,6 +672,15 @@ const start=async()=>{
   // Netlify zet `URL` op het adres van de site. Lokaal wijst hij naar deze server, zodat
   // de betaallinks in de postbus naar iets wijzen dat hier bestaat.
   process.env.URL=`http://127.0.0.1:${POORT}`;
+  // De betaalpoort staat in productie dicht tot de reisbureauregistratie rond is. Hier moet
+  // hij open, anders valt de hele boekingsflow niet te testen. Dat kan alleen omdat
+  // `localTestOverridesAllowed()` twee dingen tegelijk eist: NODE_ENV op "test" én een URL
+  // die naar localhost wijst. Die combinatie kan op Netlify niet ontstaan.
+  process.env.NODE_ENV="test";
+  process.env.TAVERN_PAYMENTS_ENABLED="true";
+  process.env.BOOKING_TERMS_VERSION="lokale-test-voorwaarden";
+  process.env.BOOKING_TERMS_DOCUMENT_URL=`http://127.0.0.1:${POORT}/voorwaarden.pdf`;
+  process.env.TRAVEL_INFORMATION_DOCUMENT_URL=`http://127.0.0.1:${POORT}/reisinformatie.pdf`;
   const AGENDA=join(DATA,"calendar.json");
   const leesAgenda=()=>{try{return JSON.parse(readFileSync(AGENDA,"utf8"));}catch{return {items:[]};}};
   const schrijfAgenda=d=>writeFileSync(AGENDA,JSON.stringify(d,null,2));
