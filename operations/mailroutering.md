@@ -7,7 +7,14 @@ behalve dat van Lewos zelf.
 | Variabele | Waarde | Krijgt |
 | --- | --- | --- |
 | `LEWOS_GENERAL_EMAIL` | `lewos.co@gmail.com` | alles wat geen gewone accommodatieboeking is |
-| `FONTECHA_ACCOMMODATION_EMAIL` | *nog te bepalen — wacht op het Gmail-account van Fontecha* | bevestigde boekingen en wat er nodig is om een kamer klaar te zetten |
+| `FONTECHA_ACCOMMODATION_EMAIL` | het Gmail-adres van de accommodatie — **staat alleen in Netlify** | bevestigde boekingen en wat er nodig is om een kamer klaar te zetten |
+| `LEWOS_ACCOMMODATION_EMAILS` | hetzelfde adres, en eventuele andere adressen waarmee de accommodatie in de gedeelde agenda schrijft — **alleen in Netlify** | bepaalt welke agenda-afspraken voorraad blokkeren |
+
+Het account van de accommodatie bestaat sinds 5 september 2026. **Het adres staat bewust
+nergens in deze repo** — niet in code, niet in een seed, niet in een test en niet in dit
+document. Het is een persoonsgegeven van een derde, en een adres dat eenmaal in de
+Git-geschiedenis staat krijg je er niet meer uit. Waar een test een adres nodig heeft, staat
+er een verzonnen adres op `.invalid`.
 
 `LEWOS_GENERAL_EMAIL` heeft `lewos.co@gmail.com` als standaardwaarde: staat de variabele
 niet in Netlify, dan blijft dat gewoon het hoofdadres van Lewos. **`FONTECHA_ACCOMMODATION_EMAIL`

@@ -30,7 +30,7 @@ const vraag=(pad,token,opties={})=>fetch(BASIS+pad,{...opties,
 const RANGE="/api/admin/bookings?from=2026-10-01&to=2026-11-30";
 const robert=await login("lewos.co@gmail.com");
 const nadine=await login("accommodatie@example.invalid");
-const vreemde=await login("someone.else@gmail.com");
+const vreemde=await login("someone.else@example.invalid");
 
 check("zonder token: 401",(await vraag(RANGE,null)).status===401);
 check("alg:none wordt geweigerd",(await vraag(RANGE,zelfgemaakt("lewos.co@gmail.com",{alg:"none"}))).status===401);

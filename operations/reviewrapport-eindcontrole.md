@@ -72,7 +72,8 @@ er is vandaag niets aangemaakt, gewijzigd of verwijderd.
   `calendarList` aan, en vraagt alleen de scope `calendar.events`. Daarmee kan het
   serviceaccount uitsluitend bij agenda's die expliciet met hem gedeeld zijn. Zolang je
   primaire agenda niet met hem gedeeld is, blijft Casa Cepa buiten bereik. **Zie bevinding C.**
-- **Nadines adres** — overal `accommodatie@example.invalid`, met één m in "accomodation",
+- **Nadines adres** — was overal gelijk gespeld, met één m in "accomodation"; sindsdien uit
+  de repo verwijderd en alleen nog een instelling,
   op alle vijf plekken gelijk. Geen tikfoutvariant. **Zie bevinding B.**
 - **Allergieën en dieetwensen** — `_calendar.mjs` kent het veld niet; er is geen weg naar
   Google Agenda. `admin_bookings_in_range` (het maandoverzicht) geeft **de inhoud niet

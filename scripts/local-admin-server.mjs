@@ -45,7 +45,7 @@ const jwtGeheim=readFileSync(GEHEIM,"utf8").trim();
 // ── De toegestane adressen ───────────────────────────────────────────────────
 const ADMINS=[
   {email:"lewos.co@gmail.com",display_name:"Robert Neugebauer",role:"admin"},
-  {email:"accommodatie@example.invalid",display_name:"Nadine — Fontecha",role:"accommodation"}
+  {email:"accommodatie@example.invalid",display_name:"TEST – Accommodatie",role:"accommodation"}
 ];
 
 // ── Fictieve boekingen ───────────────────────────────────────────────────────
@@ -718,7 +718,7 @@ const start=async()=>{
       mode:"local",testEnvironment:true,
       identities:[
         ...ADMINS.map(a=>({email:a.email,label:a.display_name,allowed:true})),
-        {email:"someone.else@gmail.com",label:"Someone else (not an administrator)",allowed:false}
+        {email:"someone.else@example.invalid",label:"Someone else (not an administrator)",allowed:false}
       ]});
 
     if(url.pathname==="/api/admin/local-login"&&request.method==="POST"){
@@ -883,7 +883,7 @@ const start=async()=>{
   server.listen(POORT,"127.0.0.1",()=>{
     console.log(`\nLewos-beheeromgeving (lokaal, testgegevens)\n  http://127.0.0.1:${POORT}/admin/\n`);
     console.log("Toegestaan:");for(const a of ADMINS)console.log(`  ${a.email}  (${a.display_name})`);
-    console.log("Geweigerd : someone.else@gmail.com — ingelogd, maar geen beheerder");
+    console.log("Geweigerd : someone.else@example.invalid — ingelogd, maar geen beheerder");
     console.log(`\nTestgegevens: ${BESTAND}\n  --reseed zet ze terug naar de begintoestand.\n`);
   });
 };

@@ -95,7 +95,8 @@ autorisatie komt en niet van een ontbrekend token.
 
 - [ ] Supabase Auth aanzetten en beide adressen uitnodigen. Zet registratie dicht
       (`create_user:false` staat al in de aanvraag) zodat niemand zichzelf kan aanmelden.
-- [ ] `LEWOS_ADMIN_EMAILS=lewos.co@gmail.com,accommodatie@example.invalid` in Netlify.
+- [ ] `LEWOS_ADMIN_EMAILS` in Netlify: het adres van Lewos plus dat van de accommodatie,
+      gescheiden door een komma. De adressen zelf staan alleen in Netlify, niet hier.
 - [ ] `SUPABASE_ANON_KEY` in Netlify — dat is de publiceerbare sleutel, niet de service-key.
 - [ ] `SUPABASE_JWT_SECRET` in Netlify, óf niets zetten als het project asymmetrisch tekent;
       dan wordt de JWKS gebruikt.

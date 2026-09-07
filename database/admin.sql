@@ -41,11 +41,22 @@ create table if not exists public.lewos_admins (
   added_at timestamptz not null default now()
 );
 
--- De twee adressen die toegang krijgen. `accomodation` met één m: zo heet het account,
--- bevestigd door Robert op 5 september 2026.
+-- Alleen het eigen zakelijke adres van Lewos staat hier. Dat is al openbaar: het staat in
+-- de voorwaarden, de juridische kennisgeving en op de contactpagina.
+--
+-- **Het adres van de accommodatie staat hier bewust NIET.** Dat is een persoonsgegeven van
+-- een derde en hoort niet in een repository die naar GitHub gaat (harde grens 4 uit
+-- CLAUDE.md). Robert voegt dat account zelf toe, één keer, met de regel hieronder — en
+-- alleen in de database, niet in een bestand:
+--
+--   insert into public.lewos_admins (email, display_name, role)
+--   values ('<adres van de accommodatie>','Accommodatie','accommodation')
+--   on conflict (email) do update set display_name=excluded.display_name, role=excluded.role;
+--
+-- Zolang die regel niet gedraaid is, komt de accommodatie de beheeromgeving niet in. Dat is
+-- zichtbaar en te herstellen; een adres dat eenmaal in de Git-geschiedenis staat niet.
 insert into public.lewos_admins (email, display_name, role) values
-  ('lewos.co@gmail.com','Robert Neugebauer','admin'),
-  ('accommodatie@example.invalid','Nadine — Fontecha','accommodation')
+  ('lewos.co@gmail.com','Robert Neugebauer','admin')
 on conflict (email) do update set display_name=excluded.display_name, role=excluded.role;
 
 -- ── 2. De werkelijke verblijfsduur ───────────────────────────────────────────

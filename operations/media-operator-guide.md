@@ -42,8 +42,8 @@ Voert de deelnemers in. Het bestand is een JSON-lijst:
 
 ```json
 [
-  {"fullName": "Voornaam Achternaam", "email": "iemand@voorbeeld.nl", "adultDeclared": true},
-  {"fullName": "Tweede Gast",         "email": "tweede@voorbeeld.nl", "adultDeclared": true}
+  {"fullName": "Voornaam Achternaam", "email": "iemand@voorbeeld.invalid", "adultDeclared": true},
+  {"fullName": "Tweede Gast",         "email": "tweede@voorbeeld.invalid", "adultDeclared": true}
 ]
 ```
 

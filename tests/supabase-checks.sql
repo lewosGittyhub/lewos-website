@@ -23,6 +23,8 @@ declare
   t text; r text; n integer; ontbreekt text;
   v_claim uuid; v_deelnemer uuid; v_betaald uuid; v_week uuid; uit jsonb;
   ROBERT constant text := 'lewos.co@gmail.com';
+  -- Verzonnen adres. Deze controle test de rol, niet de persoon; de rij wordt aan het
+  -- eind teruggedraaid.
   NADINE  constant text := 'accommodatie@example.invalid';
   VREEMDE constant text := 'niemand@example.invalid';
 begin

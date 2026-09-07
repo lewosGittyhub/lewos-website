@@ -20,6 +20,8 @@ let rpcAanroepen=[];let server;let base;
 const nativeFetch=globalThis.fetch;
 
 const ADMIN="lewos.co@gmail.com";
+// Verzonnen adres op het gereserveerde domein `.invalid`. Het echte adres van de
+// accommodatie hoort niet in de repo; deze test gaat over de rol, niet over de persoon.
 const NADINE="accommodatie@example.invalid";
 const DB_ADMINS=[ADMIN,NADINE];
 
@@ -146,7 +148,7 @@ test("een verlopen token wordt geweigerd",async()=>{
 });
 
 test("ingelogd zijn is niet genoeg: een adres buiten de lijst krijgt 403",async()=>{
-  const r=await vraag(alsAdmin("someone.else@gmail.com"));
+  const r=await vraag(alsAdmin("someone.else@example.invalid"));
   assert.equal(r.statusCode,403);
   assert.equal(JSON.parse(r.body).error,"not_an_administrator");
   assert.equal(rpcAanroepen.length,0,"de functie had de database niet mogen bevragen");
@@ -158,7 +160,7 @@ test("een niet-bevestigd adres telt niet als identiteit",async()=>{
 });
 
 test("het detail is net zo dicht als het overzicht",async()=>{
-  for(const headers of [{},alsAdmin("someone.else@gmail.com")]){
+  for(const headers of [{},alsAdmin("someone.else@example.invalid")]){
     const r=await vraag(headers,"/api/admin/bookings/claim-0001",{});
     assert.ok([401,403].includes(r.statusCode),`detail gaf ${r.statusCode}`);
   }

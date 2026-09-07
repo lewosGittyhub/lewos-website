@@ -1056,7 +1056,7 @@ staat, en dat is hij nu niet.
 
 **Wat nu volgt.** Robert doorloopt de zes stappen in `operations/google-agenda-koppeling.md`
 en draait daarna het commando dat daar staat. Ook nog open: het adres van Fontecha is
-`accommodatie@example.invalid` met één m (bevestigd op 5 september 2026); de eerdere
+het adres van de accommodatie draagt één m in "accomodation" (bevestigd op 5 september 2026); het adres zelf staat alleen in Netlify, niet in deze repo; de eerdere
 documenten die de dubbele m gebruikten zijn bijgewerkt.
 
 ### 2026-09-03 · Claude · Migratie tegen echte Supabase gedraaid; tabelrechten gedicht · TE CONTROLEREN
