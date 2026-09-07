@@ -57,6 +57,13 @@ before(async()=>{
         return response.end(JSON.stringify({status:"ok",claimId:invoer.p_claim_id,decision:invoer.p_decision,
           confirmedArrival:invoer.p_arrival,confirmedDeparture:invoer.p_departure}));
       }
+      if(request.url.endsWith("/admin_remind_participant")){
+        // Een deelnemer zonder betaaltermijn. De database meldt dat als eigen uitkomst en
+        // legt géén herinnering vast — er is er ook geen verstuurd.
+        if(invoer.p_participant_id==="00000000-0000-4000-8000-00000000dead")
+          return response.end(JSON.stringify({status:"no_deadline",participantId:invoer.p_participant_id}));
+        return response.end(JSON.stringify({status:"reminded",participantId:invoer.p_participant_id}));
+      }
       response.statusCode=404;response.end("{}");
     });
   });
@@ -326,4 +333,51 @@ test("een onleesbare datum in een bevestiging komt de database niet in",async()=
   const r=await handler({httpMethod:"POST",path:"/api/admin/bookings/claim-0001/extra-nights",
     headers:alsAdmin(ADMIN),body:JSON.stringify({decision:"confirmed",confirmedArrival:"28-10-2026"})});
   assert.equal(r.statusCode,422);
+});
+
+
+// ── Herinneren zonder betaaltermijn ─────────────────────────────────────────
+//
+// Robert, 6 september 2026: dit gaf een 503 "admin_unavailable". Dan denkt de beheerder dat
+// het systeem stuk is en probeert het opnieuw, terwijl er alleen een termijn ontbreekt.
+
+const herinner=async(deelnemerId,email=ADMIN)=>{
+  const {handler}=await import("../netlify/functions/admin-actions.mjs");
+  return handler({httpMethod:"POST",path:`/api/admin/participants/${deelnemerId}/remind`,
+    headers:{authorization:`Bearer ${token({email})}`},body:"{}"});
+};
+
+test("herinneren zonder betaaltermijn is geen storing",async()=>{
+  const uit=await herinner("00000000-0000-4000-8000-00000000dead");
+  assert.equal(uit.statusCode,409,"een ontbrekende termijn is geen 503");
+  const body=JSON.parse(uit.body);
+  assert.equal(body.error,"no_payment_deadline");
+  assert.match(body.message,/no payment deadline/i);
+});
+
+test("de melding zegt wat de beheerder nu moet doen",async()=>{
+  // Zonder herstelactie is een nette foutmelding nog steeds een doodlopende weg.
+  const {message}=JSON.parse((await herinner("00000000-0000-4000-8000-00000000dead")).body);
+  assert.match(message,/payment request/i,"noemt het betaalverzoek niet");
+  assert.match(message,/Extend/,"noemt de handeling niet die wél een termijn zet");
+  assert.doesNotMatch(message,/unavailable/i);
+});
+
+test("een gewone herinnering blijft gewoon slagen",async()=>{
+  const uit=await herinner("00000000-0000-4000-8000-00000000beef");
+  assert.equal(uit.statusCode,200);
+  assert.equal(JSON.parse(uit.body).status,"reminded");
+});
+
+test("de database verzint geen termijn en legt niets vast zonder termijn",async()=>{
+  const {readFile}=await import("node:fs/promises");
+  const sql=await readFile(new URL("../database/admin.sql",import.meta.url),"utf8");
+  const functie=sql.split("create or replace function public.admin_remind_participant")[1]
+    .split("$$;")[0];
+  assert.match(functie,/'no_deadline'/,"de functie kent de uitkomst niet");
+  // De controle moet vóór het vastleggen staan, anders staat er een herinnering in het
+  // logboek die nooit is verstuurd.
+  assert.ok(functie.indexOf("no_deadline")<functie.indexOf("insert into public.lewos_admin_actions"),
+    "de controle staat na het vastleggen van de herinnering");
+  assert.doesNotMatch(functie,/hold_expires_at\s*=/,"de functie zet zelf een termijn");
 });

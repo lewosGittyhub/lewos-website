@@ -271,11 +271,22 @@ revoke all on function private.admin_role(text) from public, anon, authenticated
 create or replace function public.admin_remind_participant(p_email text, p_participant_id uuid, p_reason text default null)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare p public.tavern_booking_participants%rowtype;
+        v_deadline timestamptz;
 begin
   if not public.admin_is_allowed(p_email) then raise exception 'not_an_administrator'; end if;
   select * into p from public.tavern_booking_participants where id=p_participant_id for update;
   if not found then return jsonb_build_object('status','not_found'); end if;
   if p.status='paid' then return jsonb_build_object('status','already_paid'); end if;
+  -- Een betaalverzoek noemt altijd een termijn. Staat die er niet, dan is er niets om aan
+  -- te herinneren en verzinnen we er geen: dan zou de gast een datum krijgen die nergens
+  -- op slaat. Meld het als eigen uitkomst en leg géén herinnering vast — er is er ook geen
+  -- verstuurd. Robert, 6 september 2026: dit gaf eerder een "beheeromgeving niet
+  -- beschikbaar", en dan lijkt het systeem stuk terwijl er alleen een termijn ontbreekt.
+  select c.hold_expires_at into v_deadline
+    from public.tavern_seat_claims c where c.id=p.claim_id;
+  if v_deadline is null then
+    return jsonb_build_object('status','no_deadline','participantId',p.id);
+  end if;
   -- Alleen vastleggen dát er herinnerd is. De deadline blijft waar hij stond: een
   -- herinnering is hetzelfde verzoek, nog een keer, en geeft nooit extra tijd.
   update public.tavern_booking_participants set payment_link_sent_at=now() where id=p.id;

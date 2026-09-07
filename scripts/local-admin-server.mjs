@@ -482,6 +482,9 @@ const adminRemind=({p_email,p_participant_id,p_reason})=>onderSlot(async()=>{
   const data=db();const gevonden=zoekDeelnemer(data,p_participant_id);
   if(!gevonden)return {status:"not_found"};
   if(gevonden.deelnemer.status==="paid")return {status:"already_paid"};
+  // Geen termijn, geen herinnering. Dit staat vóór het opbouwen van de mail: die eist een
+  // deadline en gooit anders op, en dat kwam er als "beheeromgeving niet beschikbaar" uit.
+  if(!gevonden.claim.hold_expires_at)return {status:"no_deadline",participantId:p_participant_id};
   // De deadline blijft staan; een herinnering geeft nooit extra tijd.
   gevonden.deelnemer.payment_link_sent_at=nu().toISOString();
   const bestand=inPostbus(buildPaymentRequestEmail({participant:gevonden.deelnemer,

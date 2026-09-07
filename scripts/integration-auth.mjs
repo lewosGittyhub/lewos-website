@@ -75,9 +75,20 @@ if(onbetaald){
     {method:"POST",body:JSON.stringify(body)});
   // Toon de status en het antwoord bij een mislukking: zonder dat is een rode regel hier
   // niet te herleiden, en dat kostte op 6 september 2026 een half uur.
+  //
+  // Twee antwoorden zijn goed. Heeft de deelnemer een betaaltermijn, dan gaat de
+  // herinnering eruit (200). Heeft hij die niet — en op een verse database is dat zo — dan
+  // hoort er een leesbare weigering te komen, géén storing. Alleen een 503 is fout.
   const herinnering=await doe(nadine,"remind",{});
-  check("Nadine mag herinneren",herinnering.status===200,
+  const geweigerd=herinnering.status===409&&/no_payment_deadline/.test(herinnering.tekst);
+  check("Nadine mag herinneren, of hoort waarom niet",
+    herinnering.status===200||geweigerd,
     `status ${herinnering.status}: ${herinnering.tekst.slice(0,200)}`);
+  check("een ontbrekende termijn is nooit een storing",herinnering.status!==503,
+    `status ${herinnering.status}`);
+  if(geweigerd)check("de weigering zegt wat er nu moet gebeuren",
+    /Extend/.test(herinnering.tekst)&&/payment request/i.test(herinnering.tekst),
+    herinnering.tekst.slice(0,200));
   check("Nadine mag niet vrijgeven",(await doe(nadine,"release",{reason:"proef"})).status===403);
   check("Nadine mag niet verlengen",
     (await doe(nadine,"extend",{reason:"proef",newDeadline:new Date(Date.now()+7200e3).toISOString()})).status===403);

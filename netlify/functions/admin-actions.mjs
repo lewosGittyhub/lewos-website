@@ -39,6 +39,11 @@ const rpc=async(naam,body)=>{
   return inhoud;
 };
 
+// Eén tekst voor één situatie, zodat de beheerder overal hetzelfde leest en weet wat hij
+// nu moet doen. Geen verzonnen termijn: verlengen is de handeling die er een zet.
+const GEEN_TERMIJN={error:"no_payment_deadline",
+  message:"This guest has no payment deadline yet, so there is nothing to remind them about. Send the payment request first, or use Extend to set a deadline."};
+
 export const handler=async event=>{
   if(event.httpMethod!=="POST")return json(405,{error:"method_not_allowed"});
   if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)return json(503,{error:"admin_not_configured"});
@@ -67,6 +72,7 @@ export const handler=async event=>{
       const uitkomst=await rpc("admin_remind_participant",{p_email:beheerder.email,p_participant_id:deelnemerId,p_reason:reden||null});
       if(uitkomst?.status==="not_found")return json(404,{error:"participant_not_found"});
       if(uitkomst?.status==="already_paid")return json(409,{error:"already_paid"});
+      if(uitkomst?.status==="no_deadline")return json(409,GEEN_TERMIJN);
       return json(200,uitkomst);
     }
     if(actie==="extend"){
@@ -92,6 +98,11 @@ export const handler=async event=>{
     if(error.rpcMessage==="requires_owner")
       return json(403,{error:"requires_owner",
         message:"Only Robert can extend a deadline or release a seat. Nadine can send a reminder and get in touch."});
+    // Hetzelfde geval, maar dan opgegooid in plaats van teruggegeven — bijvoorbeeld als de
+    // mail wordt opgebouwd vóórdat de uitkomst is nagekeken. Een ontbrekende termijn is
+    // geen storing, dus hij hoort hier geen 503 te worden.
+    if(error.code==="payment_request_deadline_missing"||error.message==="payment_request_deadline_missing")
+      return json(409,GEEN_TERMIJN);
     console.error("Admin action error",error);
     return json(503,{error:"admin_unavailable"});
   }
