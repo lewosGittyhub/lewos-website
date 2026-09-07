@@ -109,6 +109,25 @@ test("elke functie die naar de database schrijft kent de poort",async()=>{
   assert.deepEqual(ontbreekt,[],"deze functies schrijven naar de database zonder de poort te kennen");
 });
 
+test("de poort gebruikt een antwoordhulp die in dat bestand bestaat",async()=>{
+  // `node --check` ziet dit niet: `json(...)` in een bestand dat alleen `response(...)` kent
+  // is syntactisch prima en klapt pas bij de eerste echte aanroep. Dat gebeurde op
+  // 7 september 2026 in stripe-webhook.mjs.
+  const map=path.join(root,"netlify/functions");
+  const stuk=[];
+  for(const naam of await readdir(map)){
+    if(!naam.endsWith(".mjs")||naam.startsWith("_"))continue;
+    const bron=await lees(`netlify/functions/${naam}`);
+    const poort=bron.match(/if\(!environmentIsSafe\(\)\)return (\w+)\(/);
+    if(!poort)continue;
+    const hulp=poort[1];
+    // De hulpfunctie moet in ditzelfde bestand gedefinieerd of geïmporteerd zijn.
+    const bestaat=new RegExp(`(const|let|function)\\s+${hulp}\\b|import\\s*\\{[^}]*\\b${hulp}\\b`).test(bron);
+    if(!bestaat)stuk.push(`${naam} gebruikt ${hulp}(), maar kent die niet`);
+  }
+  assert.deepEqual(stuk,[]);
+});
+
 test("de poort staat vóór het werk, niet erna",async()=>{
   for(const naam of ["seat-hold.mjs","pay.mjs","admin-actions.mjs","first-access.mjs",
     "create-checkout-session.mjs","media-consent.mjs","contact.mjs","stripe-webhook.mjs",

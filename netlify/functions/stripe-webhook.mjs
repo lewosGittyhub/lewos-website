@@ -4,6 +4,7 @@ import {bookingDocuments} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -143,6 +144,8 @@ const sendSpecialRequirementsEmail=async(booking,to)=>{
 };
 
 export const handler=async event=>{
+  // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
+  if(!environmentIsSafe())return response(503,unsafeEnvironmentBody());
   if(event.httpMethod!=="POST")return response(405,{error:"method_not_allowed"});
   if(!process.env.STRIPE_WEBHOOK_SECRET||!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)return response(503,{error:"webhook_not_configured"});
   const rawBody=event.isBase64Encoded?Buffer.from(event.body||"","base64").toString("utf8"):event.body||"";
