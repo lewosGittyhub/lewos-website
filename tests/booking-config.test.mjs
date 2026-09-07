@@ -3,6 +3,11 @@ import {afterEach,test} from "node:test";
 import {readFile} from "node:fs/promises";
 import {paymentsAreEnabled,publicBookingIsOpen} from "../netlify/functions/_booking-config.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const original={...process.env};
 afterEach(()=>{
   for(const key of Object.keys(process.env))if(!(key in original))delete process.env[key];

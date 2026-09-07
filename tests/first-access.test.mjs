@@ -3,6 +3,11 @@ import {after, before, beforeEach, test} from "node:test";
 import http from "node:http";
 import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 let registrationResult={status:"first_access_held",weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",seats:3,remaining:3};
 let emailRequests=0;
 let mailBodies=[];

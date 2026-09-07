@@ -3,6 +3,11 @@ import {readdir,readFile,stat} from "node:fs/promises";
 import path from "node:path";
 import {test} from "node:test";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const root=path.resolve(import.meta.dirname,"..");
 // Wat niet meegaat naar Netlify, hoort ook niet doorzocht te worden. `.local-data` is de
 // testdatabase van `scripts/local-admin-server.mjs`: die staat vol met bedragen in centen

@@ -6,6 +6,11 @@ import path from "node:path";
 import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 import {FIELD_LIMITS,NAME_MIN} from "../netlify/functions/_field-limits.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 // Robert, 2 september 2026: elke grens die een gast kan raken moet zichtbaar zijn, overal
 // hetzelfde betekenen, en nooit stilzwijgend tekst weggooien. Het berichtveld draagt
 // allergieën en dieetwensen; daar is stil afkappen het schadelijkst.

@@ -5,6 +5,11 @@ import {afterEach, test} from "node:test";
 import {LEWOS_GENERAL_DEFAULT,readRecipients,recipientsAreMixed} from "../netlify/functions/_recipients.mjs";
 import {resendPayload} from "../netlify/functions/_email.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const herstel=()=>{delete process.env.LEWOS_GENERAL_EMAIL;delete process.env.FONTECHA_ACCOMMODATION_EMAIL;};
 afterEach(herstel);
 

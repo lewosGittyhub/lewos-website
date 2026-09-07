@@ -8,6 +8,11 @@ import http from "node:http";
 import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 import {ARRIVAL_TIME,DEPARTURE_TIME,bookingEvent,calendarConfig,describeCalendar,eventIdFor,readEvent,upsertBookingEvent} from "../netlify/functions/_calendar.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const {privateKey}=generateKeyPairSync("rsa",{modulusLength:2048,privateKeyEncoding:{type:"pkcs8",format:"pem"},publicKeyEncoding:{type:"spki",format:"pem"}});
 
 let verzoeken=[];let bestaatAl=false;let server;let base;

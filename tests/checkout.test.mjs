@@ -4,6 +4,11 @@ import {createHmac} from "node:crypto";
 import http from "node:http";
 import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 let calls=[];let holdResult;let confirmationResult;let stripeFails=false;let attachFails=false;let attachResult;let emailFails=false;let markFails=false;let emailRequests=0;let server;const nativeFetch=globalThis.fetch;
 before(async()=>{
   server=http.createServer((request,response)=>{let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{calls.push({url:request.url,body,headers:request.headers});response.setHeader("content-type","application/json");

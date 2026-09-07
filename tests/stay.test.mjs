@@ -12,6 +12,11 @@ import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const lees=p=>readFile(path.join(root,p),"utf8");
 

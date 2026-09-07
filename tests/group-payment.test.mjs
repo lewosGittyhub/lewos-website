@@ -4,6 +4,11 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {GROUP_WINDOW_MINUTES,MAX_AUTOMATIC_MINUTES,PHASES,groupPaymentState,groupProgressLabel} from "../netlify/functions/_group-payment.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 const T0=new Date("2026-11-01T10:00:00Z");
 const op=minuten=>new Date(T0.getTime()+minuten*60000);
 const groep=(...statussen)=>statussen.map((status,i)=>({full_name:`TEST – Deelnemer ${i+1}`,email:`test${i+1}@example.invalid`,status}));

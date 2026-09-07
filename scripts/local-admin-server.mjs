@@ -720,6 +720,9 @@ const start=async()=>{
   // hij open, anders valt de hele boekingsflow niet te testen. Dat kan alleen omdat
   // `localTestOverridesAllowed()` twee dingen tegelijk eist: NODE_ENV op "test" én een URL
   // die naar localhost wijst. Die combinatie kan op Netlify niet ontstaan.
+  // Deze server heeft zijn eigen database, postbus en nagebootste agenda; hij verklaart
+  // zich daarom als een omgeving met eigen instellingen. Zie _deploy-context.mjs.
+  process.env.LEWOS_PREVIEW_SAFE="true";
   process.env.NODE_ENV="test";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
   process.env.BOOKING_TERMS_VERSION="lokale-test-voorwaarden";

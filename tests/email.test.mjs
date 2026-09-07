@@ -4,6 +4,11 @@ import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {escapeHtml,escapeLines,labelledBlock,resendPayload} from "../netlify/functions/_email.mjs";
 
+// Deze test roept echte functies aan. Sinds 7 september 2026 weigert elke omgeving die
+// niet verklaart wat hij is — zie netlify/functions/_deploy-context.mjs. Een testrun is
+// een omgeving met eigen instellingen, dus die verklaart zich hier als zodanig.
+process.env.LEWOS_PREVIEW_SAFE="true";
+
 // Robert, 2 september 2026: geen enkele payload zonder `text`, regeleindes blijven staan,
 // gastinvoer wordt getoond en nooit uitgevoerd. Tot die dag was elke mail HTML-only.
 const root=path.resolve(import.meta.dirname,"..");
