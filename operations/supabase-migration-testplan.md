@@ -294,10 +294,11 @@ het naar productie gaat.
 
 # De Supabase-eindcontrole (6 september 2026)
 
-**Dit is de laatste technische stap vóór de deploy, en Claude kan hem niet uitvoeren.** Op
-deze Mac staat geen `supabase`-CLI, geen Docker en geen toegangstoken, en inloggen op het
-Supabase-account van Robert is niets wat een assistent hoort te doen. Wat hier staat is de
-controle zelf, lokaal bewezen, klaar om te plakken.
+**UITGEVOERD op 7 september 2026 — alles geslaagd.** Zie "Uitkomst" onderaan deze sectie.
+
+Oorspronkelijk stond hier dat Claude dit niet kon uitvoeren: geen `supabase`-CLI, geen
+Docker, geen toegangstoken. Dat klopte, tot de Chrome-extensie werd verbonden en de controle
+via het dashboard van Robert kon lopen — in de **preview-branch**, nooit in productie.
 
 ## Wat er te controleren valt dat lokaal níét kan
 
@@ -365,3 +366,56 @@ maandoverzicht ophalen tegen de ontwikkelbranch. Krijgt hij `PGRST202` (function
 dan is er een handtekening verschoven.
 
 **Stripe en Supabase Auth.** Los, ongewijzigd, en hier niet aan de orde.
+
+
+## Uitkomst, 7 september 2026
+
+**Gebruikt:** organisatie **Lewos** (Pro), project **Lewos Tavern**, preview-branch
+**`rece-migratie-test`** — een eigen database met een eigen project-ref, los van de
+productiebranch `main`. Die laatste draagt in het dashboard het label `PRODUCTION` en is
+niet aangeraakt.
+
+Vóór de eerste schrijfactie is in de SQL-editor zelf gecontroleerd op welke database werd
+gewerkt; pas daarna zijn de migraties geplakt. Ze zijn niet ingetypt maar via het klembord
+geplakt: de editor vult haakjes en aanhalingstekens automatisch aan en zou de SQL anders
+verminken.
+
+| Stap | Uitkomst |
+| --- | --- |
+| `first-access.sql` | Success (Supabase waarschuwde voor "destructive operations" — dat zijn de `drop function if exists`-regels) |
+| `admin.sql` | Success |
+| `seat-holds.sql` | Success (zelfde waarschuwing) |
+| `stay-dates.sql` | Success |
+| `tests/supabase-checks.sql` | Success — en omdat elke mislukte controle daarin een exception opgooit, betekent dat: alle tien geslaagd |
+
+**De cijfers, apart opgevraagd** omdat de SQL-editor `raise notice` niet toont:
+
+| Meting | Waarde |
+| --- | --- |
+| Tabellen met RLS aan | **6 van 6** |
+| Tabelrechten voor `anon`/`authenticated` die weg moeten | **0** |
+| Functies van ons die `anon`/`authenticated` mag aanroepen | **0** |
+| Beheerfuncties aanwezig | 8 |
+| `begin_seat_hold` standaard 60 minuten | true |
+| `promote_seat_hold_to_payment` standaard 30 minuten | true |
+
+**PostgREST**, zonder sleutel benaderd: leeft en weigert alles. `401` op de tabellen én op
+`admin_bookings_in_range`, `admin_booking_detail` en `admin_release_participant`.
+
+**Geen enkel verschil met lokale PostgreSQL gevonden.** Het probleem van 3 september 2026 —
+`anon` en `authenticated` met alle rechten op alle tabellen — is hier **niet** teruggekomen.
+
+**Opgeruimd:** nul testboekingen, nul testdeelnemers, nul vastgelegde beheeracties, nul
+boekingen in totaal. De twee beheerders komen uit de seed van `admin.sql`, niet uit de test.
+De SQL-snippet in de editor is verwijderd.
+
+## Wat hiermee nog steeds niet bewezen is
+
+- **Gelijktijdige stoelclaims op Supabase.** De SQL-editor is één sessie; de proef met twaalf
+  parallelle verbindingen liep alleen lokaal.
+- **De beheerfuncties over HTTP mét service_role.** Bewezen is dat PostgREST ze *weigert*
+  zonder sleutel — niet dat hij ze mét sleutel correct bedient. Dat vraagt de service-role
+  sleutel, en die hoort een assistent niet uit het dashboard te halen.
+- **`tests/database-integration.sql` op Supabase.** Dat bestand controleert het gedrag van de
+  functies en draaide alleen lokaal.
+- Stripe, Supabase Auth, Resend en Google Agenda: onaangeroerd.
