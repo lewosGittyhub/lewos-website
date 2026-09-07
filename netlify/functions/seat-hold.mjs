@@ -24,6 +24,8 @@ import {createHash} from "node:crypto";
 import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {FILLING_WINDOW_MINUTES,holdState,HOLD_PHASES} from "./_seat-hold.mjs";
+import {sendEmail} from "./_email.mjs";
+import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
@@ -133,7 +135,12 @@ export const handler=async event=>{
       try{stayRequest=readStayRequest(invoer);}
       catch(error){return json(422,{error:error.message,message:STAY_ERRORS[error.message]||"We could not read those dates."});}
 
-      const uitkomst=await rpc("promote_seat_hold_to_payment",{
+      // ── Het eerste betaalverzoek, in drie stappen ────────────────────────
+      //
+      // Voorbereiden, versturen, en pas dán vastleggen. De volgorde is het hele punt:
+      // gaat er één mail mis, dan komt de boeking niet in de betaalfase en krijgt niemand
+      // een bevestiging voor een betaallink die nooit is aangekomen.
+      const voorbereid=await rpc("prepare_seat_hold_payment",{
         p_session_hash:hash,p_name:naam,p_email:email,
         p_allergies:String(invoer.allergies||"").trim(),p_dietary:String(invoer.dietary||"").trim(),
         p_dietary_notes:dietaryNotes,
@@ -144,8 +151,51 @@ export const handler=async event=>{
         p_extra_nights:String(invoer.extraNights||"").trim(),
         p_filming_acknowledged:invoer.filmingAcknowledged===true,
         p_participants:deelnemers.map(d=>({name:String(d.name).trim(),email:String(d.email).trim().toLowerCase()}))});
-      if(uitkomst.status==="hold_expired")return json(409,{error:"hold_expired"});
-      if(uitkomst.status==="no_hold")return json(404,{error:"no_hold"});
+      if(voorbereid.status==="hold_expired")return json(409,{error:"hold_expired"});
+      if(voorbereid.status==="no_hold")return json(404,{error:"no_hold"});
+
+      let uitkomst=voorbereid;
+      // Al in de betaalfase: opnieuw indienen stuurt geen tweede ronde verzoeken en zet de
+      // klok niet terug. De gast ziet gewoon zijn bestaande boeking.
+      if(voorbereid.status==="ready"){
+        // De betaallink wijst naar onze eigen pagina met het betaalkenmerk van déze
+        // deelnemer, niet naar een Stripe-sessie. Zo hoeft er bij het boeken geen betaling
+        // te worden aangemaakt, blijft de link stabiel bij een herhaalde poging, en werkt
+        // hij zodra de betaalpoort opengaat.
+        const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+        const verzonden=[];
+        for(const d of voorbereid.participants||[]){
+          const betaalUrl=`${basis}/tavern/pay/?ref=${encodeURIComponent(d.paymentReference)}`;
+          // Eén deelnemer, één bedrag, één link. `buildPaymentRequestEmail` krijgt bewust
+          // alleen deze deelnemer mee: het groepstotaal hoort niet in een betaalverzoek.
+          const mail=buildPaymentRequestEmail({
+            participant:{full_name:d.fullName,email:d.email,amount_cents:d.amountCents},
+            booking:{name:voorbereid.name,seats:voorbereid.seats,weekendLabel:voorbereid.weekendLabel},
+            deadline:voorbereid.deadline,paymentUrl:betaalUrl});
+          let providerId=null;
+          try{
+            // De sleutel hangt aan de deelnemer, niet aan het moment: een tweede poging na
+            // een netwerkfout levert bij de provider één bericht op, geen twee.
+            providerId=await sendEmail({to:d.email,subject:mail.subject,text:mail.text,html:mail.html,
+              idempotencyKey:`payment-request-${d.id}`});
+          }catch(error){console.error("Payment request error",error);}
+          if(providerId)verzonden.push({participantId:d.id,providerId,url:betaalUrl});
+        }
+
+        if(verzonden.length!==(voorbereid.participants||[]).length){
+          // Niet iedereen bereikt. De deelnemers gaan weg, de plaatsen blijven in de
+          // invulfase, en de gast krijgt geen bevestiging voor iets dat niet gebeurd is.
+          try{await rpc("abandon_seat_hold_payment",{p_claim_id:voorbereid.claimId});}
+          catch(error){console.error("Abandon error",error);}
+          return json(502,{error:"payment_requests_not_sent",
+            message:"We could not send everyone their payment link, so nothing has been confirmed. Your seats are still held. Please try again."});
+        }
+
+        uitkomst=await rpc("confirm_seat_hold_payment",
+          {p_claim_id:voorbereid.claimId,p_deadline:voorbereid.deadline,p_sent:verzonden});
+        if(uitkomst?.status==="not_all_sent")return json(502,{error:"payment_requests_not_sent",
+          message:"We could not confirm that everyone received their payment link. Nothing has been charged and your seats are still held."});
+      }
 
       // Pas nu de aanvraag voor extra nachten. **Niet blokkerend**: de plaatsen liggen
       // vast en de betaallinks gaan zo de deur uit — een vraag over accommodatie mag dat

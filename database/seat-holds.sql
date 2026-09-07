@@ -264,3 +264,155 @@ begin
 end; $$;
 revoke all on function public.get_seat_hold(text) from public, anon, authenticated;
 grant execute on function public.get_seat_hold(text) to service_role;
+
+-- ── Het eerste betaalverzoek, in twee stappen ────────────────────────────────
+--
+-- Robert, 7 september 2026: `promote_seat_hold_to_payment` zette de boeking in één keer in
+-- de betaalfase én maakte de deelnemers aan. Daar was geen plek om de betaalverzoeken te
+-- versturen: mislukte er één mail, dan stond de boeking al als "betaalfase" in de database
+-- en zag de gast een bevestiging voor een verzoek dat nooit is aangekomen.
+--
+-- Daarom nu twee stappen, met het versturen ertussen:
+--
+--   1. `prepare_seat_hold_payment`  — deelnemers aanmaken, ieder met eigen bedrag en eigen
+--      betaalkenmerk. **De blokkering blijft in de invulfase.** Er verandert niets aan de
+--      status van de boeking.
+--   2. de functie verstuurt de betaalverzoeken
+--   3. `confirm_seat_hold_payment`  — pas nu betaalfase, pas nu de klok van 30 minuten.
+--
+-- Gaat stap 2 mis, dan `abandon_seat_hold_payment`: de deelnemers gaan weg en de gast houdt
+-- zijn plaatsen in de invulfase. Beter een gast die het opnieuw probeert dan een gast die
+-- denkt dat hij een betaallink krijgt die nooit komt.
+
+create or replace function public.prepare_seat_hold_payment(
+  p_session_hash text, p_name text, p_email text, p_participants jsonb default '[]'::jsonb,
+  p_allergies text default null, p_dietary text default null, p_message text default null,
+  p_dietary_notes text default null,
+  p_extra_nights text default null, p_filming_acknowledged boolean default false,
+  p_payment_window_minutes integer default 30)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare c public.tavern_seat_claims%rowtype; v_deadline timestamptz;
+begin
+  perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
+  select * into c from public.tavern_seat_claims
+    where booking_session_hash=p_session_hash for update;
+  if not found then return jsonb_build_object('status','no_hold'); end if;
+  -- Al in de betaalfase: opnieuw indienen mag de klok niet terugzetten en mag geen tweede
+  -- ronde betaalverzoeken opleveren.
+  if c.hold_phase='payment' then
+    return jsonb_build_object('status','already_in_payment','claimId',c.id,
+      'paymentStartedAt',c.payment_started_at,'seats',c.party_size);
+  end if;
+  if c.hold_phase<>'filling' then return jsonb_build_object('status','hold_not_open','phase',c.hold_phase); end if;
+  if c.hold_expires_at<=clock_timestamp() then return jsonb_build_object('status','hold_expired'); end if;
+
+  -- De gegevens van de boeking mogen wel vast vastgelegd worden: dat is wat de gast heeft
+  -- ingevuld, en het maakt de mail mogelijk. De fase blijft `filling`.
+  update public.tavern_seat_claims
+    set name=trim(p_name),email=lower(trim(p_email)),
+        allergies=nullif(trim(p_allergies),''),dietary_requirements=nullif(trim(p_dietary),''),
+        dietary_notes=nullif(trim(p_dietary_notes),''),
+        message=nullif(trim(p_message),''),extra_nights=nullif(trim(p_extra_nights),''),
+        adult_confirmed_at=now(),privacy_accepted_at=now(),
+        filming_notice_acknowledged_at=case when p_filming_acknowledged then now() else filming_notice_acknowledged_at end
+    where id=c.id;
+
+  -- Ieder zijn eigen rij, eigen bedrag, eigen betaalkenmerk. Het bedrag komt uit de
+  -- weekendprijs die bij de blokkering is vastgelegd, nooit uit iets dat de browser stuurt.
+  -- `on conflict do nothing` op (claim_id, lower(email)) maakt dit idempotent: een tweede
+  -- poging levert dezelfde rijen op, met dezelfde ids, dus ook dezelfde idempotentiesleutel
+  -- bij de mailprovider.
+  insert into public.tavern_booking_participants (claim_id,full_name,email,amount_cents,status,payment_reference)
+  select c.id, trim(d->>'name'), lower(trim(d->>'email')),
+         coalesce(c.price_cents,(select price_cents from public.tavern_weekends where id=c.assigned_weekend_id)),
+         'awaiting_payment',
+         -- `gen_random_uuid()` zit sinds PostgreSQL 13 in de kern; pgcrypto is hier
+         -- eerder bewust losgelaten. Twee uuid's geven ruim genoeg onvoorspelbaarheid
+         -- voor een kenmerk dat in een betaallink terechtkomt.
+         'tav_'||replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-','')
+  from jsonb_array_elements(coalesce(p_participants,'[]'::jsonb)) as d
+  on conflict do nothing;
+
+  -- Eén termijn voor de hele groep. Hij wordt hier berekend en meegegeven aan de mails,
+  -- zodat wat er in de mail staat en wat er straks in de database komt hetzelfde zijn.
+  v_deadline := clock_timestamp()+make_interval(mins=>greatest(5,least(p_payment_window_minutes,30)));
+
+  return jsonb_build_object('status','ready','claimId',c.id,'seats',c.party_size,
+    'deadline',v_deadline,
+    'weekendLabel',(select w.label||' · '||w.date_label from public.tavern_weekends w where w.id=c.assigned_weekend_id),
+    'name',c.name,
+    'participants',(select coalesce(jsonb_agg(jsonb_build_object(
+        'id',p.id,'fullName',p.full_name,'email',p.email,
+        'amountCents',p.amount_cents,'paymentReference',p.payment_reference)
+      order by p.created_at),'[]'::jsonb)
+      from public.tavern_booking_participants p where p.claim_id=c.id));
+end; $$;
+revoke all on function public.prepare_seat_hold_payment(text,text,text,jsonb,text,text,text,text,text,boolean,integer) from public, anon, authenticated;
+grant execute on function public.prepare_seat_hold_payment(text,text,text,jsonb,text,text,text,text,text,boolean,integer) to service_role;
+
+create or replace function public.confirm_seat_hold_payment(
+  p_claim_id uuid, p_deadline timestamptz, p_sent jsonb default '[]'::jsonb)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare c public.tavern_seat_claims%rowtype; v_deadline timestamptz; v_open integer;
+begin
+  perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
+  select * into c from public.tavern_seat_claims where id=p_claim_id for update;
+  if not found then return jsonb_build_object('status','no_hold'); end if;
+  if c.hold_phase='payment' then
+    return jsonb_build_object('status','already_in_payment','claimId',c.id,
+      'paymentStartedAt',c.payment_started_at);
+  end if;
+
+  -- Geen deelnemer zonder verstuurd betaalverzoek. Dit is de grens die voorkomt dat een
+  -- boeking in de betaalfase belandt terwijl iemand nooit een link heeft gekregen.
+  select count(*) into v_open from public.tavern_booking_participants p
+    where p.claim_id=c.id
+      and not exists (select 1 from jsonb_array_elements(coalesce(p_sent,'[]'::jsonb)) s
+                      where (s->>'participantId')::uuid = p.id);
+  if v_open > 0 then
+    return jsonb_build_object('status','not_all_sent','open',v_open);
+  end if;
+
+  -- De termijn komt van de aanroeper zodat mail en database dezelfde tijd noemen, maar hij
+  -- wordt hier begrensd: nooit meer dan 30 minuten vanaf nu, nooit in het verleden.
+  v_deadline := least(coalesce(p_deadline, clock_timestamp()+interval '30 minutes'),
+                      clock_timestamp()+interval '30 minutes');
+  if v_deadline <= clock_timestamp() then v_deadline := clock_timestamp()+interval '30 minutes'; end if;
+
+  update public.tavern_seat_claims
+    set status='payment_pending', hold_phase='payment',
+        payment_started_at=clock_timestamp(), hold_expires_at=v_deadline
+    where id=c.id;
+
+  update public.tavern_booking_participants p
+    set payment_link_sent_at=now(),
+        payment_link_provider_id=s.provider_id,
+        checkout_session_url=s.url
+  from (select (e->>'participantId')::uuid as id, e->>'providerId' as provider_id, e->>'url' as url
+        from jsonb_array_elements(coalesce(p_sent,'[]'::jsonb)) e) s
+  where p.claim_id=c.id and p.id=s.id;
+
+  return jsonb_build_object('status','in_payment','claimId',c.id,'seats',c.party_size,
+    'paymentStartedAt',clock_timestamp(),'deadline',v_deadline,
+    'participants',(select count(*) from public.tavern_booking_participants where claim_id=c.id));
+end; $$;
+revoke all on function public.confirm_seat_hold_payment(uuid,timestamptz,jsonb) from public, anon, authenticated;
+grant execute on function public.confirm_seat_hold_payment(uuid,timestamptz,jsonb) to service_role;
+
+create or replace function public.abandon_seat_hold_payment(p_claim_id uuid)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare c public.tavern_seat_claims%rowtype;
+begin
+  perform pg_advisory_xact_lock(hashtext('tavern-weekends'));
+  select * into c from public.tavern_seat_claims where id=p_claim_id for update;
+  if not found then return jsonb_build_object('status','no_hold'); end if;
+  -- Staat de boeking al in de betaalfase, dan is er niets af te breken: dan zijn de
+  -- verzoeken wél verstuurd. Nooit een betaalfase terugdraaien.
+  if c.hold_phase='payment' then return jsonb_build_object('status','already_in_payment'); end if;
+  -- Alleen deelnemers die nog niets gekregen en niets betaald hebben.
+  delete from public.tavern_booking_participants
+    where claim_id=c.id and status='awaiting_payment' and payment_link_sent_at is null;
+  return jsonb_build_object('status','abandoned','claimId',c.id);
+end; $$;
+revoke all on function public.abandon_seat_hold_payment(uuid) from public, anon, authenticated;
+grant execute on function public.abandon_seat_hold_payment(uuid) to service_role;

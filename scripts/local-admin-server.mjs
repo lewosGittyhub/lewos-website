@@ -441,7 +441,12 @@ const releaseSeatHold=({p_session_hash})=>onderSlot(async()=>{
   bewaar(data);return {status:"released",claimId:c.id,seats:c.party_size};
 });
 
-const promoteSeatHold=({p_session_hash,p_name,p_email,p_participants,p_allergies,p_dietary,p_dietary_notes,p_message,p_extra_nights})=>onderSlot(async()=>{
+// ── Het eerste betaalverzoek, in drie stappen ────────────────────────────────
+// Spiegel van `database/seat-holds.sql`. Sinds 7 september 2026 verstuurt de Netlify-functie
+// de betaalverzoeken zelf, langs dezelfde `sendEmail` als de rest van de boekingsflow; deze
+// server onderschept die verzending en schrijft hem naar de postbus. Deed de shim het nog
+// zelf, dan gingen er twee mails uit per deelnemer.
+const prepareSeatHold=({p_session_hash,p_name,p_email,p_participants,p_allergies,p_dietary,p_dietary_notes,p_message,p_extra_nights,p_payment_window_minutes})=>onderSlot(async()=>{
   const data=db();verlopenOpruimen(data);
   const c=data.claims.find(x=>x.booking_session_hash===p_session_hash);
   if(!c){bewaar(data);return {status:"no_hold"};}
@@ -449,24 +454,61 @@ const promoteSeatHold=({p_session_hash,p_name,p_email,p_participants,p_allergies
   if(c.hold_phase!=="filling"){bewaar(data);return {status:"hold_not_open",phase:c.hold_phase};}
   if(new Date(c.hold_expires_at)<=nu()){bewaar(data);return {status:"hold_expired"};}
   c.name=String(p_name).trim();c.email=String(p_email).trim().toLowerCase();
-  c.status="payment_pending";c.hold_phase="payment";c.payment_started_at=nu().toISOString();
   c.allergies=(p_allergies||"").trim()||null;c.dietary_requirements=(p_dietary||"").trim()||null;
   c.dietary_notes=(p_dietary_notes||"").trim()||null;
   c.message=(p_message||"").trim()||null;c.extra_nights=(p_extra_nights||"").trim()||null;
-  c.hold_expires_at=new Date(nu().getTime()+30*60000).toISOString();
-  c.participants=(p_participants||[]).map((d,i)=>({id:randomUUID(),full_name:d.name,email:d.email,
-    amount_cents:c.price_cents||PRIJS,status:"awaiting_payment",
-    payment_reference:`local-${c.id}-${i+1}`,
-    checkout_session_url:`http://127.0.0.1:${POORT}/tavern/pay/?ref=local-${c.id}-${i+1}`,
-    paid_at:null,payment_link_sent_at:nu().toISOString(),created_at:nu().toISOString()}));
-  // Ieder zijn eigen verzoek, met zijn eigen bedrag en dezelfde deadline.
-  for(const deelnemer of c.participants)
-    inPostbus(buildPaymentRequestEmail({participant:deelnemer,
-      booking:{name:c.name,seats:c.party_size,weekendLabel:weekendLabel(data,c.weekend)},
-      deadline:c.hold_expires_at,paymentUrl:deelnemer.checkout_session_url}),"payment-request");
+  // Idempotent op e-mailadres, net als de unieke index in de database.
+  c.participants=c.participants||[];
+  for(const d of p_participants||[]){
+    const adres=String(d.email).trim().toLowerCase();
+    if(c.participants.some(p=>String(p.email).toLowerCase()===adres))continue;
+    c.participants.push({id:randomUUID(),full_name:d.name,email:adres,
+      amount_cents:c.price_cents||PRIJS,status:"awaiting_payment",
+      payment_reference:`tav_${randomUUID().replace(/-/g,"")}`,
+      checkout_session_url:null,paid_at:null,payment_link_sent_at:null,created_at:nu().toISOString()});
+  }
+  // De fase blijft `filling`. Pas na het versturen wordt het betaalfase.
+  const minuten=Math.max(5,Math.min(Number(p_payment_window_minutes)||30,30));
   bewaar(data);
-  return {status:"in_payment",claimId:c.id,seats:c.party_size,paymentStartedAt:c.payment_started_at,
-    participants:c.participants.length};
+  return {status:"ready",claimId:c.id,seats:c.party_size,
+    deadline:new Date(nu().getTime()+minuten*60000).toISOString(),
+    weekendLabel:weekendLabel(data,c.weekend),name:c.name,
+    participants:c.participants.map(p=>({id:p.id,fullName:p.full_name,email:p.email,
+      amountCents:p.amount_cents,paymentReference:p.payment_reference}))};
+});
+
+const confirmSeatHold=({p_claim_id,p_deadline,p_sent})=>onderSlot(async()=>{
+  const data=db();
+  const c=data.claims.find(x=>x.id===p_claim_id);
+  if(!c){bewaar(data);return {status:"no_hold"};}
+  if(c.hold_phase==="payment"){bewaar(data);return {status:"already_in_payment",claimId:c.id,paymentStartedAt:c.payment_started_at};}
+  const verstuurd=new Map((p_sent||[]).map(e=>[e.participantId,e]));
+  const open=(c.participants||[]).filter(p=>!verstuurd.has(p.id)).length;
+  if(open>0){bewaar(data);return {status:"not_all_sent",open};}
+  const grens=new Date(nu().getTime()+30*60000);
+  let deadline=p_deadline?new Date(p_deadline):grens;
+  if(deadline>grens||deadline<=nu())deadline=grens;
+  c.status="payment_pending";c.hold_phase="payment";
+  c.payment_started_at=nu().toISOString();c.hold_expires_at=deadline.toISOString();
+  for(const p of c.participants||[]){
+    const e=verstuurd.get(p.id);
+    p.payment_link_sent_at=nu().toISOString();
+    p.payment_link_provider_id=e.providerId;p.checkout_session_url=e.url;
+  }
+  bewaar(data);
+  return {status:"in_payment",claimId:c.id,seats:c.party_size,
+    paymentStartedAt:c.payment_started_at,deadline:c.hold_expires_at,
+    participants:(c.participants||[]).length};
+});
+
+const abandonSeatHold=({p_claim_id})=>onderSlot(async()=>{
+  const data=db();
+  const c=data.claims.find(x=>x.id===p_claim_id);
+  if(!c){bewaar(data);return {status:"no_hold"};}
+  if(c.hold_phase==="payment"){bewaar(data);return {status:"already_in_payment"};}
+  c.participants=(c.participants||[]).filter(p=>!(p.status==="awaiting_payment"&&!p.payment_link_sent_at));
+  bewaar(data);
+  return {status:"abandoned",claimId:c.id};
 });
 
 // De beheeracties. Spiegel van database/admin.sql, inclusief de rolcontrole.
@@ -566,7 +608,10 @@ const nepSupabase=http.createServer((request,response)=>{
       if(request.url.endsWith("/check_tavern_request_limit"))
         return response.end(JSON.stringify(checkLimit(invoer)));
       const holdRpcs={begin_seat_hold:beginSeatHold,get_seat_hold:getSeatHold,
-        release_seat_hold:releaseSeatHold,promote_seat_hold_to_payment:promoteSeatHold,
+        release_seat_hold:releaseSeatHold,
+        prepare_seat_hold_payment:prepareSeatHold,
+        confirm_seat_hold_payment:confirmSeatHold,
+        abandon_seat_hold_payment:abandonSeatHold,
         admin_reminder_payload:adminReminderPayload,
         admin_remind_participant:adminRemind,admin_extend_participant:adminExtend,
         admin_release_participant:adminRelease};
@@ -624,6 +669,9 @@ const start=async()=>{
   // herkenning nooit. Een verzonnen adres; het echte staat alleen in Netlify.
   const HUISADRES="accommodatie@lokale-test.invalid";
   process.env.LEWOS_ACCOMMODATION_EMAILS=HUISADRES;
+  // Netlify zet `URL` op het adres van de site. Lokaal wijst hij naar deze server, zodat
+  // de betaallinks in de postbus naar iets wijzen dat hier bestaat.
+  process.env.URL=`http://127.0.0.1:${POORT}`;
   const AGENDA=join(DATA,"calendar.json");
   const leesAgenda=()=>{try{return JSON.parse(readFileSync(AGENDA,"utf8"));}catch{return {items:[]};}};
   const schrijfAgenda=d=>writeFileSync(AGENDA,JSON.stringify(d,null,2));
