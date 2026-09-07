@@ -355,6 +355,67 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-07 · Claude · Previewsleutels in Netlify; de preview is vanaf nu de enige testomgeving · TE CONTROLEREN
+
+**Wat.** De configuratiestand van het Netlify-project **`lewos.co`**, vastgelegd op 7 september
+2026. Er is niets aan de code van de boekingsketen veranderd; dit item beschrijft de omgeving
+waarin `mailroutering-fontecha` getest wordt, plus drie documentatiecorrecties.
+
+Bijgewerkt in Netlify, uitsluitend in previewcontexten:
+
+- `SUPABASE_SERVICE_ROLE_KEY` — bijgewerkt voor **Deploy Previews**, **Branch deploys** en
+  **Preview Server & Agent Runners**.
+- `SUPABASE_ANON_KEY` — toegevoegd voor diezelfde drie contexten. Stond daarvóór nergens.
+- **Productiecontexten zijn niet gewijzigd.** Geen enkele Production-waarde is aangeraakt.
+- **Er is geen deploy uitgevoerd.** De draaiende preview gebruikt dus nog de oude waarden;
+  de nieuwe gelden pas na een volgende build.
+
+Over het inlogtoken van de beheeromgeving: de Supabase-preview `rece-migratie-test` tekent met
+**moderne JWT signing keys**. De legacy JWT-secret is voor die branch niet beschikbaar, en
+`SUPABASE_JWT_SECRET` is voor deze opzet niet nodig. Preciezer, want de variabele staat nog wél
+in de code: `_admin-auth.mjs` raadpleegt hem alleen op de HS256-tak. Komt er een token met een
+asymmetrisch algoritme binnen — en dat is wat deze branch afgeeft — dan loopt de controle via de
+JWKS van `SUPABASE_URL` en komt de secret er niet aan te pas. Nagemeten: de JWKS van de branch
+levert HTTP 200 met één **ES256**-sleutel.
+
+Drie documenten noemden de secret onvoorwaardelijk verplicht en zijn daarop gecorrigeerd:
+`operations/deploy-mailroutering.md`, `operations/voorbereidingsrapport-deploy.md` en
+`operations/reviewrapport-eindcontrole.md`. `operations/beheeromgeving.md` had het al goed staan.
+
+**Waarom.** Wie in die drie tabellen las dat de beheeromgeving zonder `SUPABASE_JWT_SECRET`
+"elk token weigert", ging op zoek naar een secret die voor deze branch niet bestaat. Dat is
+verloren tijd op de verkeerde plek: het echte openstaande punt zit elders (zie onderaan).
+
+**Grenzen die golden en gehouden zijn.** Er zijn geen echte productiegegevens, betalingen,
+mails of agenda-afspraken aangeraakt. Sleutelwaarden zijn nergens getoond, gelogd, gecommit of
+in Markdown opgenomen — ook niet gedeeltelijk, en ook niet in dit bestand. **De preview blijft
+de enige omgeving waarin verder getest mag worden.**
+
+**Hoe te controleren.**
+
+```
+node --test tests/*.test.mjs
+```
+
+In Netlify (Project configuration → Environment variables) is per variabele te zien in hoeveel
+deploy contexts een waarde staat, zonder die waarde te openen. Verwacht: `SUPABASE_URL` vijf
+contexten met productie en preview uit elkaar; `LEWOS_ENVIRONMENT` `production` alleen op
+Production en `preview` op de twee previewcontexten; `LEWOS_PREVIEW_SAFE=true` en
+`TAVERN_PAYMENTS_ENABLED=false` alleen op preview; `TAVERN_FROM_EMAIL` leeg in preview.
+
+Dat laatste is geen slordigheid maar de rem op uitgaande mail: `sendEmail` in
+`netlify/functions/_email.mjs` geeft `null` terug zodra het afzenderadres ontbreekt, dus de
+preview kan Resend niet bereiken, ongeacht welke sleutel daar staat.
+
+**Niet geverifieerd.** Of de bijgewerkte service-role-sleutel werkt, is niet aangetoond: dat
+kan pas na een nieuwe preview-build, en die is bewust niet gedraaid. De draaiende preview gaf
+bij deze controle nog `booking_service_unavailable` op `/api/first-access` en `/api/pay` — dat
+is de oude sleutel, niet de nieuwe.
+
+**Wat nu volgt.** Eén preview-build starten en daarna `/api/first-access`, `/api/pay`, de
+admin-login en één beveiligde beheeractie opnieuw langslopen. Niet pushen, niet mergen, niet
+deployen naar productie.
+
 ### 2026-09-06 · Claude · Eén gedeelde agenda: wie het eerst boekt, heeft het · TE CONTROLEREN
 
 **Wat.** Robert en Nadine delen één Google-agenda. Zij is eigenaar van Fontecha en zet haar

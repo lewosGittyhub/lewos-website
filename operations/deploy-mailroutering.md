@@ -155,7 +155,7 @@ nakijken. **Geen enkele waarde staat hieronder**, ook geen gedeeltelijke.
 | `LEWOS_ACCOMMODATION_EMAILS` | herkennen welke agenda-afspraken van de accommodatie komen | de koppeling valt terug op streng gedrag: **elke** vreemde afspraak in de agenda blokkeert nachten, ook een privénotitie. Veilig, maar je verliest verkoop |
 | `TAVERN_TIMEZONE` | tijdzone van de afspraken | valt terug op `Europe/Madrid` |
 | `LEWOS_ADMIN_EMAILS` | wie de beheeromgeving in mag | **niemand komt binnen** — ook Robert niet |
-| `SUPABASE_JWT_SECRET` | het inlogtoken controleren | de beheeromgeving weigert elk token (401) |
+| `SUPABASE_JWT_SECRET` | het inlogtoken controleren, **alleen bij HS256** | niets, zolang het Supabase-project asymmetrisch tekent: dan gaat de controle via de JWKS van `SUPABASE_URL`. Tekent het project met een legacy HS256-secret en ontbreekt deze variabele, dan weigert de beheeromgeving elk token (401) |
 | `SUPABASE_ANON_KEY` | de publiceerbare sleutel voor de inlogpagina | inloggen op `/admin/` werkt niet |
 
 ### Veertien die er al waren

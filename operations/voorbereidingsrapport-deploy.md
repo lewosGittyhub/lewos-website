@@ -99,7 +99,7 @@ Geen enkele waarde staat hieronder, ook geen gedeeltelijke.
 | Sleutel | Doel | Geheim? |
 | --- | --- | --- |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | de agenda-aanroepen ondertekenen | **ja — geheim.** Bewaar de regeleindes als `\n` |
-| `SUPABASE_JWT_SECRET` | inlogtokens van de beheeromgeving controleren | **ja — geheim** |
+| `SUPABASE_JWT_SECRET` | inlogtokens van de beheeromgeving controleren | **ja — geheim.** Alleen nodig bij legacy HS256-tokens; tekent het project met moderne signing keys, dan blijft deze leeg |
 | `SUPABASE_ANON_KEY` | de publiceerbare sleutel voor de inlogpagina | nee, publiceerbaar — maar niet tonen |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | het account dat de agenda aanspreekt | nee |
 | `LEWOS_CALENDAR_ID` | wélke agenda | nee, wel een identificatie |

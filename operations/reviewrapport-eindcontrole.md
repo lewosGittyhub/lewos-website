@@ -155,7 +155,7 @@ Tien, alle **scope Functions, alle deploy contexts**. Geen waarden hieronder.
 | Sleutel | Doel | Geheim? |
 | --- | --- | --- |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | de agenda-aanroepen ondertekenen | **ja.** Regeleindes als `\n` |
-| `SUPABASE_JWT_SECRET` | inlogtokens controleren | **ja** |
+| `SUPABASE_JWT_SECRET` | inlogtokens controleren, alleen bij legacy HS256 | **ja.** Blijft leeg bij moderne signing keys |
 | `SUPABASE_ANON_KEY` | publiceerbare sleutel voor de inlogpagina | nee, wel niet tonen |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | het account dat de agenda aanspreekt | nee |
 | `LEWOS_CALENDAR_ID` | wélke agenda — het groepsagenda-id | nee |
