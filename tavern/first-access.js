@@ -214,8 +214,10 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     paintChoice();
   });
   applyMode(isPrivate());
-  loadAvailability();
   const query=new URLSearchParams(window.location.search);
+  const requestedWeekend=query.get('weekend');
+  if(requestedWeekend&&weekend.querySelector(`option[value="${requestedWeekend}"]`))weekend.value=requestedWeekend;
+  loadAvailability();
   if(query.get('status')==='alternative'){
     weekend.value=query.get('offered')||'';
     show(`${query.get('label')||'The next announced weekend'} can currently fit your complete party. Check the new date and submit again to claim the seats.`,'alternative');
