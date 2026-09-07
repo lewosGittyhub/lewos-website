@@ -289,3 +289,79 @@ waarde wist niets, een vreemde kan geen extra nachten bevestigen.
 
 Draai `tests/database-integration.sql` dus alsnog één keer op een Supabase-branch voordat
 het naar productie gaat.
+
+---
+
+# De Supabase-eindcontrole (6 september 2026)
+
+**Dit is de laatste technische stap vóór de deploy, en Claude kan hem niet uitvoeren.** Op
+deze Mac staat geen `supabase`-CLI, geen Docker en geen toegangstoken, en inloggen op het
+Supabase-account van Robert is niets wat een assistent hoort te doen. Wat hier staat is de
+controle zelf, lokaal bewezen, klaar om te plakken.
+
+## Wat er te controleren valt dat lokaal níét kan
+
+`tests/database-integration.sql` bewijst het **gedrag** van de functies, en dat is op echte
+PostgreSQL 16.4 rond. Wat daar niet in zit is precies wat op Supabase anders is:
+
+- de rechten die Supabase zélf uitdeelt aan `anon` en `authenticated`;
+- of RLS overal aan staat;
+- of PostgREST de functies met dezelfde handtekening terugvindt;
+- de rolverdeling tussen Robert en Nadine tegen de echte database.
+
+Daarvoor is `tests/supabase-checks.sql` geschreven: tien controles, één transactie, aan het
+eind een `rollback`. Elk testgegeven is verzonnen en gebruikt `.invalid`. Er gaat geen mail
+uit, er wordt niets betaald en de agenda blijft ongemoeid — het bestand praat alleen met de
+database.
+
+## Wat Robert doet
+
+1. **Maak een ontwikkelbranch** in Supabase (Branching), of een apart testproject. **Nooit
+   het productieproject.**
+2. Draai in de SQL Editor van díé branch de vier migraties, in deze volgorde:
+   `first-access.sql` → `admin.sql` → `seat-holds.sql` → `stay-dates.sql`.
+   *(Draait ook `filming-consent.sql` mee, zet die dan ná `first-access.sql`.)*
+3. Draai `tests/supabase-checks.sql`.
+4. Kijk naar de meldingen onderaan. Bij succes eindigt hij op:
+
+   ```
+   SUPABASE-CONTROLE GESLAAGD
+   ```
+
+   Faalt er iets, dan stopt hij mét de reden. Stuur die regel door; hij is zo geschreven dat
+   er in staat wát er mis is, niet alleen dát er iets mis is.
+5. **Gooi de ontwikkelbranch daarna weg.**
+
+## De tien controles
+
+| | Wat |
+| --- | --- |
+| 1 | RLS staat aan op alle zes tabellen |
+| 2 | `anon` en `authenticated` kunnen niet lezen of schrijven in gastgegevens |
+| 3 | de zeven beheerfuncties zijn voor hen niet aanroepbaar |
+| 4 | standaardtermijnen zijn 60 minuten invullen en 30 minuten betalen |
+| 5 | Nadine mag herinneren en verlengen, niet vrijgeven |
+| 6 | een vreemde mag geen enkele beheeractie |
+| 7 | een deels betaalde groep verliest niets automatisch |
+| 8 | alleen Robert geeft vrij, en de betaalde plaats blijft staan |
+| 9 | `anon` en `authenticated` kunnen geen enkele functie van ons aanroepen |
+| 10 | dieetgegevens alleen in het beveiligde detail, nooit in het maandoverzicht |
+
+**Controle 2 en 9 zijn de reden dat dit bestand bestaat.** PostgreSQL geeft EXECUTE
+standaard aan `PUBLIC`, en `anon` erft dat. Elke migratie moet dat expliciet intrekken;
+vergeet er één, dan staat die functie op het open internet. Lokaal valt dat niet op, want
+daar bestaat `anon` alleen omdat wij hem zelf aanmaken. Op 3 september 2026 beet dat verschil
+al een keer: lokaal stond de teller op nul, op Supabase hadden `anon` en `authenticated` alle
+rechten op alle drie de tabellen.
+
+Controle 9 laat functies van extensies met rust — pgcrypto zet er tientallen in `public` en
+die dragen geen gastgegevens.
+
+## Wat het niet dekt
+
+**PostgREST over HTTP.** Of de RPC's via de REST-laag dezelfde handtekening vinden, blijkt
+pas uit een echte aanroep. De goedkoopste proef: laat de beheeromgeving één keer een
+maandoverzicht ophalen tegen de ontwikkelbranch. Krijgt hij `PGRST202` (function not found),
+dan is er een handtekening verschoven.
+
+**Stripe en Supabase Auth.** Los, ongewijzigd, en hier niet aan de orde.
