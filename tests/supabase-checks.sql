@@ -109,9 +109,12 @@ begin
   insert into public.tavern_booking_participants(claim_id,full_name,email,amount_cents,status,checkout_session_url)
     values(v_claim,'TEST – Betaalde gast','betaald@example.invalid',202500,'paid',null)
     returning id into v_betaald;
-  insert into public.tavern_booking_participants(claim_id,full_name,email,amount_cents,status,checkout_session_url)
+  -- Sinds 7 september 2026 leidt de herinnering de betaallink af uit `payment_reference`,
+  -- niet uit `checkout_session_url`. Die laatste kolom betekent alleen nog: de sessie bij
+  -- Stripe.
+  insert into public.tavern_booking_participants(claim_id,full_name,email,amount_cents,status,payment_reference)
     values(v_claim,'TEST – Wachtende gast','wacht@example.invalid',202500,'awaiting_payment',
-           'https://example.invalid/pay/verzonnen')
+           'tav_'||replace(gen_random_uuid()::text,'-',''))
     returning id into v_deelnemer;
 
   -- ── 5. Rollen: Nadine ────────────────────────────────────────────────────
@@ -205,6 +208,40 @@ begin
     if sqlerrm <> 'not_an_administrator' then raise exception 'onverwacht: %', sqlerrm; end if;
   end;
   raise notice 'OK 10. dieetgegevens alleen in het beveiligde detail, nooit in het maandoverzicht';
+
+  -- ── 11. De persoonlijke betaalpagina ────────────────────────────────────
+  -- Eén kenmerk geeft toegang tot precies één deelnemer, en tot niets van de groep.
+  -- Een eigen deelnemer: die van hierboven is bij controle 8 vrijgegeven.
+  update public.tavern_seat_claims
+    set status='payment_pending', hold_phase='payment', hold_expires_at=now()+interval '30 minutes'
+    where id=v_claim;
+  insert into public.tavern_booking_participants(claim_id,full_name,email,amount_cents,status,payment_reference)
+    values(v_claim,'TEST – Betaler','betaler@example.invalid',202500,'awaiting_payment',
+           'tav_'||replace(gen_random_uuid()::text,'-',''))
+    returning id into v_deelnemer;
+  select payment_reference into t from public.tavern_booking_participants where id=v_deelnemer;
+  uit := public.tavern_payment_request(t);
+  if uit->>'status' <> 'ok' then raise exception 'het betaalkenmerk werkt niet: %', uit; end if;
+  if uit->>'fullName' <> 'TEST – Betaler' then
+    raise exception 'de betaalpagina toont de verkeerde deelnemer: %', uit;
+  end if;
+  if (uit->>'amountCents')::int <> 202500 then
+    raise exception 'de betaalpagina toont het verkeerde bedrag: %', uit->>'amountCents';
+  end if;
+  if uit::text ~* '(Betaalde gast|peanut|allerg|vegetarian|epipen)' then
+    raise exception 'de betaalpagina lekt gegevens van een ander of een dieetgegeven: %', left(uit::text,200);
+  end if;
+  if public.tavern_payment_request('tav_0000000000000000000000000000dead')->>'status' <> 'not_found' then
+    raise exception 'een onbekend betaalkenmerk werd toch gevonden';
+  end if;
+  -- De sessie wordt één keer vastgelegd en daarna hergebruikt.
+  uit := public.attach_participant_checkout_session(t,'cs_test_een','https://checkout.example.invalid/1');
+  if uit->>'status' <> 'attached' then raise exception 'de eerste sessie werd niet vastgelegd: %', uit; end if;
+  uit := public.attach_participant_checkout_session(t,'cs_test_twee','https://checkout.example.invalid/2');
+  if uit->>'status' <> 'already_attached' or uit->>'checkoutSessionId' <> 'cs_test_een' then
+    raise exception 'een tweede betaalsessie overschreef de eerste: %', uit;
+  end if;
+  raise notice 'OK 11. het betaalkenmerk geeft precies één deelnemer, en de sessie is idempotent';
 
   raise notice '';
   raise notice 'SUPABASE-CONTROLE GESLAAGD';
