@@ -7,6 +7,12 @@ page: `/operations/*` returns 404 on the live site and `robots.txt` disallows it
 Nothing here is hotlinked. Every file is downloaded, cropped and re-encoded locally, then
 committed to `tavern/assets/` or `assets/`.
 
+## Brand assets
+
+| `assets/favicon.svg` / `assets/favicon-*.png` | Round Lewos logo favicon | Supplied by Robert (`IMG_1170.jpg`) | Owned by Lewos |
+| `assets/favicon-32.png` | 32px PNG favicon fallback | Derived locally from the supplied round Lewos logo | Owned by Lewos |
+| `assets/favicon-180.png` | 180px Apple touch icon | Derived locally from the supplied round Lewos logo | Owned by Lewos |
+
 ## Photographs
 
 | File | Subject | Source | Licence |
