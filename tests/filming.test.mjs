@@ -15,11 +15,11 @@ const htmlFiles=files.filter(file=>file.endsWith(".html"));
 const read=file=>readFile(file,"utf8");
 const where=file=>path.relative(root,file);
 
-test("Weekend 01 is presented as the filmed First Edition before anyone books",async()=>{
+test("Weekend 01 is presented as The Halloween Table before anyone books",async()=>{
   const tavern=await read(path.join(root,"tavern/index.html"));
   // Een gast die €2.025 uitgeeft moet vóór het betaalmoment weten dat hij gefilmd wordt,
   // waar dat beeld terechtkomt, en dat hij zelf nog moet tekenen.
-  assert.match(tavern,/The Filmed First Edition/);
+  assert.match(tavern,/The Halloween Table/);
   assert.match(tavern,/professionally filmed/i,"the page must say the weekend is professionally filmed");
   for(const channel of ["StoryForgers","organic social-media","newsletters","promotional films"]){
     assert.ok(tavern.includes(channel),`the Tavern page must name where the material may appear: ${channel}`);
@@ -53,7 +53,7 @@ test("the booker confirms the filmed edition, and confirms nothing on anyone's b
   const handler=await read(path.join(root,"netlify/functions/create-checkout-session.mjs"));
   // Het is een bevestiging, geen toestemming. Dat verschil moet in de tekst staan.
   assert.match(page,/name="filmingAcknowledged"/);
-  assert.match(page,/I understand that Weekend 01 is The Lewos Tavern's professionally filmed First Edition/);
+  assert.match(page,/I understand that Weekend 01 is The Lewos Tavern's professionally filmed Halloween Table/);
   assert.match(page,/not media or privacy permission/i);
   assert.doesNotMatch(page,/name="filmingConsent"/,"the checkout may not collect filming consent at all");
   // Verplicht, maar alleen bij Weekend 01, en nooit verplicht terwijl het verborgen is.

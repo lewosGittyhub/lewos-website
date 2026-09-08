@@ -167,8 +167,8 @@ revoke all on table public.tavern_seat_claims    from public, anon, authenticate
 revoke all on table public.tavern_request_limits from public, anon, authenticated;
 
 insert into public.tavern_weekends (slug, label, date_label, sort_order, starts_on, ends_on)
-values ('weekend-01', 'Weekend 01', '30 Oct to 2 Nov 2026', 1, date '2026-10-30', date '2026-11-02'),
-       ('weekend-02', 'Weekend 02', '6 to 9 Nov 2026', 2, date '2026-11-06', date '2026-11-09')
+values ('weekend-01', 'The Halloween Table', '30 Oct to 2 Nov 2026', 1, date '2026-10-30', date '2026-11-02'),
+       ('weekend-02', 'The Autumn Table', '6 to 9 Nov 2026', 2, date '2026-11-06', date '2026-11-09')
 on conflict (slug) do update set label=excluded.label,date_label=excluded.date_label,sort_order=excluded.sort_order,starts_on=excluded.starts_on,ends_on=excluded.ends_on;
 
 -- Never free an attached Stripe checkout on a local timer alone: a paid

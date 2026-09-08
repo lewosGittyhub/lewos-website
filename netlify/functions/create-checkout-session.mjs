@@ -134,7 +134,7 @@ export const handler=async event=>{
       // alleen. Een verzoek dat de pagina omzeilt en het weglaat, komt niet langs.
       if(weekend==="weekend-01"&&!filmingAcknowledged)return json(400,{error:"confirmations_required"});
       hold=await rpc("begin_tavern_checkout",{p_name:name,p_email:email,p_party_size:people,p_weekend_slug:weekend,p_payment_reference:reference,p_adult_confirmed:adultConfirmed,p_privacy_accepted:privacyAccepted,p_terms_version:termsVersion,p_filming_consent:FILMING_CONSENT_NEVER_FROM_CHECKOUT,p_public_booking_opens_at:process.env.PUBLIC_BOOKING_OPENS_AT,p_hold_minutes:CHECKOUT_HOLD_MINUTES,p_allergies:allergies,p_dietary:dietary,p_dietary_notes:dieet,p_message:notes,p_extra_nights:extraNights});
-      hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"Weekend 01 · 30 Oct to 2 Nov 2026":"Weekend 02 · 6 to 9 Nov 2026"};
+      hold={...hold,name,email,weekendLabel:weekend==="weekend-01"?"The Halloween Table · 30 Oct to 2 Nov 2026":"The Autumn Table · 6 to 9 Nov 2026"};
     }
   }catch(error){console.error("Checkout hold error",error);return json(503,{error:"checkout_unavailable"});}
   if(hold.status!=="payment_pending")return json(409,{error:hold.status,...hold});
