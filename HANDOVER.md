@@ -7,6 +7,69 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Peter als tweede Game Master, en twee van de drie agendavariabelen · TE CONTROLEREN
+
+**Peter Fleming staat als tweede Game Master op de Tavern-pagina** (`771e8b7`), onder de sectie
+van Evan. Zijn tekst komt volledig uit zijn eigen antwoorden op de vragenlijst; er staat niets in
+wat hij niet zelf heeft opgeschreven. Regel voor regel nagelopen tegen die antwoorden.
+
+Wat bewust anders is dan bij Evan: Crit Test Dummies staat als eigen alinea in plaats van
+weggestopt in de slotzin, omdat twee jaar publiek spelen op Twitch zwaarder weegt dan een
+zelfbeschrijving. En er staat géén citaatblok. Evan heeft daar een spelerscitaat; Peter heeft dat
+niet aangeleverd, en Robert vroeg om er een te verzinnen. Dat is geweigerd: een gefabriceerde
+testimonial op een pagina die €2.025 vraagt is precies wat `CLAUDE.md` §2 en §5.2 verbieden, en
+met de reisbureauregistratie in behandeling ook juridisch onverstandig. In plaats daarvan is de
+publieke stream naar voren gehaald als bewijs dat wél echt is.
+
+Ook bewust weggelaten: zijn ambitie om board games gepubliceerd te krijgen. Wat hij ís hoort op
+de pagina, waar hij naartoe wil niet — dat is zijn agenda, niet die van de gast.
+
+**Technisch.** Beide koppen hebben nu een eigen id (`gm-title-evan`, `gm-title-peter`), zodat
+`aria-labelledby` blijft kloppen; twee keer hetzelfde id mag niet. Nieuwe CSS-klasse
+`gm__portrait--center`: Peters foto heeft vrijwel dezelfde verhouding als de kolom en staat
+daarom gecentreerd, terwijl Evans bredere foto de bestaande `object-position: 56%` nodig heeft.
+Gemeten bijsnijding op 1440px breed: Evan verliest 34 % van de zijkanten, Peter 21 %. Op mobiel
+32 % tegen 18 %, zonder horizontale overflow.
+
+**Een val met de foto, voor wie het overdoet.** Het bestand kwam liggend binnen, 2640×1980.
+`sips` — het enige beeldgereedschap op deze Mac — schrijft een rotatie als EXIF-vlag in plaats
+van hem in de pixels te bakken, en browser en viewer gaan daar verschillend mee om. Dat kostte
+vijf mislukte pogingen. Voorvertoning (⌘L, dan opslaan) doet het wel goed. Controleer de
+oriëntatie altijd in de browser, niet met `sips -g pixelWidth`, want die rapporteert de logische
+maat en niet wat er werkelijk in de pixels staat.
+
+**Nog open bij Peter.** Drie dingen, alle drie vóór de merge:
+
+1. **Zijn akkoord.** Bij Evan is op 29 augustus vastgelegd dat hij naam, biografie, foto én
+   citaat had gezien en goedgekeurd. Bij Peter is dat niet bevestigd; hij leverde de antwoorden
+   en de foto, maar of hij deze definitieve tekst en het gebruik ervan op een verkooppagina heeft
+   gezien is onbekend. Dit staat ook als openstaand punt in `operations/image-credits.md`.
+2. **Welk weekend hij draait.** Evans sectie sluit af met "He comes to Asturias to run the
+   Halloween Table." Die zin ontbreekt bij Peter, bewust: niet geraden.
+3. **Een spelerscitaat**, als hij er een kan krijgen.
+
+**Netlify: twee van de drie agendavariabelen gezet**, allebei alleen op Production, geen andere
+context en geen bestaande waarde aangeraakt.
+
+| Variabele | Stand |
+| --- | --- |
+| `LEWOS_CALENDAR_ID` | gezet, 90 tekens, gelezen uit de agenda-instellingen zelf |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | gezet: `lewos-calendar@lewos-automation.iam.gserviceaccount.com` |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | **ontbreekt nog** — Robert plakt die zelf |
+
+Het serviceaccount-JSON staat niet meer op de Mac; is het weg, dan moet er in Google Cloud een
+nieuwe sleutel worden aangemaakt (Google laat een sleutel maar één keer downloaden).
+
+**Er verandert nog niets.** `calendarConfig()` eist alle drie de waarden, dus zolang de
+privésleutel ontbreekt geeft `/api/house-availability` gewoon `not_configured`. Bovendien lezen
+functies hun omgeving pas bij een build, dus er is daarna een productie-deploy nodig. Die wacht
+op Roberts aparte akkoord.
+
+**Wat er dan gecontroleerd moet worden:** dat `/api/house-availability` `configured: true` geeft,
+en dat de twee handmatige weekendafspraken de weekenden **niet** blokkeren — die zijn vanuit
+Roberts eigen account gemaakt en horen in `classifyEvent` onder `niet_herkend` te vallen.
+Blokkeren ze wel, dan klopt er iets niet aan `LEWOS_ACCOMMODATION_EMAILS`.
+
 ### 2026-09-08 · Claude · Live gegaan, en de twee weekenden vastgezet in de agenda · TE CONTROLEREN
 
 **De merge is doorgegaan.** `main` ging van `36f62cf` naar `637f2ca`, een schone fast-forward
