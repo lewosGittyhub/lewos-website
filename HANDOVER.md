@@ -7,6 +7,77 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Live gegaan, en de twee weekenden vastgezet in de agenda · TE CONTROLEREN
+
+**De merge is doorgegaan.** `main` ging van `36f62cf` naar `637f2ca`, een schone fast-forward
+van 40 commits over 95 bestanden. Netlify publiceerde om 21:25 in 29 seconden.
+
+**Live smoke-tests, alle groen.**
+
+| Route | Uitkomst |
+| --- | --- |
+| `/` en `/tavern/` | 200 |
+| `/admin/` | 200 — voor het eerst live |
+| `/api/first-access` | 200 |
+| `/api/admin/config` | 200, `mode: supabase`, `REF[obnkmu]` — de productiedatabase |
+| `/tavern/pay/` | 200 |
+| `/assets/favicon.svg` | 200, geen externe verwijzingen |
+| `/api/pay` op onbekende referentie | 404 |
+| `/api/checkout` (GET) | 405 |
+| `/tavern/book` | 404 |
+| `/api/admin/bookings` zonder en met vals token | 401 |
+
+`publicBookingOpen: false`, prijs €2.025, zes plaatsen vrij per weekend. Pagina en API dragen
+allebei de nieuwe namen, dus de tijdelijke mismatch is opgelost.
+
+**Een risico dat Robert zag en dat terecht was.** `syncWeekendBlocks` zet alleen een blokkade
+in de agenda als er minstens één stoel geboekt is; een weekend zonder boekingen verliest hem
+juist weer. Beide weekenden staan op nul boekingen, dus er stond niets. Nadine had 30 oktober
+of 6 november dus gewoon kunnen boeken, en dan valt dat weekend van de site met
+"the house is booked for these dates". Dat is de werkafspraak "wie het eerst boekt, heeft het",
+maar toegepast op de twee data waar de hele site omheen is gebouwd.
+
+**Opgelost met twee handmatige afspraken** in `Lewos – Tavern & huis`, beide op "Bezet",
+tijdzone Madrid:
+
+- The Lewos Tavern — The Halloween Table — house reserved · 30 okt 16:00 → 2 nov 09:30
+- The Lewos Tavern — The Autumn Table — house reserved · 6 nov 16:00 → 9 nov 09:30
+
+Vooraf nagelopen in `classifyEvent`: een handmatige afspraak vanaf Roberts eigen account is niet
+`ours`, draagt geen accommodatiemarkering en staat niet op een accommodatieadres, dus hij eindigt
+bij `niet_herkend` en **blokkeert niet**. De weekenden blijven dus gewoon te boeken op de site,
+terwijl Nadine ze wél ziet staan. Dat werkt alleen doordat `LEWOS_ACCOMMODATION_EMAILS` nu op
+Production staat; met een lege lijst zou regel 4 van de beslisboom álles laten blokkeren.
+
+**Agenda opgeruimd.** Twee testafspraken verwijderd: de zesdaagse "TEST – Lewos boeking" van
+5–10 november 2026 en "TEST — koppeling Lewos (mag weg)" van 5–6 januari 2027.
+
+**Taal in de agenda is Engels.** De omschrijvingen stonden er eerst in het Nederlands in; dat is
+rechtgezet. Afspraken in de gedeelde agenda gaan in het Engels, omdat Nadine meeleest.
+
+**Twee waarden uit een controleerbare bron gehaald.** Het serviceaccount is
+`lewos-calendar@lewos-automation.iam.gserviceaccount.com` — af te lezen aan de maker van de
+testafspraken — en het Calendar ID stond in de bewerk-URL van een afspraak.
+`operations/google-agenda-koppeling.md` noemde een ander adres als voorbeeld, wat makkelijk te
+verwarren was met de echte waarde; dat is gecorrigeerd.
+
+**Hoe de koppeling werkt, voor wie het overneemt.** Twee richtingen, allebei automatisch, en
+niemand voert iets dubbel in. Nadine zet haar boeking in de gedeelde agenda; de site leest die,
+herkent haar als maker via `LEWOS_ACCOMMODATION_EMAILS` en blokkeert die nachten. Andersom
+schrijft `syncWeekendBlocks` een blokkade in diezelfde agenda zodra er een stoel geboekt is,
+zodat Nadine ziet dat het huis bezet is. De beheeromgeving is voor Tavern-boekingen, niet voor
+accommodatieboekingen.
+
+Let op wie de afspraak aanmaakt: dat bepaalt of hij blokkeert. Vanaf Nadines adres blokkeert
+hij, vanaf Roberts account niet.
+
+**Wat nog open is.** De drie Google-variabelen staan nog niet op Production, dus er wordt nog
+niets gelezen en niets geschreven. `GOOGLE_SERVICE_ACCOUNT_EMAIL` en `LEWOS_CALENDAR_ID` zijn nu
+bekend; `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` is het veld `private_key` uit het sleutelbestand en
+moet Robert zelf plakken. Zodra alle drie staan gaat de koppeling echt draaien.
+
+En de verkoop blijft dicht tot de papieren rond zijn en de klantdocumenten gepubliceerd.
+
 ### 2026-09-08 · Claude · Controle van `c540c1d`: het hernoemscript kon niet draaien · TE CONTROLEREN
 
 **Aanleiding.** Codex voegde in `c540c1d` seizoensnamen toe aan de Tavern-weekenden: "The

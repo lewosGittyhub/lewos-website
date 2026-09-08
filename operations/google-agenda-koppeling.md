@@ -35,8 +35,14 @@ Bij stap 2 en 3 van dat formulier ("Grant this service account access to project
 hebben niets met de agenda te maken. Toegang tot de agenda regel je in stap 5, door hem
 te delen — precies zoals je hem met Nadine deelt.
 
-Noteer het e-mailadres dat het account krijgt. Dat ziet eruit als
-`lewos-tavern-agenda@lewos-agenda.iam.gserviceaccount.com`.
+Noteer het e-mailadres dat het account krijgt. De vorm is
+`<naam>@<project>.iam.gserviceaccount.com`.
+
+**Het account dat Lewos in gebruik heeft is
+`lewos-calendar@lewos-automation.iam.gserviceaccount.com`.** Dat is af te lezen aan het veld
+`client_email` in het sleutelbestand, en aan de maker van elke afspraak die de koppeling zelf
+in de agenda zet. Tot 8 september 2026 stond hier een ander adres als voorbeeld, wat makkelijk
+te verwarren was met de echte waarde.
 
 ### 4. Een sleutel
 
