@@ -355,6 +355,78 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-08 · Claude · Preview volledig groen; vier migraties klaar voor handmatige uitvoering · TE CONTROLEREN
+
+**Stand.** Branch `mailroutering-fontecha`. De previewketen werkt voor het eerst end-to-end.
+`origin/mailroutering-fontecha` staat op `90a0925`; de commits daarna zijn documentatie.
+Er is niet gepusht, niet gemerged en niet naar productie gedeployd.
+
+**De preview is groen.** Build van 8 september 16:38 op
+`https://deploy-preview-1--lewos.netlify.app`:
+
+- `/api/first-access` → **200**, met `weekend-01` en `weekend-02`, zes plaatsen vrij, €2.025.
+- `/api/pay` met een onbekende referentie → **404 `not_found`**. Dat is het antwoord van de
+  database zelf, niet de 503 van een mislukte verbinding.
+- `/admin/` laadt met inlogformulier; `/api/admin/config` geeft `REF[igggvb]`.
+- `/api/admin/bookings` weigert correct: 401 `no_token`, en met een vals token 401
+  `invalid_token`.
+- `/api/house-availability` → 200 `{configured:false}` — geen agendagegevens, dus geen aanroep.
+
+Het bewijs staat in de API-logs van `rece-migratie-test` zelf: `get_tavern_availability` en
+tweemaal `tavern_payment_request`, alle drie **200**. Gisteren stond daar 401. Al het
+previewverkeer landt op de previewbranch; er ging niets naar de productiedatabase.
+
+**Netlify.** `SUPABASE_ANON_KEY` is aangevuld met een Production-waarde en staat nu op vier
+contexten; de drie previewwaarden bleven ongemoeid en er is geen andere productievariabele
+aangeraakt. `SUPABASE_URL` wijst voor Deploy Previews, Branch deploys en Preview Server naar
+de previewbranch en voor Production naar productie.
+
+**De vier productiemigraties staan klaar voor handmatige uitvoering**, in deze volgorde:
+
+1. `database/first-access.sql`
+2. `database/seat-holds.sql`
+3. `database/stay-dates.sql`
+4. `database/admin.sql`
+
+De volgorde volgt de afhankelijkheden: `first-access.sql` maakt drie tabellen, `seat-holds.sql`
+en `stay-dates.sql` maken er geen en wijzigen alleen kolommen, `admin.sql` maakt zijn eigen drie.
+
+Twee dingen die je bij het draaien moet weten.
+
+**Geen van de vier bestanden is transactioneel.** Er staat nergens `begin;`/`commit;`. Draai elk
+bestand daarom gewikkeld — `begin;` ervoor, `commit;` erna — zodat een fout halverwege schoon
+terugrolt in plaats van productie half gemigreerd achter te laten. Er staan geen
+`concurrently`-statements in, dus wikkelen kan zonder bezwaar.
+
+**Er is geen uitvaltijd voor het live formulier.** De draaiende productiecode roept vijf RPC's
+aan. Daarvan wordt alleen `register_tavern_interest` gedropt en herbouwd; de nieuwe signatuur
+accepteert alle acht parameters die de live code meestuurt en de twee nieuwe hebben defaults.
+PostgREST koppelt op naam, dus het First Access-formulier blijft werken tussen migratie en
+deploy. De overige gedropte functies worden door de live code niet aangeroepen.
+
+**Welke migraties zijn uitgevoerd.** Op de previewbranch `rece-migratie-test`: alle vier, plus
+`tests/supabase-checks.sql` met 29 controles groen. **Op productie: nog geen enkele, voor zover
+hier vast te stellen.** Robert voert ze handmatig uit; zodra dat gebeurd is hoort die uitkomst
+hier genoteerd te worden, met datum en eventuele foutmeldingen.
+
+**Verkoop en betalingen blijven uit.** `PUBLISHED_TERMS_VERSION` is leeg in
+`netlify/functions/_booking-config.mjs` en `TAVERN_PAYMENTS_ENABLED` staat niet op Production.
+`paymentsAreEnabled()` eist beide, dus de poort zit dubbel op slot. `publicBookingOpen` is
+`false` op de live site. De boekingsknop staat in een blok met `hidden` en wordt pas zichtbaar
+als publieke boeking opengaat; `tests/booking-config.test.mjs` bewaakt dat de knop en de
+404-route op `/tavern/book` altijd samen bewegen.
+
+**Testresultaten.** 474 lokale tests groen, privacycontrole 5/5, betaalpoort 8/8,
+mock-kalender 41/41, Supabase-previewcontroles 29/29.
+
+**Eerstvolgende veilige stap.** Robert draait de vier migraties handmatig op productie, elk in
+een eigen transactie, en meldt per bestand of het slaagde. Pas daarna: schema, functies, RLS en
+rechten controleren, dan mergen naar `main` — wat de productie-deploy automatisch in gang zet —
+en live smoke-tests draaien met verkoop dicht.
+
+**Buiten de repo.** De juridische documenten moeten nog worden beoordeeld; daarvoor is in dit
+dossier geen bron aanwezig en er staat hier dus bewust niets over.
+
 ### 2026-09-07 · Claude · Dagafsluiting: previewomgeving staat, één sleutel weigert nog · TE CONTROLEREN
 
 **Stand aan het eind van de dag.** Branch `mailroutering-fontecha`, laatste commit
