@@ -7,6 +7,48 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Controle van `c540c1d`: het hernoemscript kon niet draaien · TE CONTROLEREN
+
+**Aanleiding.** Codex voegde in `c540c1d` seizoensnamen toe aan de Tavern-weekenden: "The
+Halloween Table" en "The Autumn Table", met een nieuw bestand
+`database/seasonal-table-names.sql`.
+
+**Fout, hersteld.** Dat script kon niet draaien. Het schreef naar een kolom `display_name` die
+niet bestaat, en het vergeleek `id` — een `uuid` — met de tekst `'weekend-01'`. De tabel
+`public.tavern_weekends` heeft `slug text unique` en `label text`. Beide fouten zouden een
+foutmelding geven; het script is dus nooit uitgevoerd.
+
+Herschreven naar een `update` op `label`, gefilterd op `slug`. Getest op de previewbranch:
+geen fout, en de controleselect geeft `weekend-01 → The Halloween Table` en
+`weekend-02 → The Autumn Table`. Het script is idempotent en raakt de betaalpoort niet.
+
+**Openstaand en belangrijk vóór of direct ná de merge.** Productie heeft in
+`tavern_weekends.label` nog `'Weekend 01'` en `'Weekend 02'` staan — dat is te zien aan wat
+`/api/first-access` op `lewos.co` teruggeeft. De statische paginateksten in de branch zeggen
+inmiddels "The Halloween Table" en "The Autumn Table". Wordt er gemerged zonder dat
+`seasonal-table-names.sql` op productie draait, dan spreken de pagina en de API elkaar tegen
+en ziet een bezoeker beide namen door elkaar.
+
+**Ook opgemerkt: `database/first-access.sql` is gewijzigd ná uitvoering op productie.** De
+seedregel draagt nu de nieuwe namen. Dat is op zichzelf onschadelijk — de seed gebruikt
+`on conflict (slug) do update set label=excluded.label`, dus opnieuw draaien zou de hernoeming
+gewoon toepassen — maar het betekent wel dat het bestand in de repo niet meer beschrijft wat er
+op productie staat zolang de hernoeming niet gedraaid is.
+
+**Wat verder klopte.** De HTML-wijzigingen zijn intern consistent en de testsuite is groen:
+**474/474**. De aangepaste tests in `tests/filming.test.mjs` en `tests/site.test.mjs` dekken de
+nieuwe namen.
+
+**Terzijde, geen blokkade.** De naam "Evan" als Game Master staat al sinds `67c37b1`
+(27 augustus) in `origin/main` en is dus al live; hij komt niet uit deze commit. `CLAUDE.md`
+§5.2 draagt nog de stand van 21 augustus, die zegt dat een naam pas mag als de persoon
+bevestigd is. Als dat inmiddels rond is, is die passage in `CLAUDE.md` verouderd.
+
+**Procesnotitie.** Bij het pushen van de vorige ronde nam ik aan dat `HEAD` nog op `aa81feb`
+stond en controleerde dat niet opnieuw. Daardoor is `c540c1d` meegepusht vóórdat iemand hem had
+nagelopen. Onschadelijk — het is een featurebranch zonder deploy — maar controleer `HEAD`
+voortaan direct vóór een push wanneer er een tweede assistent in dezelfde repo werkt.
+
 ### 2026-09-08 · Claude · Controle van `82afcc3`: één echte fout in de favicon hersteld · TE CONTROLEREN
 
 **Wat gecontroleerd.** De vier frontendwijzigingen uit `82afcc3` (weekendknoppen, weekendselectie,

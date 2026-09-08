@@ -1,8 +1,14 @@
--- Rename the public weekend labels without changing their stable IDs or dates.
+-- Hernoem de publieke weekendlabels zonder de stabiele slugs of datums te raken.
+--
+-- De vorige versie van dit bestand kon niet draaien: hij schreef naar een kolom
+-- `display_name` die niet bestaat, en vergeleek `id` — een uuid — met 'weekend-01'.
+-- De tabel heeft `slug text unique` en `label text`; die worden hieronder gebruikt.
+--
+-- Idempotent: tweemaal draaien geeft hetzelfde resultaat. Raakt de betaalpoort niet.
 update public.tavern_weekends
-set display_name = case id
+set label = case slug
   when 'weekend-01' then 'The Halloween Table'
   when 'weekend-02' then 'The Autumn Table'
-  else display_name
+  else label
 end
-where id in ('weekend-01','weekend-02');
+where slug in ('weekend-01', 'weekend-02');
