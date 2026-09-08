@@ -7,6 +7,84 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Media-consentmigratie op de previewbranch; Codex' blokkade bevestigd · TE CONTROLEREN
+
+**Aanleiding.** De audit van Codex (`12ca4b2`) vond dat productie geen `tavern_media_*`-tabellen
+en geen media-consent-RPC's heeft, terwijl de code die wel aanroept. Dat klopt, en mijn eerdere
+bewering dat `origin/main` maar vijf RPC's aanroept was fout.
+
+**Waarom ik het miste.** Ik telde de RPC's met een grep op letterlijke namen (`rpc/[a-z_]+`).
+Drie aanroepen lopen via een helper met `rpc/${name}`, een variabele, en die viel buiten die
+regex. Tel je beide vormen, dan komt `origin/main` op **elf** RPC's, waarvan drie media-consent:
+`get_tavern_media_agreement_state`, `record_tavern_media_consent` en
+`withdraw_tavern_media_consent`. Les: tel RPC-aanroepen nooit met een grep op letterlijke namen
+zolang er een helper met een variabele bestaat.
+
+Belangrijke nuance: **de nieuwe code roept exact dezelfde drie RPC's aan als de oude.** Deze
+migratie repareert dus een gat dat vandaag al in productie zit; de merge veroorzaakt het niet.
+
+**Wat `database/filming-consent.sql` aanmaakt.** Drie tabellen
+(`tavern_media_agreements`, `tavern_media_participants`, `tavern_media_consents`), drie indexen,
+RLS op alle drie, en twaalf functies (tien in `public`, twee in `private`).
+
+**Aansluiting op de vier eerdere migraties.** Veilig. De kop eist alleen `first-access.sql`, dat
+op zowel productie als preview staat. Geen enkele functienaam overlapt met de vier eerdere
+bestanden, dus er wordt niets geherdefinieerd. De enige `drop` is
+`get_tavern_media_progress(text,text)`, die twee regels later opnieuw wordt aangemaakt; de enige
+`delete` staat in het lichaam van `private.purge_tavern_media_records` en draait niet tijdens de
+migratie.
+
+**Uitgevoerd op de previewbranch `rece-migratie-test`, niet op productie.** Vooraf gecontroleerd
+dat het om de preview ging (PREVIEW-badge aanwezig, PRODUCTION afwezig) en dat de preview de
+productiestand spiegelde: 0 mediatabellen, 0 media-RPC's, 4/4 eerdere migraties, 40 functies.
+De migratie draaide gewikkeld in `begin;`/`commit;` en meldde `Success. No rows returned`.
+Functieaantal ging van 40 naar 52.
+
+**Verificatie op de previewbranch — twaalf controles, alle OK.**
+
+| Controle | Uitkomst |
+| --- | --- |
+| Mediatabellen aangemaakt | 3 |
+| Mediatabellen zonder RLS | geen |
+| `anon`/`authenticated` kan mediatabel lezen | geen |
+| `anon`/`authenticated` kan mediatabel schrijven | geen |
+| Mediafuncties totaal | 12 |
+| `SECURITY DEFINER` zonder `search_path=''` | geen |
+| `SECURITY DEFINER` met verkeerd `search_path` | geen |
+| Mediafuncties die `anon` mag draaien | geen |
+| Mediafuncties die `authenticated` mag draaien | geen |
+| De drie RPC's die de code nodig heeft | 3 |
+| `service_role` mag die drie draaien | 3 |
+| Functies totaal na migratie | 52 |
+
+**Testresultaten.**
+
+- Volledige lokale suite: **474/474**.
+- Media-consent en filming apart: **48/48**.
+- `tests/database-integration.sql` op de previewbranch: **120 controles**, `Success`, alle drie
+  de transactieblokken teruggerold. Dit bestand bevat de media-consentdekking (51 verwijzingen);
+  `tests/supabase-checks.sql` heeft er nul.
+- `tests/supabase-checks.sql` op de previewbranch: **29 controles**, `Success`. Geen regressie
+  op de bestaande rechten.
+- Preview-eindpunten: `/api/first-access` 200 met `publicBookingOpen: false`, `/api/pay` 404
+  `not_found`, `/api/house-availability` 200.
+
+**Betaalpoort en externe diensten.** `filming-consent.sql` bevat nul verwijzingen naar de
+betaalpoort, Stripe of checkout. De drie publicatieconstanten in `_booking-config.mjs` zijn alle
+drie leeg, dus `paymentsAreEnabled()` blijft onwaar. Er is in deze ronde geen echte mail,
+betaling of Google Calendar-aanroep gedaan: er zijn uitsluitend SQL-opdrachten tegen de
+previewbranch uitgevoerd.
+
+**Resterende productiestap.** `database/filming-consent.sql` moet nog op productie draaien,
+gewikkeld in `begin;`/`commit;`, met dezelfde codeercontrole als de vier eerdere blokken
+(kopiëren met `LANG=en_US.UTF-8`, daarna tekenlengte en niet-ASCII tellen vóór Run). Daarna
+dezelfde leescontrole herhalen die hierboven op de preview groen was. Pas daarna is de merge
+functioneel compleet.
+
+**Branch- en commitstatus.** Branch `mailroutering-fontecha`. Lokaal `12ca4b2` plus deze
+documentatiecommit; `origin/mailroutering-fontecha` staat op `aa228fa`, `origin/main` op
+`36f62cf`. Er is niets gepusht, gemerged of gedeployd, en er is niets aan productie gewijzigd.
+
 ## GECONTROLEERD door Codex, 8 september 2026 — pre-merge audit tegen productie
 
 Gecontroleerd op branch `mailroutering-fontecha` (`5a8afb1`) tegen `origin/main`
