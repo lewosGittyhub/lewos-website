@@ -355,6 +355,63 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-08 · Claude · Beheerderstabel gevuld en live gecontroleerd; de merge staat nog open · TE CONTROLEREN
+
+**Vier controles vóór de wijziging.**
+
+1. De vier migraties staan volledig op productie. Bewijs voor de volgorde: `arrival_date` en
+   `departure_date` staan op `tavern_seat_claims` — die komen uit `admin.sql`, en
+   `stay-dates.sql` leunt erop; beide zijn aanwezig, dus admin liep vóór stay-dates. De zeven
+   stoelhold- en verblijffuncties bestaan met hun echte signaturen.
+2. `public.lewos_admins` bestaat, met RLS aan.
+3. Back-up aanwezig: **08 september 2026 00:36:09 UTC**, physical. Let op: die dateert van vóór
+   de migraties van vandaag, dus terugzetten maakt ze ongedaan.
+4. `LEWOS_ADMIN_EMAILS` staat op Production met exact twee adressen, beide verwacht, geen
+   onbekende. Het adres van de accommodatie is uit de Netlify-configuratie gelezen, niet uit
+   het geheugen: 31 tekens, identiek aan wat Robert eerder verbatim opgaf.
+
+**Eén controlequery gaf een vals negatief.** Een eerste versie meldde "blok 3 ontbreekt", maar
+dat kwam doordat de parametertypes bij `to_regprocedure` verkeerd waren gegokt. Op naam
+gecontroleerd is blok 3 volledig aanwezig. Toets functies op naam, niet op een geraden
+signatuur.
+
+**De wijziging.** Eén idempotente upsert op `public.lewos_admins`: de accommodatie toegevoegd
+met rol `accommodation`. Verder is er niets aan productiegegevens gewijzigd. Uitkomst
+`Success. No rows returned`. De leesquery erna bevestigt twee rijen: Robert als `admin` en de
+accommodatie als `accommodation`.
+
+Twee poorten bewaken de beheeromgeving en ze moeten allebei kloppen: `allowedEmails()` leest
+`LEWOS_ADMIN_EMAILS`, en `admin_is_allowed()` kijkt in `lewos_admins`. `admin.sql` vult die
+tabel alleen met Robert; wie er verder in moet, moet er apart in gezet worden.
+
+**Smoke-tests op de live site.** Productie draait nog `main@36f62cf` — de merge is niet
+doorgegaan, zie hieronder. Gemeten stand:
+
+| Route | Uitkomst |
+| --- | --- |
+| `/` en `/tavern/` | 200 |
+| `/api/first-access` | **200**, twee weekenden, zes plaatsen vrij, €2.025, `publicBookingOpen: false` |
+| `/api/pay` | 404 — de route bestaat pas in de nieuwe code |
+| `/admin/` en `/api/admin/config` | 404 — idem |
+| `/tavern/book` | 404 — verkooproute dicht |
+
+Die 200 op `/api/first-access` is het belangrijkste resultaat van vandaag: **de oude code draait
+probleemloos op het nieuwe schema.** Dat was vooraf beredeneerd — alleen
+`register_tavern_interest` is herbouwd en de nieuwe signatuur accepteert de bestaande aanroep —
+en het is nu in productie waar. Er is dus geen haast bij de deploy en geen uitvaltijd.
+
+Geen echte mail, betaling of agenda-aanroep: er zijn uitsluitend leesverzoeken gedaan, en de
+GET-tak van `first-access` raakt geen van drieën.
+
+**De merge staat nog open.** `origin/mailroutering-fontecha` is bijgewerkt naar `aa228fa`, dus
+PR #1 bevat alles. De push naar `main` is geweigerd door de guardrail die deze repo hanteert —
+terecht, want een push naar de hoofdbranch gaat automatisch live. Die klik ligt bij Robert:
+PR #1 mergen op GitHub. `origin/main` staat nog op `36f62cf`.
+
+**Nog te doen na de merge.** Smoke-tests opnieuw draaien tegen de nieuwe code: dan horen
+`/api/pay` en `/admin/` te bestaan, `/api/pay` gesloten te blijven en de beheeromgeving een
+werkende login te tonen voor beide adressen.
+
 ### 2026-09-08 · Claude · De vier migraties staan op productie · TE CONTROLEREN
 
 **Wat.** Alle vier de migraties zijn op de productiedatabase `Lewos Tavern / main` gedraaid,
