@@ -7,6 +7,57 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Controle van `82afcc3`: één echte fout in de favicon hersteld · TE CONTROLEREN
+
+**Wat gecontroleerd.** De vier frontendwijzigingen uit `82afcc3` (weekendknoppen, weekendselectie,
+extra CTA, favicon), in de browser op desktop en mobiel, plus de diff en de testsuite.
+
+**Eén echte fout, hersteld.** `assets/favicon.svg` verwees met
+`<image href="favicon.png">` naar een extern bestand. Browsers laden favicon-SVG's in secure
+static mode en blokkeren daarin externe verwijzingen. Gemeten: de SVG laadde wel (150×150) maar
+tekende **0 van de 4096 pixels** — volledig leeg. Omdat de SVG-link vóór de PNG-links staat,
+kozen Chrome, Firefox en Safari die en toonden een leeg icoon in plaats van het ronde logo.
+
+Hersteld door de PNG als data-URI in de SVG op te nemen, zodat hij zelfvoorzienend is. Gekozen
+bron: `favicon-192.png` (20 KB), niet de 512px-versie, om het bestand klein te houden. De SVG
+ging van 251 bytes naar 27 KB. Eén bestand gewijzigd; de negentien HTML-pagina's bleven ongemoeid.
+
+Na herstel gemeten: **3300 van de 4096 pixels zichtbaar (81 %)** — precies wat een cirkel in een
+vierkant geeft — hoekpixels transparant, en de middenkleur `rgb(229,100,57)`, het huisstijl-oranje
+`#E5643A`. Het ronde logo rendert nu.
+
+**Wat wél klopte.**
+
+| Controle | Uitkomst |
+| --- | --- |
+| Knoppen zien eruit als de bestaande primaire knop | Achtergrond, kleur, radius (10px), padding (14/24px) en font identiek aan de hero-knop. Enig verschil: `inline-flex` in plaats van `flex`, waardoor de knop naar de tekst krimpt in de kaart — gewenst |
+| Weekend 01 selecteert uitsluitend Weekend 01 | Bevestigd via URL én via een echte klik |
+| Weekend 02 selecteert uitsluitend Weekend 02 | Idem |
+| Betaalpoort gesloten | Geen betaalwoorden op de pagina; de submitknop leest "Hold my seats →" |
+| Geen onjuiste boekingsroute | De enige link naar `/tavern/book/` zit in het `hidden`-blok en is onzichtbaar |
+| Extra CTA | Eén keer aanwezig, na de fotosectie, gecentreerd |
+| Focus en toetsenbord | Alle drie de knoppen zijn focusbare `<a>` met tabIndex 0; `.button:focus-visible` geeft een 3px outline. Tabvolgorde natuurlijk: hero, weekend 1, weekend 2, CTA |
+| Mobiele layout (375×812) | Geen horizontale overflow; tikdoelen 240×54, ruim boven de 44px-norm |
+
+**Testsuite.** `node --test tests/*.test.mjs`: **474/474 geslaagd**, 0 mislukt.
+
+**Twee observaties, geen fouten.**
+
+1. `data-weekend="weekend-01"` en `data-weekend="weekend-02"` op de knoppen worden door geen
+   enkele JavaScript gelezen. De selectie loopt volledig via de querystring, die
+   `tavern/first-access.js` op regel 219 uitleest en tegen de bestaande opties valideert. De
+   attributen zijn dus dood gewicht, niet schadelijk.
+2. De tekst "Choose your weekend →" staat nu vier keer op de pagina: hero, beide weekendkaarten
+   en de extra CTA. De twee weekendkaarten dragen dezelfde tekst maar leiden naar verschillende
+   weekends. In context onderscheidbaar, maar wie met een schermlezer door de linklijst gaat,
+   krijgt vier keer dezelfde naam. Overweeg "Choose Weekend 01 →" en "Choose Weekend 02 →".
+
+**Buiten deze commit.** `tavern/first-access.js` interpoleert de `?weekend=`-waarde ongeëscaped
+in een CSS-selector. Dat staat al in `origin/main` en komt niet uit `82afcc3`, dus ik heb het
+laten staan — maar een geknutselde waarde kan `querySelector` laten gooien en het script breken.
+
+**Stand.** Branch `mailroutering-fontecha`. Niets gepusht, gemerged of gedeployd.
+
 ### 2026-09-08 · Claude · Media-consentmigratie staat nu ook op productie · TE CONTROLEREN
 
 **Wat.** `database/filming-consent.sql` is op de productiedatabase `Lewos Tavern / main`
