@@ -7,6 +7,57 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-08 · Claude · Media-consentmigratie staat nu ook op productie · TE CONTROLEREN
+
+**Wat.** `database/filming-consent.sql` is op de productiedatabase `Lewos Tavern / main`
+gedraaid, door Robert, gewikkeld in `begin;`/`commit;`. Uitkomst `Success. No rows returned`.
+Daarmee is de blokkade uit de Codex-audit (`12ca4b2`) weg: productie heeft nu de
+`tavern_media_*`-tabellen en de drie RPC's die de code aanroept.
+
+Het blok dat gedraaid is, was byte-identiek aan wat eerder op de previewbranch groen draaide:
+27.822 tekens, 392 regels, drie tabellen, twaalf functies. Vooraf gecontroleerd op codering
+(0 mojibake) en op het juiste project (PRODUCTION-badge aanwezig, PREVIEW afwezig).
+
+**Verificatie op productie — dezelfde twaalf controles als op de preview, alle OK.**
+
+| Controle | Uitkomst |
+| --- | --- |
+| Mediatabellen aangemaakt | 3 |
+| Mediatabellen zonder RLS | geen |
+| `anon`/`authenticated` kan mediatabel lezen | geen |
+| `anon`/`authenticated` kan mediatabel schrijven | geen |
+| Mediafuncties totaal | 12 |
+| `SECURITY DEFINER` zonder `search_path=''` | geen |
+| `SECURITY DEFINER` met verkeerd `search_path` | geen |
+| Mediafuncties die `anon` mag draaien | geen |
+| Mediafuncties die `authenticated` mag draaien | geen |
+| De drie RPC's die de code nodig heeft | 3 |
+| `service_role` mag die drie draaien | 3 |
+| Functies totaal na migratie | 52 |
+
+Het functieaantal loopt exact gelijk met de previewbranch: van 40 naar 52.
+
+**Live smoke-test.** `lewos.co` draait nog `main@36f62cf` en is ongestoord: `/` 200,
+`/tavern/` 200, `/api/first-access` 200 met twee weekenden, €2.025 en
+`publicBookingOpen: false`, `/tavern/book` 404. De migratie heeft de draaiende site niet geraakt.
+
+**Verkoop blijft dicht.** `filming-consent.sql` bevat nul verwijzingen naar de betaalpoort,
+Stripe of checkout — de kop van het bestand zegt dat zelf op regel 5. De drie
+publicatieconstanten in `_booking-config.mjs` zijn leeg en `TAVERN_PAYMENTS_ENABLED` staat niet
+op Production. Geen echte mail, betaling of agenda-aanroep in deze ronde.
+
+**Databasestand: compleet.** Alle vijf de migraties staan nu op productie, in de volgorde
+`first-access.sql` → `admin.sql` → `seat-holds.sql` → `stay-dates.sql` → `filming-consent.sql`.
+
+**Wat er nog ligt: alleen de merge.** `origin/main` staat op `36f62cf`, de branch op `162e21e`
+plus deze documentatiecommit. De code is nog niet live; de database is er wel klaar voor. De
+merge is Roberts klik, want een push naar de hoofdbranch gaat automatisch live op lewos.co.
+
+Let op wat de merge níét verandert: de verkoop blijft dicht tot de vier voorwaarden uit
+`CLAUDE.md` §5 rond zijn en de klantdocumenten gepubliceerd. Die documenten zijn nog niet
+gepubliceerd — dat is te zien aan de drie lege constanten. De juridische stukken buiten de repo
+moeten nog worden beoordeeld; daar is in dit dossier geen bron voor.
+
 ### 2026-09-08 · Claude · Media-consentmigratie op de previewbranch; Codex' blokkade bevestigd · TE CONTROLEREN
 
 **Aanleiding.** De audit van Codex (`12ca4b2`) vond dat productie geen `tavern_media_*`-tabellen
