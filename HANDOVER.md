@@ -355,6 +355,68 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-08 · Claude · De vier migraties staan op productie · TE CONTROLEREN
+
+**Wat.** Alle vier de migraties zijn op de productiedatabase `Lewos Tavern / main` gedraaid,
+door Robert, elk als afzonderlijk blok in een eigen transactie. Alle vier meldden
+`Success. No rows returned`. Volgorde en uitkomst:
+
+1. `first-access.sql` — geland. Het `private`-schema is nieuw.
+2. `admin.sql` — geland. `admin_is_allowed`, `admin_role` en `admin_bookings_in_range` aanwezig.
+3. `seat-holds.sql` — geland. `begin_seat_hold`, `prepare_`, `confirm_` en
+   `abandon_seat_hold_payment` en `tavern_payment_request` aanwezig.
+4. `stay-dates.sql` — geland.
+
+**De volgorde was eerst fout genoteerd.** In het item hierboven stond `first-access` →
+`seat-holds` → `stay-dates` → `admin`, afgeleid uit het aantal `create table`-statements. De
+bestanden verklaren hun eigen volgorde en die telt: `admin.sql` ná `first-access.sql`,
+`seat-holds.sql` ná allebei, `stay-dates.sql` als laatste omdat het leunt op `admin_is_allowed`,
+`lewos_admin_actions`, `private.admin_role` en de kolommen `arrival_date` en `departure_date`
+uit `admin.sql`. Gedraaid is de gecorrigeerde volgorde. Het bestand
+`production-migrations-copy.sql` in de Codex-projectmap draagt nog de fóute volgorde — niet
+gebruiken.
+
+**Eindcontrole op productie, read-only.** `tests/supabase-checks.sql` is hier bewust niet
+gedraaid: dat bestand schrijft testrijen en zegt in zijn eigen kop dat het nooit tegen productie
+mag. In plaats daarvan een leesquery met dezelfde assertions:
+
+- 40 functies in `public` + `private`.
+- Geen enkele tabel zonder RLS.
+- `anon` en `authenticated` kunnen geen enkele tabel lezen of schrijven.
+- Alle acht kernfuncties aanwezig, en `service_role` mag ze alle acht uitvoeren.
+
+Twee functies kwamen als vals alarm terug, `private.merged_dietary_text` en
+`private.claim_weekend`: `anon` en `authenticated` hebben er `execute` op. Ze zijn echter
+onbereikbaar, want geen van beide rollen heeft `usage` op het schema `private`, en PostgREST
+publiceert alleen `public`. De controle keek naar functierechten zonder het schemarecht mee te
+wegen. Daarom toetst `supabase-checks.sql` ook uitsluitend op `public`.
+
+**Een val die bijna toesloeg: tekencodering.** De eerste plakpoging van blok 1 was stil corrupt.
+In de editor stond `requested.label||' ¬∑ '||requested.date_label` waar `' · '` hoort te staan —
+de UTF-8 bytes waren als Mac-Roman gelezen omdat de shell een lege locale had (`LANG=''`), en
+`pbcopy` de bytes dan verkeerd interpreteert. Alle 154 kaderlijnen en 13 middendots waren
+verminkt.
+
+Het venijnige: dat had **geen foutmelding** gegeven. De SQL zou schoon draaien en er zou
+permanent `¬∑` in elke `weekendLabel` staan — zichtbaar voor gasten op de site en in mails. Het
+kwam alleen aan het licht doordat de niet-ASCII tekens geteld werden, en die stonden niet alleen
+in commentaar maar in elf uitvoerbare regels.
+
+**Werkwijze voor een volgende keer:** kopieer met `LANG=en_US.UTF-8 pbcopy < bestand`, en
+controleer na het plakken de tekenlengte en het aantal niet-ASCII tekens tegen het bronbestand
+vóórdat er op Run wordt gedrukt. Byte-lengte gelijk aan tekenlengte is het alarmsignaal.
+
+**Verkoop en betalingen staan onveranderd uit.** `PUBLISHED_TERMS_VERSION` is leeg in
+`netlify/functions/_booking-config.mjs` en `TAVERN_PAYMENTS_ENABLED` staat niet op Production.
+De migraties raken die poort niet.
+
+**Wat nu volgt.** De database is klaar voor de nieuwe code; de code staat er nog niet op.
+Productie draait nog `main@36f62cf`. De eerstvolgende stap is de merge naar `main`, die de
+deploy automatisch in gang zet, gevolgd door live smoke-tests op `/api/first-access`,
+`/api/pay` en `/admin/` met verkoop dicht. Let op: tussen nu en die deploy draait de oude code
+op het nieuwe schema. Dat is nagelopen en veilig — de live code roept vijf RPC's aan en alleen
+`register_tavern_interest` is herbouwd, met een signatuur die de bestaande aanroep accepteert.
+
 ### 2026-09-08 · Claude · Preview volledig groen; vier migraties klaar voor handmatige uitvoering · TE CONTROLEREN
 
 **Stand.** Branch `mailroutering-fontecha`. De previewketen werkt voor het eerst end-to-end.
