@@ -7,6 +7,54 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+## GECONTROLEERD door Codex, 8 september 2026 — pre-merge audit tegen productie
+
+Gecontroleerd op branch `mailroutering-fontecha` (`5a8afb1`) tegen `origin/main`
+(`36f62cf`); remote branch stond op `aa228fa`. Er is niets gepusht, gemerged,
+gedeployed of naar Netlify geschreven.
+
+**Migratievolgorde.** De onafhankelijke volgorde is `first-access.sql` → `admin.sql`
+→ `seat-holds.sql` → `stay-dates.sql`. `admin.sql` maakt de deelnemers- en
+beheerobjecten die door `seat-holds.sql` en `stay-dates.sql` worden gebruikt; de
+laatste twee vervangen bovendien beheerfuncties. De eerdere volgorde met `admin.sql`
+als laatste respecteert die afhankelijkheid niet.
+
+**Oude code tegen het nieuwe schema.** De booking-RPC’s die `origin/main` aanroept
+zijn aanwezig met passende namen en argumenten; de nieuwe extra argumenten hebben
+defaults, zodat oudere aanroepen met ontbrekende trailing velden geldig blijven. De
+claim dat dit maar vijf RPC’s zijn is onjuist: `origin/main` roept daarnaast checkout-,
+release-, sessie- en media-consent-RPC’s aan. De booking-RPC’s bestaan in productie.
+
+**Echte afwijking: media-consent ontbreekt in productie.** Alleen-lezen controle op
+productie vond geen `tavern_media_*`-tabellen en geen media-consent-RPC’s, terwijl
+`origin/main` `get_tavern_media_agreement_state`, `record_tavern_media_consent` en
+`withdraw_tavern_media_consent` aanroept. De route kan daardoor niet end-to-end werken
+tot `database/filming-consent.sql` afzonderlijk en gecontroleerd is uitgevoerd.
+
+**Verkooppoort.** `paymentsAreEnabled()` vereist zowel `TAVERN_PAYMENTS_ENABLED="true"`
+als gepubliceerde voorwaarden en documenten. De drie publicatieconstanten zijn leeg;
+de test koppelt de gesloten betaalpoort aan de 404-regels voor `/tavern/book` en is
+geslaagd. Ik vond geen bypass in de gecontroleerde code.
+
+**Productiedata (alleen aantallen/statussen).** De zes verwachte publieke tabellen zijn
+aanwezig. Er zijn 2 claim-rijen; 0 hebben een status buiten de nieuwe constraint. De
+nieuwe tekstkolommen zijn voor beide bestaande rijen leeg, zonder constraintfout.
+Alle gecontroleerde `SECURITY DEFINER`-functies hebben `search_path=''`.
+
+**Beheer.** De functie controleert het token, `LEWOS_ADMIN_EMAILS` en daarna de rij in
+`lewos_admins`; beide poorten zijn nodig. Productie bevat 2 beheer-rijen: 1 `admin` en
+1 `accommodation`. De rolcontrole houdt vrijgeven bij de eigenaar en extra-nacht-
+beslissingen bij beide beheerders.
+
+**Tests.** De volledige lokale suite is opnieuw gedraaid met lokale serverrechten:
+474/474 geslaagd. De eerste beperkte poging faalde alleen omdat macOS lokale
+testservers blokkeerde met `EPERM`; de herhaalde uitvoering was volledig groen.
+
+**Conclusie.** De booking- en betaalmigraties zijn aanwezig en de verkoop blijft dicht.
+De merge is nog niet vrijgegeven: de ontbrekende media-consent-migratie in productie is
+een echte functionele blokkade als die route bereikbaar moet blijven. Eerst die migratie
+apart tegen een preview/branch uitvoeren en daarna dezelfde leescontrole herhalen.
+
 Kort blok, bewust bovenaan. Hier staat alleen wat de één van de ánder nodig heeft om verder
 te kunnen. Beantwoord? Dan haal je de vraag hier weg en zet je het antwoord in het logboek.
 Het lange logboek hieronder is naslag, geen postvak.
