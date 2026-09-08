@@ -173,6 +173,9 @@
     .gm__grid { display: grid; grid-template-columns: minmax(300px, .82fr) minmax(0, 1.18fr); gap: clamp(48px, 8vw, 100px); align-items: center; }
     .gm__portrait { position: relative; overflow: hidden; min-height: 610px; border-radius: var(--radius-large); background: var(--green); box-shadow: 0 28px 70px rgba(15,59,53,.18); }
     .gm__portrait img { width: 100%; height: 100%; position: absolute; inset: 0; display: block; object-fit: cover; object-position: 56% center; }
+    /* Evans foto is breder dan de kolom, vandaag de 56%. Die van Peter heeft vrijwel
+       dezelfde verhouding als de kolom, dus daar valt niets te sturen en niets weg. */
+    .gm__portrait--center img { object-position: center; }
     .gm__caption { position: absolute; z-index: 1; right: 24px; bottom: 24px; left: 24px; padding: 17px 20px; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-small); background: rgba(9,35,32,.82); color: var(--cream); font: 600 .84rem/1.3 "Poppins", sans-serif; letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(8px); }
     .gm h2 { margin-bottom: 24px; color: var(--green); font-size: clamp(2.6rem, 5vw, 4.8rem); }
     .gm__intro { margin-bottom: 24px; color: var(--green); font: 600 clamp(1.08rem, 1.8vw, 1.28rem)/1.65 "Poppins", sans-serif; }
@@ -604,7 +607,7 @@
       </div>
     </section>
 
-    <section class="gm" aria-labelledby="gm-title">
+    <section class="gm" aria-labelledby="gm-title-evan">
       <div class="gm__grid wrap">
         <figure class="gm__portrait">
           <img src="assets/evan-game-master.jpg" alt="Evan, Game Master for The Lewos Tavern Halloween Table, wearing a headset at a live event" width="509" height="569" loading="lazy" decoding="async">
@@ -612,7 +615,7 @@
         </figure>
         <div>
           <p class="eyebrow">Meet your Game Master</p>
-          <h2 id="gm-title">This is Evan.</h2>
+          <h2 id="gm-title-evan">This is Evan.</h2>
           <p class="gm__intro">A storyteller with a love for horror, atmosphere and giving players a world they can truly lose themselves in.</p>
           <p class="gm__copy">Evan first joined a tabletop roleplaying game in a school library in Oxford almost ten years ago. When that group outgrew its table, he started a second one and stepped behind the screen. What began as a lunchtime game became eight years of storytelling, with some of that original group still at his table today.</p>
           <p class="gm__copy">His games combine detailed description, music and sound to make imagined places feel real. What matters most to him is not controlling the story, but watching players take ownership of it and continue talking about it after the session has ended.</p>
@@ -621,6 +624,29 @@
           <blockquote class="gm__quote">
             <p>“Evan is a great GM. His preparation does wonders for the immersion, and he really encourages his players to take more risks with their roleplay.”</p>
             <cite>One of Evan's players</cite>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="gm" aria-labelledby="gm-title-peter">
+      <div class="gm__grid wrap">
+        <figure class="gm__portrait gm__portrait--center">
+          <img src="assets/peter-fleming-game-master.jpg" alt="Peter Fleming, Game Master for The Lewos Tavern" width="509" height="569" loading="lazy" decoding="async">
+          <figcaption class="gm__caption">Peter Fleming &middot; Game Master</figcaption>
+        </figure>
+        <div>
+          <p class="eyebrow">Meet your Game Master</p>
+          <h2 id="gm-title-peter">This is Peter.</h2>
+          <p class="gm__intro">A world-builder who would rather be surprised by his own story than know how it ends.</p>
+          <p class="gm__copy">Peter Fleming first sat down at a D&amp;D table in college, about twenty years ago. He started running games himself six years back, after moving to Berlin. Stepping behind the screen turned out to be a good way to meet people in a new city.</p>
+          <p class="gm__copy">His tables swing wide. A campy fantasy baking competition in one game, eldritch body horror on a forgotten island in another. What stays the same is the world around it, built so that players are in it rather than watching it.</p>
+          <p class="gm__copy">He does not plan the ending. The moments he plays for are the ones nobody saw coming. That includes him, when a table takes an option he never would have considered.</p>
+          <p class="gm__copy">For two years, Peter ran his games in public. Crit Test Dummies was an actual play stream on Twitch with independently written one-shots, played out live in front of an audience.</p>
+          <p class="gm__copy">Away from the table, Peter is from Indiana and lives in Germany, where he works as a producer in mobile gaming, designs board games and trains circus trapeze. He is now building an original world for his next campaign.</p>
+          <blockquote class="gm__quote">
+            <p>&ldquo;I don&rsquo;t want to know the end of the story any more than the players do until it happens.&rdquo;</p>
+            <cite>Peter Fleming</cite>
           </blockquote>
         </div>
       </div>

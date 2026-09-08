@@ -33,6 +33,7 @@ committed to `tavern/assets/` or `assets/`.
 | File | Subject | Source | Permission |
 | --- | --- | --- | --- |
 | `tavern/assets/evan-game-master.jpg` | The Game Master | Supplied by Robert | Robert confirmed on 29 August 2026 that name, biography, photograph and the quoted line were seen and approved by the person himself |
+| `tavern/assets/peter-fleming-game-master.jpg` | The second Game Master | Supplied by Robert on 8 September 2026; biography written from Peter Fleming's own questionnaire answers | Peter supplied the answers and the photograph himself. **Still to confirm: that he has seen and approved the final text and the use of his photograph on the Tavern page**, as was recorded for Evan |
 | `assets/robert-founder-lewos.jpg` | Robert | Robert's own photograph | Owned by Lewos |
 | `tavern/assets/manifesto-lewos.jpg` | The manifesto background on the Tavern page | Supplied by Robert (`main`, 7 September 2026, commit 0bb3102) | Owned by Lewos. Replaced the earlier bear illustration |
 
