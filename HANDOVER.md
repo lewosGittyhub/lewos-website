@@ -355,6 +355,64 @@ mogen niet verschuiven. Qua urgentie horen deze drie tussen 1 en 2.
 > nummering van dát moment. De lijst is op 29 augustus 2026 opgeschoond en hernummerd. De
 > logboekitems zijn bewust niet aangepast: ze beschrijven wat er toen gold.
 
+### 2026-09-07 · Claude · Dagafsluiting: previewomgeving staat, één sleutel weigert nog · TE CONTROLEREN
+
+**Stand aan het eind van de dag.** Branch `mailroutering-fontecha`, laatste commit
+**`505ddb3`** — *"Leg de previewconfiguratie vast en corrigeer de JWT-secret in drie
+documenten"*, met `90a0925` als voorganger. De vier documentatiebestanden uit dat item
+(`HANDOVER.md`, `operations/deploy-mailroutering.md`,
+`operations/reviewrapport-eindcontrole.md`, `operations/voorbereidingsrapport-deploy.md`)
+zijn **gecommit**; de werkmap is schoon. Er is niet gepusht en niet gemerged.
+
+**Groen.**
+
+- 474 lokale tests: `node --test tests/*.test.mjs`.
+- 29 Supabase-previewcontroles: `tests/supabase-checks.sql` tegen `rece-migratie-test`,
+  in één transactie met `rollback`. RLS staat aan en `anon` en `authenticated` hebben geen
+  lees-, schrijf- of uitvoerrechten.
+- Privacycontrole (5) en mock-kalendercontrole (41), zonder één echte API-aanroep.
+
+**Netlify — previewvariabelen bijgewerkt, productie niet.** `SUPABASE_SERVICE_ROLE_KEY` en
+`SUPABASE_ANON_KEY` staan in de previewcontexten; `SUPABASE_URL` is per context gesplitst en
+wijst voor Deploy Previews, Branch deploys én Preview Server & Agent Runners naar de
+previewbranch. Production behield overal zijn eigen waarde. *Local development (Netlify CLI)*
+wijst nog naar productie; ongevaarlijk, want de omgevingspoort blokkeert die context.
+
+**Er is wél een Deploy Preview gedraaid**, om 22:48, via *Retry with latest branch commit*.
+Naar productie is niet gedeployd en *Publish deploy* is niet aangeraakt. Productie draait nog
+`main@36f62cf`. Geen betalingen, geen echte mail, geen Google Calendar-aanroepen en geen
+wijziging in de productiedatabase.
+
+**Wat die build opleverde.** De anon-sleutel wordt aantoonbaar gebruikt: `/admin/` toont nu
+het volledige inlogformulier, en die variabele bestond vanochtend nog niet. De service-role-
+sleutel wordt door de branch geweigerd. De API-logs van `rece-migratie-test` zijn
+ondubbelzinnig: `POST /rest/v1/rpc/get_tavern_availability` → **401**, idem voor
+`tavern_payment_request`. De verzoeken komen dus wél op de branch aan — de URL klopt, er gaat
+niets naar productie — maar de sleutel wordt niet herkend. De twee andere verklaringen zijn
+uitgesloten: de functies bestaan, en `has_function_privilege('service_role', …, 'execute')`
+geeft voor beide `true`.
+
+**Over `SUPABASE_JWT_SECRET`.** Alleen nodig bij legacy HS256-tokens. Deze branch tekent met
+moderne signing keys — de JWKS levert HTTP 200 met één **ES256**-sleutel — en dan verifieert
+`_admin-auth.mjs` tegen die JWKS via `SUPABASE_URL`. De variabele hoeft er niet te zijn.
+
+**Open voor de volgende werkdag.**
+
+1. `SUPABASE_SERVICE_ROLE_KEY` voor de previewcontexten opnieuw zetten met de sleutel van
+   `rece-migratie-test` (Project Settings → API Keys → *Legacy anon, service_role API keys*).
+   Let op: na *Save variable* verschijnt de dialoog **"This looks like a sensitive value"**;
+   zonder die te bevestigen wordt er niets opgeslagen. Dat is vandaag twee keer misgegaan.
+
+   **Deze stap moet Robert zelf doen.** Het onthullen van een service-role-sleutel is een
+   actie die de assistent niet mag uitvoeren; op de legacy-sleutelpagina zit achter
+   `service_role` alleen *Reveal*, geen kopieerknop die de waarde verborgen houdt. Wie het
+   overneemt: laat Robert de sleutel onthullen en kopiëren, daarna kan de assistent hem in
+   de drie previewcontexten plakken zonder de waarde te zien.
+2. Eén nieuwe preview-build, en daarna `/api/first-access`, `/api/pay` en een echte
+   admin-login aflopen.
+3. `SUPABASE_ANON_KEY` ontbreekt nog op **Production**. Zonder die variabele werkt de
+   beheeromgeving na een merge ook op `lewos.co` niet.
+
 ### 2026-09-07 · Claude · Previewsleutels in Netlify; de preview is vanaf nu de enige testomgeving · TE CONTROLEREN
 
 **Wat.** De configuratiestand van het Netlify-project **`lewos.co`**, vastgelegd op 7 september
