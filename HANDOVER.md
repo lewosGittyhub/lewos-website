@@ -384,12 +384,22 @@ de previewbranch en voor Production naar productie.
 **De vier productiemigraties staan klaar voor handmatige uitvoering**, in deze volgorde:
 
 1. `database/first-access.sql`
-2. `database/seat-holds.sql`
-3. `database/stay-dates.sql`
-4. `database/admin.sql`
+2. `database/admin.sql`
+3. `database/seat-holds.sql`
+4. `database/stay-dates.sql`
 
-De volgorde volgt de afhankelijkheden: `first-access.sql` maakt drie tabellen, `seat-holds.sql`
-en `stay-dates.sql` maken er geen en wijzigen alleen kolommen, `admin.sql` maakt zijn eigen drie.
+**Deze volgorde is gecorrigeerd op 8 september.** Eerder stond hier `first-access` → `seat-holds`
+→ `stay-dates` → `admin`, afgeleid uit het aantal `create table`-statements. Dat was fout. De
+bestanden verklaren hun eigen volgorde en die telt: `admin.sql` zegt *"Draait ná
+`database/first-access.sql`"*, `seat-holds.sql` zegt *"Draait ná `first-access.sql` en
+`admin.sql`"*, en `stay-dates.sql` schrijft de keten voluit als `first-access.sql` →
+`filming-consent.sql` → `admin.sql` → `seat-holds.sql` → dit bestand, omdat het leunt op
+`admin_is_allowed`, `lewos_admin_actions`, `private.admin_role` en de kolommen `arrival_date`
+en `departure_date` uit `admin.sql`, en aan het eind twee functies uit dat bestand vervangt.
+
+**Openstaande vraag: `filming-consent.sql`.** Dat bestand staat in de keten tussen
+`first-access.sql` en `admin.sql`, maar hoort niet bij de vier die nu klaarstaan. Of het op
+productie al gedraaid is, is hier niet vastgesteld. Zoek dat uit vóór stap 2.
 
 Twee dingen die je bij het draaien moet weten.
 
