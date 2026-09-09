@@ -22,8 +22,13 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
   let availability=[];
   let publicBookingOpen=false;
   const show=(message,type='info')=>{result.textContent=message;result.dataset.type=type;result.hidden=false;result.focus();};
-  const showPublicBooking=()=>{publicBookingOpen=true;form.hidden=true;if(publicBooking)publicBooking.hidden=false;};
-  const showFirstAccessWaiting=()=>{form.hidden=true;if(publicBooking)publicBooking.hidden=true;if(firstAccessWaiting)firstAccessWaiting.hidden=false;};
+  // De statusregel in de editiekaart stond hardgecodeerd op "First Access now open" en bleef
+  // dat zeggen toen het formulier al verborgen was. Wat de bezoeker daar leest hoort uit
+  // dezelfde bron te komen als wat hij verderop kan doen.
+  const accessStatus=document.querySelector('[data-access-status]');
+  const setStatus=tekst=>{if(accessStatus)accessStatus.textContent=tekst;};
+  const showPublicBooking=()=>{publicBookingOpen=true;form.hidden=true;if(publicBooking)publicBooking.hidden=false;setStatus('Public booking open');};
+  const showFirstAccessWaiting=()=>{form.hidden=true;if(publicBooking)publicBooking.hidden=true;if(firstAccessWaiting)firstAccessWaiting.hidden=false;setStatus('First Access closing');};
   // De kalender vult zich uit de database. Komen er geen echte datums terug, dan
   // blijft alleen het keuzemenu staan: liever geen kalender dan een halve.
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];

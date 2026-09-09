@@ -111,6 +111,25 @@ test("closes First Access at the scheduled time while private windows finish",as
   assert.equal(rateBodies.length,0);
 });
 
+test("een gepasseerde datum sluit First Access niet als de betaalpoort dicht staat",async()=>{
+  // Robert, 9 september 2026: dit is dagenlang misgegaan op de live site. De datum was
+  // verstreken, dus First Access sloot -- maar publieke verkoop kon niet opengaan, want
+  // PUBLISHED_TERMS_VERSION is leeg. Het aanmeldformulier verdween, terwijl de editiekaart
+  // bleef zeggen dat First Access open was. Een kanaal sluiten ten gunste van een kanaal dat
+  // niet open kán, is altijd fout: dan is er geen enkele weg meer naar binnen.
+  process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
+  delete process.env.TAVERN_PAYMENTS_ENABLED;
+  delete process.env.BOOKING_TERMS_VERSION;
+  publicReady=false;
+  const {handler}=await import("../netlify/functions/first-access.mjs");
+  const status=JSON.parse((await handler({httpMethod:"GET",headers:{}})).body);
+  assert.equal(status.publicBookingOpen,false);
+  assert.equal(status.firstAccessClosed,false,"zonder betaalde route blijft First Access de weg naar binnen");
+  // En het moet ook echt werken, niet alleen zichtbaar zijn.
+  const response=await handler(post(valid));
+  assert.equal(response.statusCode,200);
+});
+
 test("private enquiries remain available after public booking opens",async()=>{
   process.env.TAVERN_PAYMENTS_ENABLED="true";
   process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";

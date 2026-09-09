@@ -1,7 +1,7 @@
 import {createHash} from "node:crypto";
 import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
-import {publicBookingIsOpen} from "./_booking-config.mjs";
+import {publicBookingIsOpen,paymentsAreEnabled} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {escapeHtml,labelledBlock,resendPayload} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
@@ -124,9 +124,14 @@ export const handler=async event=>{
       const availability=await fetch(`${supabaseUrl}/rest/v1/rpc/get_tavern_availability`,{method:"POST",headers:{apikey:serviceKey,authorization:`Bearer ${serviceKey}`,"content-type":"application/json"},body:"{}"});
       if(!availability.ok){console.error("Availability database error",availability.status,await availability.text());return json(503,{error:"booking_service_unavailable"});}
       const weekends=await availability.json();
-      const firstAccessClosed=firstAccessClosesAt()!==null&&Date.now()>=firstAccessClosesAt();
-      const publicBookingOpen=firstAccessClosed?await databasePublicBookingReady({supabaseUrl,serviceKey}):false;
-      return json(200,{weekends,publicBookingOpen,firstAccessClosed:firstAccessClosed&&!publicBookingOpen});
+      // De geplande sluitingsdatum sluit First Access alleen als de betaalde route het
+      // ook echt kan overnemen. Staat de betaalpoort dicht, dan zou de datum een
+      // werkend kanaal sluiten ten gunste van een kanaal dat niet open kán -- en dat
+      // gebeurt stil, terwijl de pagina blijft zeggen dat aanmelden kan.
+      const gepland=firstAccessClosesAt()!==null&&Date.now()>=firstAccessClosesAt();
+      const publicBookingOpen=gepland?await databasePublicBookingReady({supabaseUrl,serviceKey}):false;
+      const firstAccessClosed=gepland&&paymentsAreEnabled()&&!publicBookingOpen;
+      return json(200,{weekends,publicBookingOpen,firstAccessClosed});
     }catch(error){console.error("Availability connection error",error);return json(503,{error:"booking_service_unavailable"});}
   }
   if(event.httpMethod!=="POST") return json(405,{error:"method_not_allowed"});
@@ -166,7 +171,7 @@ export const handler=async event=>{
   if(weekend!=="private"&&people>6) return json(400,{error:"featured_party_too_large"});
   const closesAt=firstAccessClosesAt();
   if(weekend!=="private"&&closesAt===null)return json(503,{error:"booking_service_not_configured"});
-  if(weekend!=="private"&&Date.now()>=closesAt){
+  if(weekend!=="private"&&Date.now()>=closesAt&&paymentsAreEnabled()){
     try{
       if(await databasePublicBookingReady({supabaseUrl,serviceKey}))return json(409,{error:"public_booking_open",bookingUrl:"/tavern/book/"});
       return json(409,{error:"first_access_closed"});
