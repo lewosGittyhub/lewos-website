@@ -156,3 +156,74 @@ Tavern-materiaal. **Besluit van Robert, geen juridische vraag.**
       standaardformulier, en bepalen wanneer toestemming gevraagd moet worden.
 - [ ] Punt 8: de zin over één betaling herzien, samen met punt 4.
 - [ ] Punt 9: besluit over de Fontecha-verwijzing in de voorwaarden.
+
+---
+
+## Aanvulling 9 september 2026 (tweede) — wat er zonder gestor is rechtgezet
+
+**Aanleiding.** Robert op 9 september 2026: er is voorlopig geen geld voor een gestor. Die
+komt pas nadat er drie weekenden zijn georganiseerd; daarna wordt alles officieel gemaakt.
+Tot die tijd moeten de documenten er staan en zo goed mogelijk kloppen.
+
+**De grens die dit níét verschuift.** Betere documenten openen de verkoop niet.
+`CLAUDE.md` §5.1 blijft gelden: verkopen mag pas als RC-polis en caución actief zijn, de
+RECE0033T06-registratiecode binnen is én de klantdocumenten af zijn. De betaalpoort blijft
+dicht: `PUBLISHED_TERMS_VERSION` is leeg, `TAVERN_PAYMENTS_ENABLED` staat niet op Production,
+en alle drie de documenten dragen hun conceptaanduiding.
+
+**Het onderscheid dat is aangehouden.** Rechtgezet is alleen wat *feitelijk onjuist* was: het
+document beschreef iets anders dan wat er gebouwd is. Dat kan zonder jurist, want het maakt de
+tekst waar in plaats van onwaar, en het geeft de reiziger méér informatie, nooit minder. Niet
+aangeraakt is alles waar een juridisch oordeel aan hangt: wie de contractspartij is, of een
+blokkering zonder einddatum mag, en hoe de termijnen zich tot het herroepingsrecht verhouden.
+
+### Wel gewijzigd
+
+| Punt | Bestand | Was | Is |
+| --- | --- | --- | --- |
+| 1, 2, 3 | `terms/` §*Temporary seat hold* | alleen 40 minuten | beide paden beschreven: 40 minuten bij één betaler; 60 + 30 minuten bij eigen aandelen, met één verlenging tot maximaal twee uur, en de mededeling dat onbetaalde stoelen niet automatisch vrijkomen maar door Lewos worden beoordeeld |
+| 6 | `travel-information/` (EN + ES) | Weekend 01 / Weekend 02 | The Halloween Table / The Autumn Table |
+| 7 | `travel-information/` (EN + ES) | filmen kwam nul keer voor | een punt onder *Main characteristics* dat beschrijft dat The Halloween Table een gefilmde editie is, dat iedere gast de Filming & Media Agreement persoonlijk invult, dat niemand namens een ander tekent, dat herkenbaar promotioneel gebruik en betaalde advertenties elk apart toestemming vragen die geweigerd mag worden, en dat The Autumn Table niet gefilmd is |
+| 8 | `travel-information/` (EN + ES) | "Payment is made in one amount through Stripe" | iedere deelnemer betaalt zijn eigen €2.025 via een eigen betaallink, en de bevestiging gaat naar iedere deelnemer die betaald heeft |
+
+De datumstempel van `terms/` is meegegaan van 2026-08-28 naar 2026-09-09. De Spaanse versie van
+`travel-information/` is per punt meegeschreven, zodat de belofte bovenaan die sectie waar blijft:
+er wordt niets toegevoegd of weggelaten.
+
+### Correctie op punt 7 van de eerste aanvulling
+
+Punt 7 stelde dat filmen ook in `standard-information/` ontbreekt. Dat is geen gebrek. Dat
+formulier heeft een tekst die de wet zelf voorschrijft; het beschrijft geen enkel kenmerk van
+een specifiek pakket, van geen enkele aanbieder. Er is dan ook niets aan gewijzigd. Filmen
+hoort in de precontractuele informatie, en daar staat het nu.
+
+### Niet gewijzigd, en waarom
+
+- **Punt 4 — wie is de contractspartij.** Onbeantwoord. Er staat nu beschreven *hoe* er
+  betaald wordt, niet *wie* er tekent. Dat verschil is bewust: het eerste is een feit, het
+  tweede een juridisch oordeel.
+- **Punt 9 — de Fontecha-verwijzing in `terms/`.** Onaangeraakt. Dit botst met `CLAUDE.md` §5.3,
+  maar het weghalen haalt ook eerlijke informatie weg bij een gast die foto's van de echte
+  locatie zoekt. Besluit van Robert.
+- **De open velden.** Volledig adres, fiscaal nummer, telefoon en toeristische registratie
+  blijven leeg. Die zijn er nog niet (registratiecode) of horen niet in de repo
+  (`CLAUDE.md` §5.4). Ze staan als "to complete" in de tekst, waar ze horen.
+- **`standard-information/`.** Geen letter gewijzigd.
+
+### De lijst voor de gestor, straks
+
+- [x] Punt 1, 2 en 3: de voorwaarden beschrijven nu wél beide termijnen. **Blijft open:** of een
+      blokkering zonder einddatum toelaatbaar is, en hoe twee uur zich verhoudt tot het minimum
+      van vier betaalde gasten per weekend.
+- [ ] Punt 4: wie is de contractspartij? Bepaalt ook of iedere deelnemer de precontractuele
+      informatie apart moet krijgen. **Niet zelf beantwoord.**
+- [x] Punt 6: weekendnamen gelijkgetrokken.
+- [x] Punt 7: filmen staat in de precontractuele informatie. **Blijft open:** of de toestemming
+      vóór of ná het sluiten van de overeenkomst gevraagd moet worden.
+- [x] Punt 8: de zin over één betaling is herzien.
+- [ ] Punt 9: besluit over de Fontecha-verwijzing. **Van Robert, geen juridische vraag.**
+- [ ] Twee vragen die al in `standard-information/` stonden: verandert Richtlijn (EU) 2026/1024
+      dit wettelijke formulier, en moet de registratiecode in commerciële communicatie staan?
+
+474 tests groen na de wijziging. `tests/site.test.mjs` bewaakt nog steeds dat `terms/` het getal
+uit `CHECKOUT_HOLD_MINUTES` noemt en dat de boekingspagina 60 en 30 minuten noemt.
