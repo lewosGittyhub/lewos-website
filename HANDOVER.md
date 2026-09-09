@@ -52,8 +52,9 @@ de site de weekenden gewoon blijft verkopen.
 **Verkoop blijft dicht.** `PUBLISHED_TERMS_VERSION` leeg in de code, `TAVERN_PAYMENTS_ENABLED`
 niet gezet op Production, `publicBookingOpen: false` op de live site.
 
-**Wat er nog ligt.** Peters sectie staat klaar in de branch maar wacht op zijn akkoord op tekst en
-foto, op welk weekend hij draait, en eventueel op een spelerscitaat. En de verkoop wacht op de
+**Wat er nog ligt.** Peters sectie staat sinds 9 september 2026 live; Robert bevestigde die dag
+zijn akkoord op tekst en foto, vastgelegd in `operations/image-credits.md`. Open blijft nog welk
+weekend hij draait, en eventueel een spelerscitaat. En de verkoop wacht op de
 papieren.
 
 **Vanaf nu geldt:** een boeking die Nadine vanaf haar eigen adres in de gedeelde agenda zet,
@@ -107,8 +108,9 @@ een nieuwe productie-deploy nodig voordat functies de nieuwe omgeving lezen.
 - De privésleutel. Het serviceaccount-JSON staat niet meer op de Mac, dus er moet waarschijnlijk
   een nieuwe sleutel worden aangemaakt in Google Cloud — Google laat een sleutel maar één keer
   downloaden. Daarna een productie-deploy, en die wacht op Roberts aparte akkoord.
-- Peters sectie staat klaar in de branch maar mag niet live voordat hij zijn akkoord heeft
-  gegeven op tekst en foto, en voordat bekend is welk weekend hij draait.
+- Peters sectie is op 9 september 2026 live gegaan, nadat Robert diezelfde dag zijn akkoord op
+  tekst en foto bevestigde. Zie `operations/image-credits.md`. Welk weekend hij draait staat nog
+  niet vast; zolang dat zo is ontbreekt bij hem de slotzin die Evan wel heeft.
 - Een spelerscitaat voor Peter, als hij er een kan krijgen.
 
 **Waarschuwing voor wie het dossier leest:** een notitie over een omgevingsstand veroudert
