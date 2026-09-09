@@ -74,3 +74,85 @@ verstrekt. **Niet zelf beantwoord.**
 - [ ] Punt 4: wie is de contractspartij? Bepaalt ook of iedere deelnemer de precontractuele
       informatie apart moet krijgen.
 - [ ] Pas daarna de voorwaarden bijwerken en `tests/site.test.mjs` meeveranderen.
+
+---
+
+## Aanvulling 9 september 2026 — kruiscontrole van de drie documenten
+
+De vier punten hierboven gaan over de flow tegenover de voorwaarden. Deze aanvulling komt uit
+een vergelijking van `terms/`, `travel-information/` en `standard-information/` onderling en met
+de verkooppagina. Opnieuw is er geen letter juridische tekst gewijzigd.
+
+### 6. De weekenden heten sinds 8 september anders op de site dan in de documenten
+
+De verkooppagina en de database noemen ze **The Halloween Table** en **The Autumn Table**.
+`travel-information/index.html` noemt ze nog **Weekend 01** en **Weekend 02**; de andere twee
+documenten noemen ze niet bij naam.
+
+Dit is op 8 september ontstaan met de hernoeming. Een gast die op de site "The Halloween Table"
+koopt en in de precontractuele informatie "Weekend 01" leest, kan de twee niet aan elkaar
+koppelen. De datums kloppen wel en zijn ondubbelzinnig, dus het is te herstellen door de namen
+bij te werken — maar dat raakt juridische tekst en gaat dus langs de gestor.
+
+### 7. Filmen ontbreekt volledig in de precontractuele informatie
+
+Dit is het zwaarste punt van deze aanvulling.
+
+`travel-information/index.html` noemt filmen **nul keer**. `standard-information/index.html`
+ook nul keer. `terms/index.html` behandelt het wel, onder *Age, filming and personal data*.
+
+Op de verkooppagina staat intussen: *"Weekend 01 is a professionally filmed edition. A
+professional videographer captures selected parts…"* en zelfs *"Because filming is part of what
+this Halloween Table is, every attendee…"*. Filmen wordt daar dus gepresenteerd als een
+wezenlijk kenmerk van het pakket, niet als bijzaak.
+
+De precontractuele informatie is juist het document dat de voornaamste kenmerken van de
+reisdiensten moet beschrijven vóórdat de reiziger gebonden is. Staat daar niets over filmen,
+terwijl de site het als essentie verkoopt, dan mist die informatie een kenmerk dat de keuze van
+een gast kan bepalen. Er hangt bovendien een gegevensbeschermingskant aan: er is een volledige
+toestemmingsstroom gebouwd (`database/filming-consent.sql`, `/tavern/filming-agreement/`), maar
+die begint pas ná de boeking.
+
+**Vraag voor de gestor.** Moet het gefilmde karakter van weekend 01 in de precontractuele
+informatie en in het standaardformulier staan, en zo ja in welke bewoording? En moet de
+toestemming vóór of ná het sluiten van de overeenkomst worden gevraagd?
+
+### 8. De precontractuele informatie beschrijft één betaling, de flow doet er zes
+
+`travel-information/index.html` zegt: *"Payment is made in one amount through Stripe. A group
+booking becomes binding after successful payment."*
+
+Gebouwd is: iedere deelnemer betaalt zijn eigen €2.025 via een eigen betaallink, en bevestiging
+gaat per persoon. Dit is punt 4 hierboven, maar het staat dus óók in het document met de
+strengste eisen. Wie punt 4 beantwoordt, moet deze zin meenemen.
+
+### 9. Een Fontecha-verwijzing in Tavern-materiaal
+
+`terms/index.html` bevat: *"Photographs of the actual location are published on the Tavern's
+Instagram channel and by the accommodation itself on @fontecha_asturias."*
+
+`CLAUDE.md` §5.3 stelt als harde grens: *"Community Lodge / The Lewos Tavern staat volledig los
+van Fonteca. Nooit vermengen, nooit koppelen, geen Fonteca-referenties in Tavern- of Community
+Lodge-materiaal."*
+
+Dat botst. Het kan een bewuste uitzondering zijn — gasten doorverwijzen naar echte foto's van de
+locatie is eerlijk en nuttig — maar het staat wel in de boekingsvoorwaarden, en dat is
+Tavern-materiaal. **Besluit van Robert, geen juridische vraag.**
+
+### Wat er níét mis bleek
+
+- Prijs: €2.025 per persoon, consistent in alle documenten en op de site.
+- Minimum van vier betaalde gasten: consistent tussen `travel-information` en de gebouwde flow.
+- Datums, aankomst- en vertrektijden: consistent.
+- "a professional Game Master" in enkelvoud blijft kloppen; er zijn twee spelleiders, maar elk
+  weekend heeft er één.
+- Alle drie de documenten dragen zichtbaar hun conceptaanduiding en staan live op 200, wat klopt:
+  lezen mag, eraan gebonden zijn niet.
+
+### Aangevuld op de reviewlijst
+
+- [ ] Punt 6: weekendnamen gelijktrekken met de site.
+- [ ] Punt 7: filmen opnemen in de precontractuele informatie en mogelijk in het
+      standaardformulier, en bepalen wanneer toestemming gevraagd moet worden.
+- [ ] Punt 8: de zin over één betaling herzien, samen met punt 4.
+- [ ] Punt 9: besluit over de Fontecha-verwijzing in de voorwaarden.
