@@ -180,10 +180,15 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     applyMode(isPrivate());
   });
 
+  // Een waarde uit de URL of uit de API hoort nooit in een CSS-selector terecht te komen:
+  // `querySelector` gooit op een aanhalingsteken of een blokhaak, en dan valt het hele script
+  // stil. De optielijst doorlopen kan niet stuk.
+  const optieVoor=waarde=>[...weekend.options].find(optie=>optie.value===waarde)||null;
+
   const updateWeekendOptions=()=>{
     const partySize=Number.parseInt(people.value,10)||0;
     availability.forEach(item=>{
-      const option=weekend.querySelector(`option[value="${item.slug}"]`);
+      const option=optieVoor(item.slug);
       if(!option)return;
       const full=item.remaining===0;
       const doesNotFit=partySize>0&&partySize>item.remaining;
@@ -216,7 +221,7 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
   applyMode(isPrivate());
   const query=new URLSearchParams(window.location.search);
   const requestedWeekend=query.get('weekend');
-  if(requestedWeekend&&weekend.querySelector(`option[value="${requestedWeekend}"]`))weekend.value=requestedWeekend;
+  if(requestedWeekend&&optieVoor(requestedWeekend))weekend.value=requestedWeekend;
   loadAvailability();
   if(query.get('status')==='alternative'){
     weekend.value=query.get('offered')||'';
