@@ -7,6 +7,58 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-09 · Claude · De agendakoppeling staat aan · TE CONTROLEREN
+
+**Wat.** De laatste ontbrekende variabele is gezet en er is opnieuw gedeployd. De koppeling met
+Google Agenda leest nu echt.
+
+`GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` staat op **Production, één context**, aangevinkt als secret.
+Daarmee zijn alle drie de agendavariabelen compleet; Netlify telt 17 variabelen. Er is geen andere
+waarde en geen andere context aangeraakt.
+
+**Twee dingen die bij het zetten misgingen en zijn rechtgezet.**
+
+1. De waarde op het klembord was 1739 tekens en begon met een aanhalingsteken: het hele
+   JSON-veld, dus inclusief `"private_key":` en de omringende quotes. Zo opgeslagen was de sleutel
+   pas gefaald op het moment van ondertekenen, met een vage runtime-fout in plaats van een
+   duidelijke configuratiefout. De waarde is eruit gepeld tot 1736 tekens, van
+   `-----BEGIN PRIVATE KEY-----` tot en met het einde, zonder quotes.
+2. Een eerdere poging van Robert was niet opgeslagen. Vrijwel zeker de dialoog
+   "This looks like a sensitive value", die bij een sleutelnaam met `PRIVATE_KEY` gegarandeerd
+   verschijnt en zonder bevestiging alles weggooit. Door het secret-vinkje vóór het opslaan aan te
+   zetten blijft die dialoog weg. **Doe dat voortaan zo bij elke sleutelachtige variabele.**
+
+De vorm klopt met wat `_calendar.mjs` verwacht: nul echte regeleindes en 28 letterlijke
+`\n`-tekens, die de code zelf uitpakt met `.replace(/\\n/g,"\n")`. De sleutelwaarde is nergens
+getoond of gelogd; alleen lengte en begin- en eindmarkering zijn gecontroleerd.
+
+**Deploy.** `Production: main@637f2ca` — Published, 9 september 11:34, in 25 seconden. Dezelfde
+commit, alleen opnieuw gebouwd zodat de functies de nieuwe omgeving lezen. Geen nieuwe code live.
+
+**De vier controles, alle geslaagd.**
+
+| Controle | Uitkomst |
+| --- | --- |
+| `/api/house-availability?from=2026-11-01&to=2026-11-05` | `configured: true` — was `not_configured` |
+| Blokkeren de twee handmatige weekendafspraken? | **Nee.** 30 okt–4 nov: nul bezette nachten. 4–11 nov: nul bezette nachten |
+| `/api/first-access` | 200, twee weekenden, zes plaatsen vrij, €2.025, `publicBookingOpen: false` |
+| Agenda ongewijzigd | Dezelfde twee afspraken, geen nieuwe aangemaakt, niets verwijderd, geen testafspraken terug |
+
+Dat tweede resultaat is het bewijs dat de opzet klopt: de koppeling leest de agenda, ziet de twee
+"house reserved"-afspraken staan, en laat ze met rust omdat ze vanuit Roberts eigen account zijn
+gemaakt en dus onder `niet_herkend` vallen. Nadine ziet ze wel en boekt er niet overheen, terwijl
+de site de weekenden gewoon blijft verkopen.
+
+**Verkoop blijft dicht.** `PUBLISHED_TERMS_VERSION` leeg in de code, `TAVERN_PAYMENTS_ENABLED`
+niet gezet op Production, `publicBookingOpen: false` op de live site.
+
+**Wat er nog ligt.** Peters sectie staat klaar in de branch maar wacht op zijn akkoord op tekst en
+foto, op welk weekend hij draait, en eventueel op een spelerscitaat. En de verkoop wacht op de
+papieren.
+
+**Vanaf nu geldt:** een boeking die Nadine vanaf haar eigen adres in de gedeelde agenda zet,
+blokkeert die nachten op de site. Dat is niet meer theorie.
+
 ### 2026-09-09 · Claude · Drie kleine punten opgeruimd, en de Netlify-stand nagemeten · TE CONTROLEREN
 
 **Stand op het moment van schrijven, alles nagekeken en niet aangenomen.**
