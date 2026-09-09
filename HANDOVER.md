@@ -7,6 +7,62 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-09 · Claude · Drie kleine punten opgeruimd, en de Netlify-stand nagemeten · TE CONTROLEREN
+
+**Stand op het moment van schrijven, alles nagekeken en niet aangenomen.**
+
+| Wat | Waar |
+| --- | --- |
+| Lokale branch | `9bbc639` |
+| `origin/mailroutering-fontecha` | `85e0cce` — één commit achter |
+| `origin/main` (live op lewos.co) | `637f2ca` |
+| Werkmap | schoon |
+| Lokale testsuite | 474/474 |
+
+Live geverifieerd: `/api/first-access` geeft "The Halloween Table" en "The Autumn Table" met
+`publicBookingOpen: false`.
+
+**Netlify, uitgelezen op 9 september — niet uit het geheugen.** Zestien variabelen in totaal.
+De drie voor de agendakoppeling:
+
+| Variabele | Stand |
+| --- | --- |
+| `LEWOS_CALENDAR_ID` | Production, 90 tekens. Alle andere contexten leeg |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Production, 55 tekens. Alle andere contexten leeg |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | **bestaat niet** |
+
+De koppeling doet dus nog niets: `calendarConfig()` eist alle drie de waarden en geeft anders
+`null` terug, waarna `/api/house-availability` netjes `not_configured` antwoordt. Er is bovendien
+een nieuwe productie-deploy nodig voordat functies de nieuwe omgeving lezen.
+
+**Drie opruimpunten uit de controle van `82afcc3`, nu opgelost in `9bbc639`.**
+
+1. **Een waarde uit de URL kwam ongeëscaped in een CSS-selector.** `?weekend=` ging rechtstreeks
+   in `` weekend.querySelector(`option[value="${…}"]`) ``. Een geknutselde waarde als `?weekend="]`
+   laat `querySelector` gooien, en dan valt het hele formulierscript stil. Vervangen door een
+   hulpfunctie die de optielijst doorloopt; die kan niet breken. Dekt meteen de tweede plek in
+   `updateWeekendOptions` waar hetzelfde gebeurde. Dit stond al in `origin/main` en kwam dus niet
+   uit Codex' commit.
+2. **De twee weekendknoppen droegen dezelfde tekst** maar leidden naar verschillende weekends.
+   Ze heten nu "Choose The Halloween Table" en "Choose The Autumn Table". De hero-knop en de CTA
+   onder de fotosectie houden "Choose your weekend", want die gaan allebei naar `#chapters` —
+   dezelfde tekst voor dezelfde bestemming is juist goed.
+3. **`data-weekend` op de knoppen was dood.** Geen enkele JavaScript las het; de selectie loopt
+   volledig via de querystring. Verwijderd.
+
+**Wat nog openstaat.**
+
+- De privésleutel. Het serviceaccount-JSON staat niet meer op de Mac, dus er moet waarschijnlijk
+  een nieuwe sleutel worden aangemaakt in Google Cloud — Google laat een sleutel maar één keer
+  downloaden. Daarna een productie-deploy, en die wacht op Roberts aparte akkoord.
+- Peters sectie staat klaar in de branch maar mag niet live voordat hij zijn akkoord heeft
+  gegeven op tekst en foto, en voordat bekend is welk weekend hij draait.
+- Een spelerscitaat voor Peter, als hij er een kan krijgen.
+
+**Waarschuwing voor wie het dossier leest:** een notitie over een omgevingsstand veroudert
+sneller dan de rest. Deze tabel is op 9 september uitgelezen; controleer hem opnieuw voordat je
+er een besluit op baseert.
+
 ### 2026-09-08 · Claude · Peter als tweede Game Master, en twee van de drie agendavariabelen · TE CONTROLEREN
 
 **Peter Fleming staat als tweede Game Master op de Tavern-pagina** (`771e8b7`), onder de sectie
