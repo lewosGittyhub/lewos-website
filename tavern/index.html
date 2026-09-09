@@ -88,7 +88,7 @@
     .release__head h2 { margin-bottom: 0; font-size: clamp(2.4rem, 4.8vw, 4.4rem); }
     .release__head p:last-child { margin-bottom: 5px; color: var(--beige); }
     .weekends { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-    .weekend { position: relative; padding: clamp(32px, 5vw, 54px); overflow: hidden; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-medium); background-image: linear-gradient(rgba(10,42,38,.78), rgba(10,42,38,.70)), url("assets/weekend-01-dark-dice.webp?v=1"); background-position: center; background-size: cover; text-shadow: 0 2px 16px rgba(0,0,0,.35); }
+    .weekend { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(32px, 5vw, 54px); overflow: hidden; border: 1px solid rgba(247,243,236,.28); border-radius: var(--radius-medium); background-image: linear-gradient(rgba(10,42,38,.78), rgba(10,42,38,.70)), url("assets/weekend-01-dark-dice.webp?v=1"); background-position: center; background-size: cover; text-shadow: 0 2px 16px rgba(0,0,0,.35); }
     .weekend:nth-child(2) { background-image: linear-gradient(rgba(10,42,38,.80), rgba(10,42,38,.72)), url("assets/dice-character-sheet.webp?v=1"); background-position: center; }
     .weekend::after { content: "Six seats"; position: absolute; top: 28px; right: 28px; color: var(--orange); font: 600 .72rem/1 "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
     .weekend__number { display: block; margin-bottom: 54px; color: rgba(237,230,218,.55); font: 600 .76rem/1 "Poppins", sans-serif; letter-spacing: .14em; text-transform: uppercase; }
@@ -97,7 +97,13 @@
     .weekend .weekend__hook { max-width: 560px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(237,230,218,.28); color: var(--cream); font-weight: 600; }
     .weekend__link { display: inline-flex; margin-top: 14px; color: var(--orange); font: 600 .88rem/1.3 "Poppins", sans-serif; text-decoration: none; }
     .weekend__link:hover { color: var(--cream); }
-    .weekend__button { margin-top: 22px; }
+    /* Het doel van "Choose your weekend" verderop de pagina: het hele kalenderblok,
+       niet alleen het label, zodat beide maanden in beeld springen. */
+    #choose-weekend { scroll-margin-top: 96px; }
+    /* `auto` duwt de knop naar de onderkant van de kaart, zodat beide knoppen op
+       dezelfde hoogte staan ook als de ene tekst langer is dan de andere. */
+    .weekend__button { margin-top: auto; padding-top: 0; }
+    .weekend .weekend__hook { margin-bottom: 22px; }
     .around__cta { display: flex; width: fit-content; margin: 28px auto 0; }
     .release__rule { margin: 28px 0 0; padding-left: 20px; border-left: 3px solid var(--orange); color: var(--beige); }
 
@@ -190,6 +196,8 @@
     .included__grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 90px; align-items: start; }
     .included__grid { position: relative; z-index: 1; }
     .included__grid > div:first-child { position: relative; min-height: 100%; }
+    /* De linkerkolom is verder leeg onder de kop; daar staat de knop niet in de weg. */
+    .included__cta { display: inline-flex; margin-top: 34px; }
     .included h2 { font-size: clamp(2.5rem, 4.6vw, 4.2rem); }
     .included__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid rgba(247,243,236,.22); }
     .included__list li { display: grid; grid-template-columns: 32px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid rgba(247,243,236,.18); }
@@ -591,7 +599,7 @@
           <button class="around__nav around__nav--next" type="button" data-next data-glyph="&#8250;" aria-label="Next photograph"></button>
           <div class="around__dots" data-dots role="tablist" aria-label="Choose a photograph"></div>
         </div>
-        <a class="button around__cta" href="#chapters">Choose your weekend →</a>
+        <a class="button around__cta" href="#choose-weekend">Choose your weekend →</a>
       </div>
     </section>
 
@@ -686,6 +694,7 @@
         <div>
           <p class="eyebrow">Your provisions await</p>
           <h2 id="included-title">Bring your character. We take care of the rest.</h2>
+          <a class="button included__cta" href="#choose-weekend">Choose your weekend &rarr;</a>
         </div>
         <div>
           <ul class="included__list">
@@ -780,7 +789,7 @@
           <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
           <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
           <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" data-limit="email" required></div>
-          <div class="form-field">
+          <div class="form-field" id="choose-weekend">
             <span class="form-field__legend" id="stay-legend">Your weekend, and the nights around it</span>
             <div class="calendar" data-weekend-calendar aria-labelledby="stay-legend"></div>
             <p class="calendar__chosen" data-calendar-chosen role="status" hidden></p>
