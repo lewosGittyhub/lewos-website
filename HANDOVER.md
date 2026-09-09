@@ -7,6 +7,248 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-09 · Claude · De agendakoppeling staat aan · TE CONTROLEREN
+
+**Wat.** De laatste ontbrekende variabele is gezet en er is opnieuw gedeployd. De koppeling met
+Google Agenda leest nu echt.
+
+`GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` staat op **Production, één context**, aangevinkt als secret.
+Daarmee zijn alle drie de agendavariabelen compleet; Netlify telt 17 variabelen. Er is geen andere
+waarde en geen andere context aangeraakt.
+
+**Twee dingen die bij het zetten misgingen en zijn rechtgezet.**
+
+1. De waarde op het klembord was 1739 tekens en begon met een aanhalingsteken: het hele
+   JSON-veld, dus inclusief `"private_key":` en de omringende quotes. Zo opgeslagen was de sleutel
+   pas gefaald op het moment van ondertekenen, met een vage runtime-fout in plaats van een
+   duidelijke configuratiefout. De waarde is eruit gepeld tot 1736 tekens, van
+   `-----BEGIN PRIVATE KEY-----` tot en met het einde, zonder quotes.
+2. Een eerdere poging van Robert was niet opgeslagen. Vrijwel zeker de dialoog
+   "This looks like a sensitive value", die bij een sleutelnaam met `PRIVATE_KEY` gegarandeerd
+   verschijnt en zonder bevestiging alles weggooit. Door het secret-vinkje vóór het opslaan aan te
+   zetten blijft die dialoog weg. **Doe dat voortaan zo bij elke sleutelachtige variabele.**
+
+De vorm klopt met wat `_calendar.mjs` verwacht: nul echte regeleindes en 28 letterlijke
+`\n`-tekens, die de code zelf uitpakt met `.replace(/\\n/g,"\n")`. De sleutelwaarde is nergens
+getoond of gelogd; alleen lengte en begin- en eindmarkering zijn gecontroleerd.
+
+**Deploy.** `Production: main@637f2ca` — Published, 9 september 11:34, in 25 seconden. Dezelfde
+commit, alleen opnieuw gebouwd zodat de functies de nieuwe omgeving lezen. Geen nieuwe code live.
+
+**De vier controles, alle geslaagd.**
+
+| Controle | Uitkomst |
+| --- | --- |
+| `/api/house-availability?from=2026-11-01&to=2026-11-05` | `configured: true` — was `not_configured` |
+| Blokkeren de twee handmatige weekendafspraken? | **Nee.** 30 okt–4 nov: nul bezette nachten. 4–11 nov: nul bezette nachten |
+| `/api/first-access` | 200, twee weekenden, zes plaatsen vrij, €2.025, `publicBookingOpen: false` |
+| Agenda ongewijzigd | Dezelfde twee afspraken, geen nieuwe aangemaakt, niets verwijderd, geen testafspraken terug |
+
+Dat tweede resultaat is het bewijs dat de opzet klopt: de koppeling leest de agenda, ziet de twee
+"house reserved"-afspraken staan, en laat ze met rust omdat ze vanuit Roberts eigen account zijn
+gemaakt en dus onder `niet_herkend` vallen. Nadine ziet ze wel en boekt er niet overheen, terwijl
+de site de weekenden gewoon blijft verkopen.
+
+**Verkoop blijft dicht.** `PUBLISHED_TERMS_VERSION` leeg in de code, `TAVERN_PAYMENTS_ENABLED`
+niet gezet op Production, `publicBookingOpen: false` op de live site.
+
+**Wat er nog ligt.** Peters sectie staat klaar in de branch maar wacht op zijn akkoord op tekst en
+foto, op welk weekend hij draait, en eventueel op een spelerscitaat. En de verkoop wacht op de
+papieren.
+
+**Vanaf nu geldt:** een boeking die Nadine vanaf haar eigen adres in de gedeelde agenda zet,
+blokkeert die nachten op de site. Dat is niet meer theorie.
+
+### 2026-09-09 · Claude · Drie kleine punten opgeruimd, en de Netlify-stand nagemeten · TE CONTROLEREN
+
+**Stand op het moment van schrijven, alles nagekeken en niet aangenomen.**
+
+| Wat | Waar |
+| --- | --- |
+| Lokale branch | `9bbc639` |
+| `origin/mailroutering-fontecha` | `85e0cce` — één commit achter |
+| `origin/main` (live op lewos.co) | `637f2ca` |
+| Werkmap | schoon |
+| Lokale testsuite | 474/474 |
+
+Live geverifieerd: `/api/first-access` geeft "The Halloween Table" en "The Autumn Table" met
+`publicBookingOpen: false`.
+
+**Netlify, uitgelezen op 9 september — niet uit het geheugen.** Zestien variabelen in totaal.
+De drie voor de agendakoppeling:
+
+| Variabele | Stand |
+| --- | --- |
+| `LEWOS_CALENDAR_ID` | Production, 90 tekens. Alle andere contexten leeg |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Production, 55 tekens. Alle andere contexten leeg |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | **bestaat niet** |
+
+De koppeling doet dus nog niets: `calendarConfig()` eist alle drie de waarden en geeft anders
+`null` terug, waarna `/api/house-availability` netjes `not_configured` antwoordt. Er is bovendien
+een nieuwe productie-deploy nodig voordat functies de nieuwe omgeving lezen.
+
+**Drie opruimpunten uit de controle van `82afcc3`, nu opgelost in `9bbc639`.**
+
+1. **Een waarde uit de URL kwam ongeëscaped in een CSS-selector.** `?weekend=` ging rechtstreeks
+   in `` weekend.querySelector(`option[value="${…}"]`) ``. Een geknutselde waarde als `?weekend="]`
+   laat `querySelector` gooien, en dan valt het hele formulierscript stil. Vervangen door een
+   hulpfunctie die de optielijst doorloopt; die kan niet breken. Dekt meteen de tweede plek in
+   `updateWeekendOptions` waar hetzelfde gebeurde. Dit stond al in `origin/main` en kwam dus niet
+   uit Codex' commit.
+2. **De twee weekendknoppen droegen dezelfde tekst** maar leidden naar verschillende weekends.
+   Ze heten nu "Choose The Halloween Table" en "Choose The Autumn Table". De hero-knop en de CTA
+   onder de fotosectie houden "Choose your weekend", want die gaan allebei naar `#chapters` —
+   dezelfde tekst voor dezelfde bestemming is juist goed.
+3. **`data-weekend` op de knoppen was dood.** Geen enkele JavaScript las het; de selectie loopt
+   volledig via de querystring. Verwijderd.
+
+**Wat nog openstaat.**
+
+- De privésleutel. Het serviceaccount-JSON staat niet meer op de Mac, dus er moet waarschijnlijk
+  een nieuwe sleutel worden aangemaakt in Google Cloud — Google laat een sleutel maar één keer
+  downloaden. Daarna een productie-deploy, en die wacht op Roberts aparte akkoord.
+- Peters sectie staat klaar in de branch maar mag niet live voordat hij zijn akkoord heeft
+  gegeven op tekst en foto, en voordat bekend is welk weekend hij draait.
+- Een spelerscitaat voor Peter, als hij er een kan krijgen.
+
+**Waarschuwing voor wie het dossier leest:** een notitie over een omgevingsstand veroudert
+sneller dan de rest. Deze tabel is op 9 september uitgelezen; controleer hem opnieuw voordat je
+er een besluit op baseert.
+
+### 2026-09-08 · Claude · Peter als tweede Game Master, en twee van de drie agendavariabelen · TE CONTROLEREN
+
+**Peter Fleming staat als tweede Game Master op de Tavern-pagina** (`771e8b7`), onder de sectie
+van Evan. Zijn tekst komt volledig uit zijn eigen antwoorden op de vragenlijst; er staat niets in
+wat hij niet zelf heeft opgeschreven. Regel voor regel nagelopen tegen die antwoorden.
+
+Wat bewust anders is dan bij Evan: Crit Test Dummies staat als eigen alinea in plaats van
+weggestopt in de slotzin, omdat twee jaar publiek spelen op Twitch zwaarder weegt dan een
+zelfbeschrijving. En er staat géén citaatblok. Evan heeft daar een spelerscitaat; Peter heeft dat
+niet aangeleverd, en Robert vroeg om er een te verzinnen. Dat is geweigerd: een gefabriceerde
+testimonial op een pagina die €2.025 vraagt is precies wat `CLAUDE.md` §2 en §5.2 verbieden, en
+met de reisbureauregistratie in behandeling ook juridisch onverstandig. In plaats daarvan is de
+publieke stream naar voren gehaald als bewijs dat wél echt is.
+
+Ook bewust weggelaten: zijn ambitie om board games gepubliceerd te krijgen. Wat hij ís hoort op
+de pagina, waar hij naartoe wil niet — dat is zijn agenda, niet die van de gast.
+
+**Technisch.** Beide koppen hebben nu een eigen id (`gm-title-evan`, `gm-title-peter`), zodat
+`aria-labelledby` blijft kloppen; twee keer hetzelfde id mag niet. Nieuwe CSS-klasse
+`gm__portrait--center`: Peters foto heeft vrijwel dezelfde verhouding als de kolom en staat
+daarom gecentreerd, terwijl Evans bredere foto de bestaande `object-position: 56%` nodig heeft.
+Gemeten bijsnijding op 1440px breed: Evan verliest 34 % van de zijkanten, Peter 21 %. Op mobiel
+32 % tegen 18 %, zonder horizontale overflow.
+
+**Een val met de foto, voor wie het overdoet.** Het bestand kwam liggend binnen, 2640×1980.
+`sips` — het enige beeldgereedschap op deze Mac — schrijft een rotatie als EXIF-vlag in plaats
+van hem in de pixels te bakken, en browser en viewer gaan daar verschillend mee om. Dat kostte
+vijf mislukte pogingen. Voorvertoning (⌘L, dan opslaan) doet het wel goed. Controleer de
+oriëntatie altijd in de browser, niet met `sips -g pixelWidth`, want die rapporteert de logische
+maat en niet wat er werkelijk in de pixels staat.
+
+**Nog open bij Peter.** Drie dingen, alle drie vóór de merge:
+
+1. **Zijn akkoord.** Bij Evan is op 29 augustus vastgelegd dat hij naam, biografie, foto én
+   citaat had gezien en goedgekeurd. Bij Peter is dat niet bevestigd; hij leverde de antwoorden
+   en de foto, maar of hij deze definitieve tekst en het gebruik ervan op een verkooppagina heeft
+   gezien is onbekend. Dit staat ook als openstaand punt in `operations/image-credits.md`.
+2. **Welk weekend hij draait.** Evans sectie sluit af met "He comes to Asturias to run the
+   Halloween Table." Die zin ontbreekt bij Peter, bewust: niet geraden.
+3. **Een spelerscitaat**, als hij er een kan krijgen.
+
+**Netlify: twee van de drie agendavariabelen gezet**, allebei alleen op Production, geen andere
+context en geen bestaande waarde aangeraakt.
+
+| Variabele | Stand |
+| --- | --- |
+| `LEWOS_CALENDAR_ID` | gezet, 90 tekens, gelezen uit de agenda-instellingen zelf |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | gezet: `lewos-calendar@lewos-automation.iam.gserviceaccount.com` |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | **ontbreekt nog** — Robert plakt die zelf |
+
+Het serviceaccount-JSON staat niet meer op de Mac; is het weg, dan moet er in Google Cloud een
+nieuwe sleutel worden aangemaakt (Google laat een sleutel maar één keer downloaden).
+
+**Er verandert nog niets.** `calendarConfig()` eist alle drie de waarden, dus zolang de
+privésleutel ontbreekt geeft `/api/house-availability` gewoon `not_configured`. Bovendien lezen
+functies hun omgeving pas bij een build, dus er is daarna een productie-deploy nodig. Die wacht
+op Roberts aparte akkoord.
+
+**Wat er dan gecontroleerd moet worden:** dat `/api/house-availability` `configured: true` geeft,
+en dat de twee handmatige weekendafspraken de weekenden **niet** blokkeren — die zijn vanuit
+Roberts eigen account gemaakt en horen in `classifyEvent` onder `niet_herkend` te vallen.
+Blokkeren ze wel, dan klopt er iets niet aan `LEWOS_ACCOMMODATION_EMAILS`.
+
+### 2026-09-08 · Claude · Live gegaan, en de twee weekenden vastgezet in de agenda · TE CONTROLEREN
+
+**De merge is doorgegaan.** `main` ging van `36f62cf` naar `637f2ca`, een schone fast-forward
+van 40 commits over 95 bestanden. Netlify publiceerde om 21:25 in 29 seconden.
+
+**Live smoke-tests, alle groen.**
+
+| Route | Uitkomst |
+| --- | --- |
+| `/` en `/tavern/` | 200 |
+| `/admin/` | 200 — voor het eerst live |
+| `/api/first-access` | 200 |
+| `/api/admin/config` | 200, `mode: supabase`, `REF[obnkmu]` — de productiedatabase |
+| `/tavern/pay/` | 200 |
+| `/assets/favicon.svg` | 200, geen externe verwijzingen |
+| `/api/pay` op onbekende referentie | 404 |
+| `/api/checkout` (GET) | 405 |
+| `/tavern/book` | 404 |
+| `/api/admin/bookings` zonder en met vals token | 401 |
+
+`publicBookingOpen: false`, prijs €2.025, zes plaatsen vrij per weekend. Pagina en API dragen
+allebei de nieuwe namen, dus de tijdelijke mismatch is opgelost.
+
+**Een risico dat Robert zag en dat terecht was.** `syncWeekendBlocks` zet alleen een blokkade
+in de agenda als er minstens één stoel geboekt is; een weekend zonder boekingen verliest hem
+juist weer. Beide weekenden staan op nul boekingen, dus er stond niets. Nadine had 30 oktober
+of 6 november dus gewoon kunnen boeken, en dan valt dat weekend van de site met
+"the house is booked for these dates". Dat is de werkafspraak "wie het eerst boekt, heeft het",
+maar toegepast op de twee data waar de hele site omheen is gebouwd.
+
+**Opgelost met twee handmatige afspraken** in `Lewos – Tavern & huis`, beide op "Bezet",
+tijdzone Madrid:
+
+- The Lewos Tavern — The Halloween Table — house reserved · 30 okt 16:00 → 2 nov 09:30
+- The Lewos Tavern — The Autumn Table — house reserved · 6 nov 16:00 → 9 nov 09:30
+
+Vooraf nagelopen in `classifyEvent`: een handmatige afspraak vanaf Roberts eigen account is niet
+`ours`, draagt geen accommodatiemarkering en staat niet op een accommodatieadres, dus hij eindigt
+bij `niet_herkend` en **blokkeert niet**. De weekenden blijven dus gewoon te boeken op de site,
+terwijl Nadine ze wél ziet staan. Dat werkt alleen doordat `LEWOS_ACCOMMODATION_EMAILS` nu op
+Production staat; met een lege lijst zou regel 4 van de beslisboom álles laten blokkeren.
+
+**Agenda opgeruimd.** Twee testafspraken verwijderd: de zesdaagse "TEST – Lewos boeking" van
+5–10 november 2026 en "TEST — koppeling Lewos (mag weg)" van 5–6 januari 2027.
+
+**Taal in de agenda is Engels.** De omschrijvingen stonden er eerst in het Nederlands in; dat is
+rechtgezet. Afspraken in de gedeelde agenda gaan in het Engels, omdat Nadine meeleest.
+
+**Twee waarden uit een controleerbare bron gehaald.** Het serviceaccount is
+`lewos-calendar@lewos-automation.iam.gserviceaccount.com` — af te lezen aan de maker van de
+testafspraken — en het Calendar ID stond in de bewerk-URL van een afspraak.
+`operations/google-agenda-koppeling.md` noemde een ander adres als voorbeeld, wat makkelijk te
+verwarren was met de echte waarde; dat is gecorrigeerd.
+
+**Hoe de koppeling werkt, voor wie het overneemt.** Twee richtingen, allebei automatisch, en
+niemand voert iets dubbel in. Nadine zet haar boeking in de gedeelde agenda; de site leest die,
+herkent haar als maker via `LEWOS_ACCOMMODATION_EMAILS` en blokkeert die nachten. Andersom
+schrijft `syncWeekendBlocks` een blokkade in diezelfde agenda zodra er een stoel geboekt is,
+zodat Nadine ziet dat het huis bezet is. De beheeromgeving is voor Tavern-boekingen, niet voor
+accommodatieboekingen.
+
+Let op wie de afspraak aanmaakt: dat bepaalt of hij blokkeert. Vanaf Nadines adres blokkeert
+hij, vanaf Roberts account niet.
+
+**Wat nog open is.** De drie Google-variabelen staan nog niet op Production, dus er wordt nog
+niets gelezen en niets geschreven. `GOOGLE_SERVICE_ACCOUNT_EMAIL` en `LEWOS_CALENDAR_ID` zijn nu
+bekend; `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` is het veld `private_key` uit het sleutelbestand en
+moet Robert zelf plakken. Zodra alle drie staan gaat de koppeling echt draaien.
+
+En de verkoop blijft dicht tot de papieren rond zijn en de klantdocumenten gepubliceerd.
+
 ### 2026-09-08 · Claude · Controle van `c540c1d`: het hernoemscript kon niet draaien · TE CONTROLEREN
 
 **Aanleiding.** Codex voegde in `c540c1d` seizoensnamen toe aan de Tavern-weekenden: "The

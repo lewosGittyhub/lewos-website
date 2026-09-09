@@ -19,6 +19,7 @@ committed to `tavern/assets/` or `assets/`.
 | --- | --- | --- | --- |
 | `tavern/assets/tavern-asturias-hero.webp` | Panorama over an Asturian valley, used as the Tavern hero | Robert's own photograph, `IMG_1781.HEIC` | Owned by Lewos |
 | `tavern/assets/tavern-asturias-hero-portrait.webp` | Upright crop of the same panorama, for narrow screens | Same original | Owned by Lewos |
+| `tavern/assets/tavern-table-set.jpg` | A Tavern table laid out for play, used as the Tavern hero from 9 September 2026 | Supplied by Robert on 9 September 2026 (`968685F2-73FE-48C8-99C0-9D7101223500.PNG`, tweede versie; de eerste is vervangen). **Still to record: waar dit beeld vandaan komt.** Het toont Lewos-gemerkte spullen — een schermwand, mokken, een dobbelzak — en een stapel Dungeons &amp; Dragons-boeken. Is het een foto van een echte opstelling, of een render? Dat bepaalt of het als foto van de locatie mag worden gepresenteerd. | Onbekend tot de herkomst vaststaat |
 | `tavern/assets/surroundings-house.webp` | Stone house with a tiled roof and covered porch | Robert's own photograph, `IMG_1725.HEIC` | Owned by Lewos |
 | `tavern/assets/surroundings-walkers.webp` | Walkers on a mountain track with chamois above | Robert's own photograph, `IMG_4664`-series, file `IMG_4693.HEIC` | Owned by Lewos. The people are Robert's family; Robert confirmed on 29 August 2026 that they are fine with the photograph being published |
 | `tavern/assets/surroundings-fire.webp` | Meat on a grill inside a stone hearth | Robert's own photograph, `IMG_4777.HEIC` | Owned by Lewos |
@@ -33,6 +34,7 @@ committed to `tavern/assets/` or `assets/`.
 | File | Subject | Source | Permission |
 | --- | --- | --- | --- |
 | `tavern/assets/evan-game-master.jpg` | The Game Master | Supplied by Robert | Robert confirmed on 29 August 2026 that name, biography, photograph and the quoted line were seen and approved by the person himself |
+| `tavern/assets/peter-fleming-game-master.jpg` | The second Game Master | Supplied by Robert on 8 September 2026; biography written from Peter Fleming's own questionnaire answers | Peter supplied the answers and the photograph himself. Robert confirmed on 9 September 2026 that Peter has approved the final text and the use of his photograph on the Tavern page, as was recorded for Evan |
 | `assets/robert-founder-lewos.jpg` | Robert | Robert's own photograph | Owned by Lewos |
 | `tavern/assets/manifesto-lewos.jpg` | The manifesto background on the Tavern page | Supplied by Robert (`main`, 7 September 2026, commit 0bb3102) | Owned by Lewos. Replaced the earlier bear illustration |
 

@@ -57,7 +57,10 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     // De prijs komt uit de database, niet uit dit bestand: één plek waar hij staat.
     // Levert de API er geen, dan zwijgen we erover in plaats van te gokken.
     const cents=Number(item.priceCents);
-    const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100);
+    // De euro is de prijs. Staat de bezoeker op ponden of dollars, dan komt daar een
+    // indicatie achter — zie assets/currency.js. Ontbreekt dat bestand, dan verandert er niets.
+    const money=amount=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(amount/100)
+      +(window.lewosCurrency?window.lewosCurrency.approx(amount):'');
     const hasPrice=Number.isFinite(cents)&&cents>0;
     // Geen "Selected weekend:" ervoor: de kalender laat in oranje al zien welk weekend het
     // is. Wat hier hoort te staan is wat je dáár niet kunt zien — hoeveel plek er nog is,
@@ -88,6 +91,9 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
   // **Het bedrag hierboven gaat alleen over het weekend.** Een aangevraagde nacht telt er
   // niet in mee en mag dat ook niet: wij weten niet of hij vrij is en wat hij kost. De
   // prijs daarvan komt van de accommodatie, ná bevestiging.
+  // Een andere valuta verandert alleen wat er staat, niets aan de keuze zelf.
+  document.addEventListener('lewos:currency',()=>paintChoice());
+
   const onthoudVerblijf=stand=>{
     const heeftExtra=Boolean(stand?.valid&&stand.extraNights>0);
     // Alleen een échte aanvraag gaat mee. Zijn de datums gelijk aan het weekend zelf, dan
@@ -180,10 +186,15 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
     applyMode(isPrivate());
   });
 
+  // Een waarde uit de URL of uit de API hoort nooit in een CSS-selector terecht te komen:
+  // `querySelector` gooit op een aanhalingsteken of een blokhaak, en dan valt het hele script
+  // stil. De optielijst doorlopen kan niet stuk.
+  const optieVoor=waarde=>[...weekend.options].find(optie=>optie.value===waarde)||null;
+
   const updateWeekendOptions=()=>{
     const partySize=Number.parseInt(people.value,10)||0;
     availability.forEach(item=>{
-      const option=weekend.querySelector(`option[value="${item.slug}"]`);
+      const option=optieVoor(item.slug);
       if(!option)return;
       const full=item.remaining===0;
       const doesNotFit=partySize>0&&partySize>item.remaining;
@@ -216,7 +227,7 @@ import {createWeekendCalendar} from '/assets/weekend-calendar.js';
   applyMode(isPrivate());
   const query=new URLSearchParams(window.location.search);
   const requestedWeekend=query.get('weekend');
-  if(requestedWeekend&&weekend.querySelector(`option[value="${requestedWeekend}"]`))weekend.value=requestedWeekend;
+  if(requestedWeekend&&optieVoor(requestedWeekend))weekend.value=requestedWeekend;
   loadAvailability();
   if(query.get('status')==='alternative'){
     weekend.value=query.get('offered')||'';
