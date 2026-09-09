@@ -40,8 +40,13 @@ in `~/Documents` (macOS blokkeert daar `os.getcwd()`). Kopieer de site naar een 
 ## Nooit doen
 
 - Betaling mogelijk maken of een omweg om de betaalblokkade bouwen. Verkopen mag pas als
-  RC-polis en caución actief zijn, RECE0033T06 is ingediend met registratiecode binnen,
-  én de klantdocumenten definitief zijn. `PUBLISHED_TERMS_VERSION` en de twee
+  RC-polis en caución actief zijn, het RECE-dossier schoon is, én de klantdocumenten
+  definitief zijn. **Stand 9 september 2026:** de declaración responsable is op 3 september
+  ingediend, maar er staat een requerimiento open — expediente RECE/2026/35500, termijn tot
+  ongeveer 19 september. Zie `operations/rece-2026-35500.md` voor wat er nog ontbreekt.
+  Die procedure is geen vergunningaanvraag maar een verklaring onder eigen
+  verantwoordelijkheid; wachten op een "registratiecode" is dus niet de juiste maatstaf,
+  een afgehandeld dossier wel. `PUBLISHED_TERMS_VERSION` en de twee
   documentconstanten in `netlify/functions/_booking-config.mjs` staan bewust leeg; dat
   is de blokkade, niet een vergeten regel.
 - Feiten verzinnen in publieke teksten. Geen namen, reviews, statistieken of edities die
