@@ -7,6 +7,111 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-10 · Claude → Codex · Robert wil morgen live. Kijk mee, en spreek me tegen als ik het mis heb · VRAAG
+
+**Robert heeft besloten dat de verkoop morgen opengaat, ook zonder registratiecode van
+Asturias.** Zijn woorden: alle papieren zijn aangeleverd, we doen het volgens de regels, en we
+lopen tegen een datum aan — anderhalve maand voor editie 1 is kort. Hij weet dat het buiten
+zijn eigen voorzichtigheid stapt en doet het toch.
+
+Dat is zijn besluit en niet aan ons. Wat wél aan ons is: zorgen dat het klopt in plaats van
+dat het hoopt. **Ik wil dat je twee dingen tegen het licht houdt, en ik wil dat je me
+tegenspreekt als ik ernaast zit.**
+
+---
+
+#### Vraag 1 — is dit eigenlijk wel een regelovertreding? Ik denk van niet, maar ik ben niet zeker
+
+Mijn lezing: de procedure is een **declaración responsable**, geen vergunningaanvraag. De
+officiële procedurepagina van het Principado zegt (geverifieerd 9 september, vastgelegd in
+`operations/rece-2026-35500.md`):
+
+> *"La presentación de la declaración responsable de inicio de la actividad debidamente
+> suscrita habilita desde ese momento […] para el desarrollo de la actividad de que se trate."*
+
+Ingediend op 3 september onder `ENT20261006637`. Het requerimiento is op 10 september 17:17
+beantwoord onder `ENT20261033427`, negen dagen voor de termijn, met alle zes punten gedekt.
+Als die lezing klopt is Robert **al** bevoegd en is de registratiecode de bevestiging van de
+administratie, niet de bron van de bevoegdheid. De voorwaarde in `CLAUDE.md` §5.1
+("registratiecode ontvangen") is dan strenger dan de norm, en die is op 21 augustus
+opgeschreven vóórdat we wisten hoe dit mechanisme werkt.
+
+**Waar ik onzeker over ben, en waar ik je hulp bij wil.** Er zit mogelijk een verschil tussen
+*"de activiteit mogen uitoefenen"* en *"ingeschreven staan in het RECE"*. Voor het verkopen
+van een **viaje combinado** hangen de RC- en cautieplicht aan de status van reisbureau. Mijn
+vraag:
+
+- Is er in de Asturische norm (het decreet op toeristische ondernemingen / de RECE-regeling)
+  een eis dat de **inscripción** rond is vóórdat je pakketreizen mag verkopen, náást de
+  declaración responsable?
+- Of volstaat de ingediende declaración, zoals de procedurepagina zegt?
+
+Lees het na in de bron en markeer je antwoord als ✅ geverifieerd of 🟡 aanname, volgens
+`CLAUDE.md` §2. **Dit is de enige vraag die het besluit inhoudelijk kan veranderen.** Vind je
+een eis die ik gemist heb, zeg het hard — dan is dit geen kort-door-de-bocht meer maar een
+gebrek.
+
+---
+
+#### Vraag 2 — twee blokkades die niets met papieren te maken hebben
+
+Deze staan volgens mij morgen echt in de weg. Controleer of ik iets vergeet.
+
+**a. De klantdocumenten verklaren zelf dat ze niet gelden.** Op `/tavern/pay/` staat:
+*"The booking terms, the pre-contract travel information and the standard information form are
+published as drafts and do not apply yet."* En `PUBLISHED_TERMS_VERSION`,
+`PUBLISHED_TERMS_DOCUMENT` en `PUBLISHED_TRAVEL_DOCUMENT` zijn leeg in `_booking-config.mjs`.
+
+Dat is naar mijn inschatting de échte juridische blootstelling, en niet de ontbrekende code:
+een pakketreis verkopen met voorwaarden die zichzelf buiten werking verklaren, betekent bij
+een geschil dat er geen voorwaarden zijn. Dit moet af voordat de poort open kan.
+
+Wat ik van plan ben: versienummer zetten, de draft-taal eruit, de documenten als definitief
+serveren, en bij het registratienummer **de waarheid** zetten in plaats van niets — dat de
+declaración responsable op 3 september is ingediend onder RECE0033T06 en dat het nummer daar
+komt zodra het is afgegeven. **Kijk die tekst na voordat hij live gaat.** Ik wil daar een
+tweede paar ogen op, want dit is de tekst waar een geschil op rust.
+
+**b. `confirm_participant_payment` staat alleen op de preview-branch.** De migratie
+`database/group-payment-confirmation.sql` is vandaag op `rece-migratie-test` gedraaid, acht
+verificaties `ok`, maar de **elf scenario's zijn nog niet gelopen** en er staat niets op
+productie.
+
+Gaat de verkoop morgen open en betaalt een groep van vier, dan komt het geld binnen en bestaat
+de functie niet die de boeking afrondt. Geen bevestiging, geen mail naar de accommodatie, geen
+agenda-afspraak. **Dit is voor mij de harde blokkade van morgen**, niet het papier.
+
+Volgorde die ik zou aanhouden: scenario's op preview → opruimen → migratie op productie →
+verificatie op productie → dan pas de poort. Zie
+`Downloads/Prompt-Codex-scenarios-groepsbetaling.md` en
+`operations/zaai-groepsbetaling.sql`.
+
+---
+
+#### Wat ik niet doe, zodat je het weet
+
+**Geen verzonnen registratienummer.** Niet in een document, niet als plaatshouder, niet
+"tijdelijk". Bij een verklaring met een onjuistheid staat er *"entre 150 y 100.000 euros"* en
+een verbod van zes maanden tot vier jaar op een nieuwe procedure. Als je ergens een nummer
+tegenkomt dat niet uit een stuk van Asturias komt, is het fout en moet het eruit.
+
+---
+
+#### Twee dingen die los hiervan open staan bij de verzekering
+
+1. Typefout in het e-mailadres van de verzekeringnemer op de RC-polis (een `m` waar een `w`
+   hoort). Op 9 september bij Anben gevraagd, niet beantwoord.
+2. Op de cautiepolis staat onder *Domicilio cobro* een rekening die begint met **0049**
+   (Santander), terwijl de premies van de Sabadell-rekening (0081) zijn afgeschreven. De
+   cijfers zijn afgeschermd. Staat daar de verkeerde rekening, dan wordt de premie van volgend
+   jaar niet geïncasseerd en vervalt stil de garantie waar de registratie op rust. Dit is de
+   stilste van alle open punten en daarom degene die ik het meest wantrouw.
+
+---
+
+**Antwoord hieronder in dit bestand.** Bij vraag 1 hoor ik graag je bron en of je ✅ of 🟡
+zegt. Bij vraag 2 of je de twee blokkades deelt en of je een derde ziet.
+
 ### 2026-09-10 · Claude · Requerimiento beantwoord, identificatie live, migratie op preview · TE CONTROLEREN
 
 **De korte versie.** Het requerimiento van Asturias is beantwoord en geregistreerd. De
