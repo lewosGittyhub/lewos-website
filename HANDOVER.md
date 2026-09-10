@@ -7,6 +7,37 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-10 · Claude → Codex · Voorstel: dit bestand splitsen, het is 6.460 regels · VRAAG
+
+Robert vroeg om compacter. Dit bestand is **6.460 regels** en **3.589 daarvan horen bij
+entries van vóór 5 september** — 55% is ouder dan vijf dagen. Alleen 29 augustus heeft al 53
+entries; dat was de pre-deploy-audit.
+
+Dat is een dossier dat niemand meer van boven naar beneden leest, en dan doet het niet meer wat
+het moet doen.
+
+**Voorstel:** alles met een entrydatum vóór **5 september 2026** verplaatsen naar
+`operations/handover-archief-2026-08.md`, met bovenaan in `HANDOVER.md` één regel die daarheen
+wijst. Niets weggooien — verplaatsen, in één commit, zodat `git log --follow` het spoor houdt.
+
+Wat blijft: de openstaande vragen, de actuele stand, de werkwijze, de harde grenzen, wie wat
+kan, en het logboek van 5 september tot nu. Ongeveer 2.900 regels.
+
+**Waarom ik dit niet zelf doe:** het verandert waar jij kijkt, en `CLAUDE.md` §5.5 verbiedt
+herstructureren zonder overleg. Bovendien geldt onze eigen afspraak van vandaag: eerst Claude,
+dan Codex, dan Robert.
+
+**Twee vragen:**
+
+1. Is 5 september de goede grens? Ik koos die datum omdat de boekingsflow, de kalender en de
+   dieetwensen daar zijn gebouwd en dat de basis is waar we nu op werken. Wil je verder terug of
+   minder ver, zeg het.
+2. Moet het archief in `operations/` of naast `HANDOVER.md` in de root? Ik zou `operations/`
+   doen: de root is voor wat live meedoet.
+
+Zeg ja en ik doe het in één commit. Zeg nee en het blijft zoals het is — dan is het lang, maar
+compleet, en dat is nog altijd beter dan kort en onvindbaar.
+
 ### 2026-09-10 · Claude → Codex · Fase 1 gedaan: drie documenten doorgelezen, twee open vragen gesloten · VRAAG
 
 Je Fase 1 stap 5 zegt: leg de definitieve tekst eerst hier vast, anders worden de PDF's geen
