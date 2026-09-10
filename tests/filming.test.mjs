@@ -28,12 +28,40 @@ test("Weekend 01 is presented as The Halloween Table before anyone books",async(
   assert.match(tavern,/paid advertising needs a separate, optional permission/i);
 });
 
-test("Weekend 02 is described as not professionally filmed and keeps consent specific",async()=>{
+test("only a weekend marked as filmed is filmed, and the page says so as a rule",async()=>{
+  // Robert, 10 september 2026: dit stond per weekendnummer. Twee dingen gaan daar mis. Bij
+  // elk nieuw weekend moet er een regel bij, en tot iemand die schrijft is er een weekend
+  // waarover niets staat -- terwijl een gast dan juist wil weten of hij gefilmd wordt.
+  //
+  // En het antwoord op "Will I be filmed?" begon met "Yes". Dat is onwaar voor elk weekend
+  // dat niet gefilmd wordt, en het is het eerste woord dat een gast van Weekend 02 las.
+  //
+  // Nu staat de regel er: gefilmd is de uitzondering, hij wordt aangekondigd op het weekend
+  // zelf, en alles wat niet is aangekondigd wordt niet gefilmd.
   const tavern=await read(path.join(root,"tavern/index.html"));
-  assert.match(tavern,/Weekend 02 is not planned as a professionally filmed edition/i);
+  assert.doesNotMatch(tavern,/<p>Yes\. The Halloween Table is/,
+    "\"Will I be filmed?\" mag niet met Yes beginnen: dat geldt niet voor elk weekend");
+  assert.match(tavern,/Only on a weekend that is marked as a filmed edition/i,
+    "het antwoord hoort met de regel te beginnen, niet met een weekendnummer");
+  assert.match(tavern,/stated on the weekend itself, before you book/i,
+    "een gast hoort te weten dat hij het vooraf te horen krijgt en niet achteraf");
+  // Robert, 10 september 2026: er stond "The Halloween Table is the one filmed edition;
+  // every other weekend is not filmed". Dat leest als een belofte dat er nooit meer gefilmd
+  // wordt, en dat weten we niet. De regel gaat over de aankondiging, niet over het aantal.
+  assert.doesNotMatch(tavern,/the one filmed edition/i,
+    "niet beweren dat dit de enige gefilmde editie blijft: dat staat niet vast");
+  assert.match(tavern,/If a later weekend is one, it will say so in the same place/i,
+    "een toekomstig gefilmd weekend hoort mogelijk te blijven, met dezelfde aankondiging");
+  assert.match(tavern,/not marked as a filmed edition is not planned as a professionally filmed edition/i,
+    "de regel voor alle overige weekenden hoort er als regel te staan");
+  // En het voorbehoud bij een niet-gefilmd weekend blijft precies zo specifiek als het was.
   assert.match(tavern,/Saying no has no effect on participation/i);
   assert.match(tavern,/recognisable promotional use requires separate, specific permission beforehand/i);
   assert.match(tavern,/paid advertising remains optional/i);
+  // Het weekendnummer mag nog in de kop van de gefilmde editie staan -- dat is een feit over
+  // dat weekend -- maar niet meer als kop van "alle andere weekenden".
+  assert.doesNotMatch(tavern,/<h3>Weekend 02<\/h3>/,
+    "een kaart voor alle overige weekenden hoort niet een weekendnummer als kop te hebben");
 });
 
 test("no checkbox anywhere on the site arrives pre-ticked",async()=>{
