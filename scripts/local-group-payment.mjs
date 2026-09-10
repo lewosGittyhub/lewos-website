@@ -74,7 +74,11 @@ const zaad=()=>{
       starts_on:"2026-10-30",ends_on:"2026-11-02",price_cents:PRIJS,capacity:6},
     claim:{id:claimId,name:"TEST – Anna",email:"anna@example.invalid",party_size:4,
       status:"payment_pending",hold_phase:"payment",
-      hold_expires_at:new Date(Date.now()+30*60000).toISOString(),
+      // Twee uur, niet dertig minuten. De echte betaalfase begint op dertig, maar met de
+      // verlengingen uit admin.sql kan hij tot twee uur lopen -- dus dit is een geldige
+      // stand en geen verzinsel. Het geeft je de tijd om rustig door te klikken. Het gedrag
+      // rond het verstrijken van de deadline heeft zijn eigen tests.
+      hold_expires_at:new Date(Date.now()+120*60000).toISOString(),
       dietary_notes:"TEST – noten bij Chloë",message:null,extra_nights:null,
       requested_arrival:null,requested_departure:null,extra_nights_status:"none",
       accommodation_email_sent_at:null,special_requirements_email_sent_at:null},

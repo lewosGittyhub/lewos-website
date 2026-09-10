@@ -40,19 +40,36 @@ export const buildPaymentRequestEmail=({participant,booking,deadline,paymentUrl,
     ["Payment deadline",`${wanneer} (Europe/Madrid)`]
   ],"Your payment:");
 
-  const tekst=`${kop}\n\nHi ${naam},\n\n${uitleg.replace(/&#039;/g,"'")}`
-    +`${feiten.text}\n\nPay your share here:\n${paymentUrl}\n\n`
-    +`This is ${bedrag} — your own share, not the group total. Everyone in the group has the same deadline: ${wanneer}.\n\n`
+  // Robert, 10 september 2026: de knop stond ná vijf feiten, en toen hij zelf de proefmail
+  // las moest hij vragen hóe hij betaalde. Vier van die vijf feiten weet de gast al — zijn
+  // naam, met wie hij gaat, welk weekend, hoeveel ze zijn. Daar hoeft hij niet langs om te
+  // kunnen doen waarvoor de mail bestaat.
+  //
+  // Dus: knop direct onder de uitleg, en de feiten eronder als bevestiging. Het bedrag staat
+  // op de knop én in de onderwerpregel, dus niemand klikt zonder te weten wat het kost.
+  const knoplabel=`Pay your share — ${bedrag}`;
+  const tekst=`${kop}\n\nHi ${naam},\n\n${uitleg.replace(/&#039;/g,"'")}\n\n`
+    +`Pay your share here:\n${paymentUrl}\n\n`
+    +`This is ${bedrag} — your own share, not the group total.`
+    +`${feiten.text}\n\nEveryone in the group has the same deadline: ${wanneer}.\n\n`
     +`If the deadline passes, the seats already paid for stay confirmed. Nothing is released automatically.\n\n`
     +`Please check your spam folder if you cannot find this email again.\n\nRobert\nThe Lewos Tavern`;
 
+  // `display:block` met een max-width maakt er een echte knop van: op een telefoon over de
+  // volle breedte, op een laptop begrensd. En een leesbare link eronder, want een
+  // mailprogramma dat de opmaak wegstript mag een gast niet stranden met een dode knop.
   const html=`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35">`
     +`<h1 style="font-size:24px">${escapeHtml(kop)}</h1>`
-    +`<p>Hi ${escapeHtml(naam)},</p><p>${uitleg}</p>${feiten.html}`
-    +`<p><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;padding:14px 22px;border-radius:9px;`
-    +`background:#E5643A;color:#fff;font-weight:700;text-decoration:none">Pay ${escapeHtml(bedrag)} now</a></p>`
-    +`<p>This is <strong>${escapeHtml(bedrag)}</strong> — your own share, not the group total. `
-    +`Everyone in the group has the same deadline: <strong>${escapeHtml(wanneer)}</strong>.</p>`
+    +`<p>Hi ${escapeHtml(naam)},</p><p>${uitleg}</p>`
+    +`<p style="margin:30px 0 14px"><a href="${escapeHtml(paymentUrl)}" `
+    +`style="display:block;max-width:380px;padding:22px 24px;border-radius:12px;`
+    +`background:#E5643A;color:#ffffff;font:700 20px/1.25 Arial,sans-serif;`
+    +`text-decoration:none;text-align:center">${escapeHtml(knoplabel)}</a></p>`
+    +`<p style="margin:0 0 26px"><small>If the button does not work, open this link:<br>`
+    +`<a href="${escapeHtml(paymentUrl)}" style="color:#B4472A">${escapeHtml(paymentUrl)}</a></small></p>`
+    +`<p>This is <strong>${escapeHtml(bedrag)}</strong> — your own share, not the group total.</p>`
+    +`${feiten.html}`
+    +`<p>Everyone in the group has the same deadline: <strong>${escapeHtml(wanneer)}</strong>.</p>`
     +`<p>If the deadline passes, the seats already paid for stay confirmed. Nothing is released automatically.</p>`
     +`<p><small>Please check your spam folder if you cannot find this email again.</small></p>`
     +`<p>Robert<br>The Lewos Tavern</p></div>`;

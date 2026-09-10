@@ -227,3 +227,66 @@ test("de melding zegt dat er niets is afgeschreven",async()=>{
   assert.match(message,/not charged/i);
   assert.match(message,/nothing has been confirmed/i);
 });
+
+// ── De knop ──────────────────────────────────────────────────────────────────
+// Robert, 10 september 2026: hij las de proefmail en moest vragen hóe hij betaalde. De
+// knop stond onder vijf feiten die hij al wist. Deze tests houden de ordening vast.
+import {buildPaymentRequestEmail} from "../netlify/functions/_payment-request.mjs";
+
+const proefmail=(overschrijf={})=>buildPaymentRequestEmail({
+  participant:{full_name:"TEST – Bram",email:"bram@example.invalid",amount_cents:202500},
+  booking:{name:"TEST – Anna",weekendLabel:"The Halloween Table · 30 Oct to 2 Nov 2026",seats:4},
+  deadline:"2026-11-01T12:30:00.000Z",
+  paymentUrl:"https://lewos.co/tavern/pay/?ref=tav_test",
+  ...overschrijf});
+
+test("de betaalknop staat vóór de feiten, niet erna",()=>{
+  const {html}=proefmail();
+  const knop=html.indexOf("Pay your share —");
+  const feiten=html.indexOf("Your payment:");
+  assert.ok(knop>-1,"er hoort een knop te zijn");
+  assert.ok(feiten>-1,"de feiten horen er ook te staan");
+  assert.ok(knop<feiten,"de knop hoort boven de feiten te staan: daar komt de gast voor");
+});
+
+test("het is een echte knop en niet een linkje",()=>{
+  const {html}=proefmail();
+  // display:block met een max-width: op een telefoon over de volle breedte, op een laptop
+  // begrensd. Een inline-block van 14px padding is geen knop maar een tekstlink met kleur.
+  assert.match(html,/display:block/);
+  assert.match(html,/max-width:380px/);
+  assert.match(html,/padding:22px/);
+  assert.match(html,/font:700 20px/);
+  assert.match(html,/text-align:center/);
+});
+
+test("het bedrag staat op de knop, zodat niemand blind klikt",()=>{
+  const {html,subject}=proefmail();
+  assert.match(html,/Pay your share — €2,025\.00/);
+  assert.match(subject,/€2,025\.00/,"en ook in de onderwerpregel");
+});
+
+test("een leesbare link eronder, voor een mailprogramma dat de opmaak wegstript",()=>{
+  const {html}=proefmail();
+  assert.match(html,/If the button does not work/);
+  // De link moet twee keer voorkomen: op de knop en als leesbare tekst.
+  assert.equal((html.match(/tav_test/g)||[]).length,3,
+    "de link hoort op de knop, in de fallback-href en als leesbare tekst te staan");
+});
+
+test("ook in de kale tekstversie staat de link vóór de feiten",()=>{
+  const {text}=proefmail();
+  const link=text.indexOf("Pay your share here:");
+  const feiten=text.indexOf("Your payment:");
+  assert.ok(link>-1&&feiten>-1);
+  assert.ok(link<feiten,"wie geen opmaak ziet, hoort de link ook eerst te lezen");
+});
+
+test("een herinnering draagt dezelfde knop en hetzelfde bedrag",()=>{
+  const eerste=proefmail();
+  const herinnering=proefmail({reminder:true});
+  assert.notEqual(eerste.subject,herinnering.subject,"de toon mag verschillen");
+  for(const stuk of ["Pay your share — €2,025.00","display:block","tav_test"]){
+    assert.ok(herinnering.html.includes(stuk),`${stuk} hoort ook in de herinnering te staan`);
+  }
+});
