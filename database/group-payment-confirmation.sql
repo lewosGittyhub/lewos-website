@@ -247,14 +247,27 @@ begin
       where id=c.id;
   end if;
 
+  -- Twee lagen, en dat is met opzet. `name` en `email` zijn van de deelnemer: die krijgt
+  -- zijn eigen bevestiging. Alles wat over de boeking als geheel gaat staat in `booking`,
+  -- in exact dezelfde vorm als `confirm_tavern_payment` teruggeeft. Zo kan de webhook het
+  -- "boeking rond"-blok hergebruiken zonder dat de naam van één deelnemer in de mail aan
+  -- de accommodatie belandt.
   return jsonb_build_object('status','paid','participantId',p.id,'claimId',c.id,
     'name',p.full_name,'email',p.email,'amountCents',p.amount_cents,
     'weekend',w.slug,'weekendLabel',w.label||' · '||w.date_label,
     'arrivalDate',w.starts_on,'departureDate',w.ends_on,
     'termsVersion',p.terms_version,'paidAt',coalesce(p_paid_at,now()),
     'bookingComplete',v_rond,'outstanding',v_open,
-    'bookingName',c.name,'bookingEmail',c.email,'seats',c.party_size,
-    'confirmationEmailSent',false);
+    'confirmationEmailSent',false,
+    'booking',case when v_rond then jsonb_build_object(
+      'status','paid','claimId',c.id,'name',c.name,'email',c.email,'seats',c.party_size,
+      'weekendLabel',w.label||' · '||w.date_label,
+      'arrivalDate',w.starts_on,'departureDate',w.ends_on,
+      'weekendStart',w.starts_on,'weekendEnd',w.ends_on,
+      'requestedArrival',c.requested_arrival,'requestedDeparture',c.requested_departure,
+      'extraNightsStatus',c.extra_nights_status,
+      'dietaryNotes',c.dietary_notes,'notes',c.message,'extraNights',c.extra_nights,
+      'termsVersion',p.terms_version) else null end);
 end; $$;
 revoke all on function public.confirm_participant_payment(text,timestamptz) from public, anon, authenticated;
 grant execute on function public.confirm_participant_payment(text,timestamptz) to service_role;
@@ -283,6 +296,33 @@ begin
 end; $$;
 revoke all on function public.mark_participant_confirmation_email_sent(text,text) from public, anon, authenticated;
 grant execute on function public.mark_participant_confirmation_email_sent(text,text) to service_role;
+
+-- ── Verzendregistratie op boekingsnummer ─────────────────────────────────────
+-- `mark_tavern_notification_sent` zoekt de boeking op `payment_reference`. Dat werkt voor
+-- het First Access-pad, waar de boeking zelf een kenmerk heeft. Een groepsboeking heeft er
+-- geen: de kenmerken hangen aan de deelnemers. Daarom dezelfde registratie, op het
+-- boekingsnummer.
+--
+-- Raakt net als de oorspronkelijke alleen verzendregistraties aan — nooit een boeking, een
+-- bedrag of een status. En `coalesce` houdt het eerste moment vast: een herhaalde webhook
+-- verzet de tijd niet.
+create or replace function public.mark_tavern_notification_sent_by_claim(
+  p_claim_id uuid, p_kind text, p_provider_id text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare v_id uuid;
+begin
+  if p_kind not in ('accommodation','special') then raise exception 'unknown_notification_kind'; end if;
+  update public.tavern_seat_claims set
+    accommodation_email_sent_at=case when p_kind='accommodation' then coalesce(accommodation_email_sent_at,now()) else accommodation_email_sent_at end,
+    accommodation_email_provider_id=case when p_kind='accommodation' then coalesce(accommodation_email_provider_id,nullif(trim(p_provider_id),'')) else accommodation_email_provider_id end,
+    special_requirements_email_sent_at=case when p_kind='special' then coalesce(special_requirements_email_sent_at,now()) else special_requirements_email_sent_at end,
+    special_requirements_email_provider_id=case when p_kind='special' then coalesce(special_requirements_email_provider_id,nullif(trim(p_provider_id),'')) else special_requirements_email_provider_id end
+  where id=p_claim_id returning id into v_id;
+  if v_id is null then return jsonb_build_object('status','unknown_booking'); end if;
+  return jsonb_build_object('status','marked','claimId',v_id);
+end; $$;
+revoke all on function public.mark_tavern_notification_sent_by_claim(uuid,text,text) from public, anon, authenticated;
+grant execute on function public.mark_tavern_notification_sent_by_claim(uuid,text,text) to service_role;
 
 -- ── De betaalpagina weet nu wat ze moet vragen ───────────────────────────────
 -- Vervangt de versie in `seat-holds.sql`. Twee velden erbij: of dit weekend gefilmd wordt —

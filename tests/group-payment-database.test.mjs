@@ -30,13 +30,14 @@ test("de commentaarfilter laat de SQL zelf intact",()=>{
   assert.ok(source.includes("-- ── De velden"),"de bron draagt echt commentaar dat eraf moet");
 });
 
-test("de migratie levert de zes functies die deze suite bewaakt",()=>{
+test("de migratie levert de zeven functies die deze suite bewaakt",()=>{
   const namen=functions.map(fn=>`${fn.schema}.${fn.name}`).sort();
   assert.deepEqual(namen,[
     "private.cleanup_tavern_claims",
     "public.attach_participant_checkout_session",
     "public.confirm_participant_payment",
     "public.mark_participant_confirmation_email_sent",
+    "public.mark_tavern_notification_sent_by_claim",
     "public.record_participant_confirmations",
     "public.tavern_payment_request"
   ]);
@@ -206,5 +207,29 @@ test("de migratie zegt zelf dat hij niet gedraaid is en waar hij achteraan komt"
   assert.match(source,/preview-branch/);
   for(const eerder of ["first-access.sql","admin.sql","seat-holds.sql","filming-consent.sql"]){
     assert.ok(source.includes(eerder),`de volgorde moet ${eerder} noemen`);
+  }
+});
+
+test("een deelnemerbetaling levert de boekinggegevens apart aan",()=>{
+  // De naam van één deelnemer hoort niet in de mail aan de accommodatie. Daarom staat wat
+  // over de boeking als geheel gaat in een eigen laag, in dezelfde vorm als
+  // `confirm_tavern_payment` teruggeeft -- zodat de webhook dat blok kan hergebruiken.
+  const fn=byName("confirm_participant_payment");
+  assert.match(fn.body,/'booking',case when v_rond then jsonb_build_object\(/);
+  for(const veld of ["'name',c.name","'seats',c.party_size","'dietaryNotes',c.dietary_notes",
+                     "'extraNightsStatus',c.extra_nights_status"]){
+    assert.ok(fn.body.includes(veld),`${veld} hoort in de boekinglaag te staan`);
+  }
+  assert.match(fn.body,/else null end\)/,"zolang de boeking niet rond is hoort er geen boekinglaag te zijn");
+});
+
+test("verzendregistratie kan ook op boekingsnummer",()=>{
+  // Een groepsboeking heeft zelf geen payment_reference: die hangen aan de deelnemers.
+  const fn=byName("mark_tavern_notification_sent_by_claim");
+  assert.match(fn.body,/where id=p_claim_id/);
+  assert.match(fn.body,/if p_kind not in \('accommodation','special'\) then raise exception/);
+  // Alleen verzendregistraties, nooit een status of een bedrag.
+  for(const verboden of ["set status","amount_cents","price_cents","hold_expires_at"]){
+    assert.ok(!fn.body.includes(verboden),`${verboden} hoort deze functie niet aan te raken`);
   }
 });

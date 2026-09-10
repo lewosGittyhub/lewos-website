@@ -26,6 +26,11 @@ const rpc=async(name,body)=>{
   return result.json();
 };
 const confirmPayment=(reference,paidAt)=>rpc("confirm_tavern_payment",{p_payment_reference:reference,p_paid_at:paidAt});
+// Een deelnemerkenmerk staat niet in `tavern_seat_claims` maar in
+// `tavern_booking_participants`. Tot 10 september 2026 werd daar niet naar gekeken: de
+// bevestiging gaf `unknown_payment`, de webhook antwoordde 500, en Stripe bleef het opnieuw
+// proberen terwijl de betaling nooit werd vastgelegd.
+const confirmParticipant=(reference,paidAt)=>rpc("confirm_participant_payment",{p_payment_reference:reference,p_paid_at:paidAt});
 const loadAttachment=async(origin,documentPath,filename)=>{
   const url=new URL(documentPath,origin);
   if(url.origin!==new URL(origin).origin)throw new Error("booking_document_origin_mismatch");
@@ -55,6 +60,28 @@ const sendBookingEmail=async booking=>{
   return sendEmail({to:booking.email,subject:`Your Lewos Tavern booking is confirmed`,
     idempotencyKey:`booking-confirmation-${booking.claimId}`,text:tekst,attachments,
     html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${gasten} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p>${genoteerd.html}<p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`});
+};
+
+// De bevestiging voor één deelnemer die zijn eigen aandeel heeft betaald. Naar hem alleen,
+// met zijn eigen bedrag en dezelfde twee documenten als de boeker krijgt — hij heeft ze op
+// zijn betaalpagina gelezen en hoort ze te houden.
+//
+// Wat er bewust NIET in staat: het groepstotaal, de namen van de anderen, en hoeveel er nog
+// openstaat. Dat een gast weet dat hij zelf klaar is, is genoeg; wie er nog moet betalen is
+// niet zijn zaak. De hoofdboeker houdt het overzicht.
+const sendParticipantEmail=async deelnemer=>{
+  if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
+  const origin=process.env.URL||"https://lewos.co";
+  const documents=bookingDocuments();
+  let attachments;
+  try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
+  catch(error){console.error("Participant document attachment error",error);return null;}
+  const bedrag=`€${(Number(deelnemer.amountCents)/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const termsVersie=deelnemer.termsVersion||"not recorded";
+  const tekst=`Your seat is confirmed.\n\nHi ${deelnemer.name},\n\nYour own share of ${bedrag} has been received for ${deelnemer.weekendLabel}. Your seat is confirmed.\n\nBooking terms accepted: ${termsVersie}. Keep this email and its two PDF attachments with your booking records.\n\nWe will contact you with everything you need before the weekend.\n\nRobert\nThe Lewos Tavern`;
+  return verstuur({to:deelnemer.email,subject:`Your Lewos Tavern seat is confirmed`,
+    idempotencyKey:`participant-confirmation-${deelnemer.participantId}`,text:tekst,attachments,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your seat is confirmed.</h1><p>Hi ${escapeHtml(deelnemer.name)},</p><p>Your own share of ${escapeHtml(bedrag)} has been received for ${escapeHtml(deelnemer.weekendLabel)}. Your seat is confirmed.</p><p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`});
 };
 
 // Eén plek voor het versturen. Elke mail uit deze functie heeft precies één ontvanger,
@@ -143,6 +170,85 @@ const sendSpecialRequirementsEmail=async(booking,to)=>{
   });
 };
 
+// ── Alles wat pas geldt als de héle boeking betaald is ────────────────────────
+// De accommodatie, de bijzondere wensen en de agenda gaan over de boeking als geheel, niet
+// over één betaling. Bij een groep van vier hoort de accommodatie één mail te krijgen en
+// niet vier. Daarom staat dit blok apart: het First Access-pad roept het aan zodra die ene
+// betaling binnen is, en het groepspad zodra de laatste deelnemer heeft betaald.
+//
+// Geeft `null` terug als alles is gelukt, en anders het antwoord dat de webhook moet geven.
+// Een 500 laat Stripe het opnieuw proberen, en dat is de bedoeling: een betaalde boeking
+// waarvan de accommodatie niets weet, is een gast zonder bed.
+const rondBoekingAf=async boeking=>{
+  // Wat vaststaat en wat gevraagd is, uit elkaar getrokken. De regel voor de
+  // accommodatie wordt hier opgebouwd uit de opgeslagen datums; hij wordt niet
+  // overgenomen uit een tekstveld dat iets anders zou kunnen zeggen. Staat er nog een
+  // oude vrije tekst in de database, dan reist die mee als wat hij is: de eigen woorden
+  // van de gast.
+  const verblijf=stayLines({
+    weekendStart:boeking.weekendStart||boeking.arrivalDate,
+    weekendEnd:boeking.weekendEnd||boeking.departureDate,
+    requestedArrival:boeking.requestedArrival,requestedDeparture:boeking.requestedDeparture,
+    status:boeking.extraNightsStatus,
+    confirmedArrival:boeking.arrivalDate,confirmedDeparture:boeking.departureDate,
+    legacyText:boeking.extraNights||""
+  });
+
+  // De gast heeft zijn bevestiging. Nu de twee interne meldingen, allebei naar één
+  // vast postvak. Ze staan ná de bevestiging omdat de gast voorgaat, en ze geven een
+  // 500 terug als ze niet lukken: Stripe probeert de webhook dan opnieuw. Dat is de
+  // bedoeling — een betaalde boeking waarvan de accommodatie niets weet, is een gast
+  // zonder bed. De herhaling stuurt de gast geen tweede bevestiging: die is in de
+  // database afgevinkt. De `idempotency-key` houdt ook de twee meldingen enkelvoudig.
+  let mailboxes;
+  try{mailboxes=readRecipients();}
+  catch(error){console.error("Recipient configuration error",error);return response(500,{error:"recipient_configuration_invalid"});}
+  if(!mailboxes.accommodation){
+    console.error("Accommodation recipient not configured: set FONTECHA_ACCOMMODATION_EMAIL");
+    return response(500,{error:"accommodation_recipient_not_configured"});
+  }
+  const accommodatieId=await sendAccommodationEmail({...boeking,extraNightsRequest:verblijf.extraNightsRequest},mailboxes.accommodation);
+  if(!accommodatieId)return response(500,{error:"accommodation_notification_pending"});
+  const bijzonderId=await sendSpecialRequirementsEmail(boeking,mailboxes.general);
+  if(!bijzonderId)return response(500,{error:"special_requirements_notification_pending"});
+  // Vastleggen dát ze weg zijn, zodat de beheeromgeving "verstuurd" kan zeggen in plaats
+  // van "niet vastgelegd". Lukt het vastleggen niet, dan gaat de boeking gewoon door: de
+  // mail is al de deur uit, en het overzicht toont hem dan als klaargezet. Te weinig
+  // beweren is hier de veilige kant — nooit "verstuurd" claimen zonder registratie.
+  for(const [soort,providerId] of [["accommodation",accommodatieId],["special",bijzonderId]]){
+    if(providerId==="nothing_to_report")continue;
+    try{await rpc("mark_tavern_notification_sent_by_claim",{p_claim_id:boeking.claimId,p_kind:soort,p_provider_id:providerId});}
+    catch(error){console.error("Notification mark error",soort,error);}
+  }
+  // De gedeelde Lewos-agenda. Staat de koppeling niet ingesteld, dan slaan we hem over:
+  // dat is de stand tot Robert de sleutel in Netlify zet, en een boeking mag daar niet
+  // op stuklopen. Is hij wél ingesteld, dan telt hij mee — een boeking die niet in de
+  // agenda staat, bestaat voor Nadine niet. Eén afspraak per boeking, ook bij een
+  // herhaalde webhook: het afspraak-id is afgeleid van het boekingskenmerk.
+  let calendar;
+  try{calendar=calendarConfig();}
+  catch(error){console.error("Calendar configuration error",error);return response(500,{error:"calendar_configuration_invalid"});}
+  if(calendar){
+    if(!boeking.arrivalDate||!boeking.departureDate){
+      console.error("Calendar skipped: the database returned no arrival or departure date",{claimId:boeking.claimId});
+      return response(500,{error:"calendar_dates_missing"});
+    }
+    try{
+      // **`arrivalDate` en `departureDate` zijn het bevestigde verblijf.** Een
+      // aangevraagde nacht rekt de afspraak niet op: Nadine ziet in de agenda wat
+      // vaststaat, en de aanvraag staat in de beheeromgeving en in de mail aan de
+      // accommodatie. Een agenda die een nacht toont die niemand heeft toegezegd, is
+      // een kamer die op de verkeerde dag klaarstaat.
+      await upsertBookingEvent(calendar,bookingEvent({
+        claimId:boeking.claimId,name:boeking.name,seats:boeking.seats,weekendLabel:boeking.weekendLabel,
+        arrivalDate:boeking.arrivalDate,departureDate:boeking.departureDate,
+        extraNights:verblijf.extraNightsStatus===STAY_STATUS.requested?verblijf.extraNightsRequest:""
+      }));
+    }catch(error){console.error("Calendar event error",error);return response(500,{error:"calendar_event_pending"});}
+  }else console.warn("Calendar not configured; no event created for booking",boeking.claimId);
+  return null;
+};
+
 export const handler=async event=>{
   // Een deploycontext zonder eigen instellingen schrijft niets. Zie _deploy-context.mjs.
   if(!environmentIsSafe())return response(503,unsafeEnvironmentBody());
@@ -162,7 +268,41 @@ export const handler=async event=>{
   if(session.payment_status!=="paid")return response(200,{received:true,ignored:true});
   if(!reference)return response(400,{error:"missing_payment_reference"});
   try{
-    const result=await confirmPayment(reference,new Date(Number(stripeEvent.created)*1000).toISOString());
+    const betaaldOp=new Date(Number(stripeEvent.created)*1000).toISOString();
+    const result=await confirmPayment(reference,betaaldOp);
+
+    // Een deelnemerkenmerk staat niet in `tavern_seat_claims`. Vóór 10 september 2026 bleef
+    // het hier steken: `unknown_payment`, een 500, en Stripe die het bleef proberen terwijl
+    // de betaling nooit werd vastgelegd. Nu is dat het signaal dat dit een groepsbetaling is.
+    if(result.status==="unknown_payment"){
+      const deelnemer=await confirmParticipant(reference,betaaldOp);
+      if(deelnemer.status!=="paid"){
+        console.error("Paid participant session could not be confirmed",
+          {reference,status:deelnemer.status,claimId:deelnemer.claimId});
+        return response(500,{error:"paid_booking_requires_attention"});
+      }
+      // Zijn eigen bevestiging, met zijn eigen bedrag. Eén per deelnemer, ook bij een
+      // herhaalde webhook: de database houdt bij dat hij weg is.
+      if(!deelnemer.confirmationEmailSent){
+        const providerId=await sendParticipantEmail(deelnemer);
+        if(!providerId)return response(500,{error:"confirmation_email_pending"});
+        const marked=await rpc("mark_participant_confirmation_email_sent",
+          {p_payment_reference:reference,p_provider_id:providerId});
+        if(marked.status!=="marked")return response(500,{error:"confirmation_email_mark_failed"});
+      }
+      // Nog niet iedereen. De accommodatie en de agenda wachten tot de laatste betaald
+      // heeft: één mail per boeking, niet één per gast.
+      if(!deelnemer.bookingComplete)
+        return response(200,{received:true,participantPaid:true,outstanding:deelnemer.outstanding});
+      if(!deelnemer.booking){
+        console.error("Booking complete but no booking payload returned",{reference,claimId:deelnemer.claimId});
+        return response(500,{error:"paid_booking_requires_attention"});
+      }
+      const mislukt=await rondBoekingAf(deelnemer.booking);
+      if(mislukt)return mislukt;
+      return response(200,{received:true,result:deelnemer.booking});
+    }
+
     if(result.status!=="paid"){
       console.error("Paid Stripe session could not be confirmed",{reference,status:result.status,claimId:result.claimId});
       return response(500,{error:"paid_booking_requires_attention"});
@@ -173,72 +313,8 @@ export const handler=async event=>{
       const marked=await rpc("mark_tavern_confirmation_email_sent",{p_payment_reference:reference,p_provider_id:providerId});
       if(marked.status!=="marked")return response(500,{error:"confirmation_email_mark_failed"});
     }
-    // Wat vaststaat en wat gevraagd is, uit elkaar getrokken. De regel voor de
-    // accommodatie wordt hier opgebouwd uit de opgeslagen datums; hij wordt niet
-    // overgenomen uit een tekstveld dat iets anders zou kunnen zeggen. Staat er nog een
-    // oude vrije tekst in de database, dan reist die mee als wat hij is: de eigen woorden
-    // van de gast.
-    const verblijf=stayLines({
-      weekendStart:result.weekendStart||result.arrivalDate,
-      weekendEnd:result.weekendEnd||result.departureDate,
-      requestedArrival:result.requestedArrival,requestedDeparture:result.requestedDeparture,
-      status:result.extraNightsStatus,
-      confirmedArrival:result.arrivalDate,confirmedDeparture:result.departureDate,
-      legacyText:result.extraNights||""
-    });
-
-    // De gast heeft zijn bevestiging. Nu de twee interne meldingen, allebei naar één
-    // vast postvak. Ze staan ná de bevestiging omdat de gast voorgaat, en ze geven een
-    // 500 terug als ze niet lukken: Stripe probeert de webhook dan opnieuw. Dat is de
-    // bedoeling — een betaalde boeking waarvan de accommodatie niets weet, is een gast
-    // zonder bed. De herhaling stuurt de gast geen tweede bevestiging: die is in de
-    // database afgevinkt. De `idempotency-key` houdt ook de twee meldingen enkelvoudig.
-    let mailboxes;
-    try{mailboxes=readRecipients();}
-    catch(error){console.error("Recipient configuration error",error);return response(500,{error:"recipient_configuration_invalid"});}
-    if(!mailboxes.accommodation){
-      console.error("Accommodation recipient not configured: set FONTECHA_ACCOMMODATION_EMAIL");
-      return response(500,{error:"accommodation_recipient_not_configured"});
-    }
-    const accommodatieId=await sendAccommodationEmail({...result,extraNightsRequest:verblijf.extraNightsRequest},mailboxes.accommodation);
-    if(!accommodatieId)return response(500,{error:"accommodation_notification_pending"});
-    const bijzonderId=await sendSpecialRequirementsEmail(result,mailboxes.general);
-    if(!bijzonderId)return response(500,{error:"special_requirements_notification_pending"});
-    // Vastleggen dát ze weg zijn, zodat de beheeromgeving "verstuurd" kan zeggen in plaats
-    // van "niet vastgelegd". Lukt het vastleggen niet, dan gaat de boeking gewoon door: de
-    // mail is al de deur uit, en het overzicht toont hem dan als klaargezet. Te weinig
-    // beweren is hier de veilige kant — nooit "verstuurd" claimen zonder registratie.
-    for(const [soort,providerId] of [["accommodation",accommodatieId],["special",bijzonderId]]){
-      if(providerId==="nothing_to_report")continue;
-      try{await rpc("mark_tavern_notification_sent",{p_payment_reference:reference,p_kind:soort,p_provider_id:providerId});}
-      catch(error){console.error("Notification mark error",soort,error);}
-    }
-    // De gedeelde Lewos-agenda. Staat de koppeling niet ingesteld, dan slaan we hem over:
-    // dat is de stand tot Robert de sleutel in Netlify zet, en een boeking mag daar niet
-    // op stuklopen. Is hij wél ingesteld, dan telt hij mee — een boeking die niet in de
-    // agenda staat, bestaat voor Nadine niet. Eén afspraak per boeking, ook bij een
-    // herhaalde webhook: het afspraak-id is afgeleid van het boekingskenmerk.
-    let calendar;
-    try{calendar=calendarConfig();}
-    catch(error){console.error("Calendar configuration error",error);return response(500,{error:"calendar_configuration_invalid"});}
-    if(calendar){
-      if(!result.arrivalDate||!result.departureDate){
-        console.error("Calendar skipped: the database returned no arrival or departure date",{claimId:result.claimId});
-        return response(500,{error:"calendar_dates_missing"});
-      }
-      try{
-        // **`arrivalDate` en `departureDate` zijn het bevestigde verblijf.** Een
-        // aangevraagde nacht rekt de afspraak niet op: Nadine ziet in de agenda wat
-        // vaststaat, en de aanvraag staat in de beheeromgeving en in de mail aan de
-        // accommodatie. Een agenda die een nacht toont die niemand heeft toegezegd, is
-        // een kamer die op de verkeerde dag klaarstaat.
-        await upsertBookingEvent(calendar,bookingEvent({
-          claimId:result.claimId,name:result.name,seats:result.seats,weekendLabel:result.weekendLabel,
-          arrivalDate:result.arrivalDate,departureDate:result.departureDate,
-          extraNights:verblijf.extraNightsStatus===STAY_STATUS.requested?verblijf.extraNightsRequest:""
-        }));
-      }catch(error){console.error("Calendar event error",error);return response(500,{error:"calendar_event_pending"});}
-    }else console.warn("Calendar not configured; no event created for booking",result.claimId);
+    const mislukt=await rondBoekingAf(result);
+    if(mislukt)return mislukt;
     return response(200,{received:true,result});
   }catch(error){console.error("Payment confirmation error",error);return response(500,{error:"confirmation_failed"});}
 };
