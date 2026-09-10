@@ -134,5 +134,9 @@ test("de identificatie van de verkoper staat niet in de juridische kennisgeving"
   // vastgelegd te staan, zodat niemand het later "voor de consistentie" ook in /legal/ zet.
   const legal=lees("legal/index.html");
   assert.doesNotMatch(legal,NIE,"legal/index.html hoort geen fiscaal nummer te dragen");
-  assert.ok(!legal.includes("Llerandi"),"legal/index.html hoort geen woonadres te dragen");
+  // Het adres wordt uit de voorwaarden gelezen en niet hier herhaald. Zou het hier staan,
+  // dan stond het in twee bestanden, en dat is precies wat deze test moet voorkomen.
+  const adres=(lees(NIE_MAG_ALLEEN_IN).match(/<dt>Registered address<\/dt><dd>([^<]+)<\/dd>/)||[])[1];
+  assert.ok(adres,`${NIE_MAG_ALLEEN_IN} draagt geen adres meer; deze test controleert dan niets`);
+  assert.ok(!legal.includes(adres),"legal/index.html hoort geen woonadres te dragen");
 });
