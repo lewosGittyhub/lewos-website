@@ -1603,6 +1603,79 @@ Deze staan voluit in Roberts `CLAUDE.md` in `~/Downloads`. Kort:
 
 Bovenaan staat wat als eerste moet. Haal een punt weg zodra het af én gecontroleerd is.
 
+---
+
+### Stand 10 september 2026 — dit gaat vóór alles hieronder
+
+*De lijst daaronder is van 29 augustus met aanvullingen van 1 september en klopt niet meer
+met vandaag. Dit blok is de actuele stand. Wie morgen begint, begint hier.*
+
+**Het besluit.** Robert heeft op 10 september besloten dat de betaalde verkoop opengaat, ook
+zonder het RECE-registratienummer. Geen verzonnen nummer, geen placeholder: de plek blijft
+leeg en wordt aangevuld zodra Asturias het meedeelt. Het juridische risico rond art. 23(m)
+Ley 7/2001 is door hem aanvaard en staat genoteerd. Wij hebben dat risico twee keer
+onafhankelijk opgeschreven; dat is wat wij kunnen doen.
+
+**Wat af is en van deze lijst mag:**
+
+- Het requerimiento RECE/2026/35500 is beantwoord. `ENT20261033427`, 10 september 17:17,
+  negen dagen voor de termijn, alle zes punten gedekt.
+- De identificatie van de verkoper staat in `/terms/`. Alleen het registratienummer is daar
+  nog open.
+- De insolventiebescherming staat volledig in `/terms/`, uit de polis gelezen.
+- De groepsbetaalmigratie staat op de preview-branch met acht groene verificaties.
+- De vijf correcties op de Adventurer's Guide zijn door Carmen doorgevoerd.
+
+**Wat er nu ligt, in deze volgorde:**
+
+1. **[Robert] Het registratienummer opeisen bij Asturias.** Bellen: **012** of
+   **985 279 100**, Servicio de Ordenación, Innovación y Calidad Turística, vragen om het
+   *número de inscripción* voor expediente RECE/2026/35500. Schriftelijke versie ligt klaar in
+   `Downloads/Asturias-verzoek-nummer-RECE-2026-35500.txt`. **Dit is het enige punt dat niet
+   in onze handen ligt en het enige dat art. 23(m) sluit.** Inschrijving gebeurt ambtshalve na
+   een correcte indiening, dus het nummer bestaat mogelijk al.
+
+2. **[Codex] De elf groepsbetalingsscenario's op `rece-migratie-test`.** Zaaien met
+   `operations/zaai-groepsbetaling.sql`, dan a t/m g, dan h, k, i, j, dan opruimen tot nul
+   testclaims. Prompt: `Downloads/Prompt-Codex-scenarios-groepsbetaling.md`.
+
+3. **[Codex + Robert] De migratie op productie.** Eerst een verse back-up, dan de vier
+   bestaande functies vergelijken met de vingerafdruk uit het testplan — ze worden vervángen —
+   dan `database/group-payment-confirmation.sql`, dan
+   `operations/verificatie-groepsbetaling.sql` met acht keer `ok`. **Zonder deze stap is de
+   poort openzetten onverantwoord:** `confirm_participant_payment` bestaat daar niet en een
+   groepsbetaling levert dan geld binnen zonder boeking.
+
+4. **[Claude] De drie klantdocumenten definitief maken, plus de PDF's.** De draft-status eruit,
+   de identificatie in `/travel-information/` (zonder fiscaal nummer, zie de logregel van
+   10 september), de twee gesloten open vragen eruit, en drie PDF's onder `documents/` met een
+   test die controleert dat wat in `PUBLISHED_TERMS_DOCUMENT` en `PUBLISHED_TRAVEL_DOCUMENT`
+   staat écht een PDF is — dezelfde eisen als `loadAttachment`. **Wacht op Codex' beoordeling
+   van Fase 1.**
+
+5. **[Robert] De betaalpoort.** Pas na 1–4, en pas na zijn expliciete laatste bevestiging.
+   Daarna een smoke-test zonder echte betaling en zonder echte agenda-afspraak. Bij één fout
+   gaat de poort direct weer dicht.
+
+**Twee punten bij de verzekering die stil kunnen rotten:**
+
+- **De rekening op de cautiepolis begint met `0049` (Santander)**, terwijl de premies van de
+  Sabadell-rekening (`0081`) zijn afgeschreven. De cijfers zijn afgeschermd. Staat daar de
+  verkeerde rekening, dan wordt de premie van volgend jaar niet geïncasseerd en vervalt stil de
+  garantie waar de hele registratie op rust. **Eén vraag aan Mayte, en de belangrijkste van de
+  twee.**
+- De typefout in het e-mailadres van de verzekeringnemer op de RC-polis (een `m` waar een `w`
+  hoort). Op 9 september gevraagd, niet beantwoord.
+
+**Eén punt met een datum ver weg, dat daarom juist hier hoort:**
+
+- **Vóór 29 maart 2029 moet het standaardinformatieformulier vervangen zijn.** Richtlijn (EU)
+  2026/1024 vervangt Annex I van 2015/2302 (art. 1(17)) en schrapt Annex II (art. 1(18)).
+  Omzetting vóór 29 september 2028, toepassing vanaf 29 maart 2029. Geverifieerd op EUR-Lex,
+  `CELEX:32026L1024`. Tot die datum is het huidige formulier het juiste.
+
+---
+
 *Bijgewerkt 29 augustus 2026. Vijf punten die al uitgevoerd waren zijn eruit gehaald — 17
 release, 18 brede ronde, 19 best-effort, 20 media en 21 juridische status; alle vijf staan
 in het logboek. De lijst loopt nu op volgorde van urgentie: eerst wat de deploy tegenhoudt,
