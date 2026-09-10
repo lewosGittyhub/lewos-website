@@ -297,6 +297,34 @@ end; $$;
 revoke all on function public.mark_participant_confirmation_email_sent(text,text) from public, anon, authenticated;
 grant execute on function public.mark_participant_confirmation_email_sent(text,text) to service_role;
 
+-- ── Geen verlenging op een boeking die al rond is ────────────────────────────
+-- Vervangt de versie in `admin.sql`. Die functie zet een nieuwe deadline op de bóeking; de
+-- deelnemer is alleen hoe de beheeromgeving aanwijst welke boeking het is. Verlengen voor
+-- een betaalde deelnemer is dus een geldig geval — je doet het juist voor de anderen.
+--
+-- Wat niet kan is verlengen op een boeking die al helemaal betaald is. Dan zet je een
+-- vervaltijd terug op iets wat af is. Dat kon geen kwaad zolang een groepsboeking nooit op
+-- `paid` kwam; sinds `confirm_participant_payment` kan dat wel.
+--
+-- Verder woord voor woord gelijk, inclusief de vastlegging in het beheerlogboek.
+create or replace function public.admin_extend_participant(p_email text, p_participant_id uuid, p_new_deadline timestamptz, p_reason text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.tavern_booking_participants%rowtype; c public.tavern_seat_claims%rowtype;
+begin
+  if not public.admin_is_allowed(p_email) then raise exception 'not_an_administrator'; end if;
+  select * into p from public.tavern_booking_participants where id=p_participant_id for update;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  select * into c from public.tavern_seat_claims where id=p.claim_id for update;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  if c.status='paid' then return jsonb_build_object('status','booking_complete','claimId',c.id); end if;
+  update public.tavern_seat_claims set hold_expires_at=p_new_deadline where id=p.claim_id;
+  insert into public.lewos_admin_actions(actor_email,action,claim_id,participant_id,reason,details)
+    values(lower(trim(p_email)),'extend',p.claim_id,p.id,trim(p_reason),jsonb_build_object('newDeadline',p_new_deadline));
+  return jsonb_build_object('status','extended','participantId',p.id,'newDeadline',p_new_deadline);
+end; $$;
+revoke all on function public.admin_extend_participant(text,uuid,timestamptz,text) from public, anon, authenticated;
+grant execute on function public.admin_extend_participant(text,uuid,timestamptz,text) to service_role;
+
 -- ── Verzendregistratie op boekingsnummer ─────────────────────────────────────
 -- `mark_tavern_notification_sent` zoekt de boeking op `payment_reference`. Dat werkt voor
 -- het First Access-pad, waar de boeking zelf een kenmerk heeft. Een groepsboeking heeft er

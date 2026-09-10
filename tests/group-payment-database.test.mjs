@@ -30,10 +30,11 @@ test("de commentaarfilter laat de SQL zelf intact",()=>{
   assert.ok(source.includes("-- ── De velden"),"de bron draagt echt commentaar dat eraf moet");
 });
 
-test("de migratie levert de zeven functies die deze suite bewaakt",()=>{
+test("de migratie levert de acht functies die deze suite bewaakt",()=>{
   const namen=functions.map(fn=>`${fn.schema}.${fn.name}`).sort();
   assert.deepEqual(namen,[
     "private.cleanup_tavern_claims",
+    "public.admin_extend_participant",
     "public.attach_participant_checkout_session",
     "public.confirm_participant_payment",
     "public.mark_participant_confirmation_email_sent",
@@ -232,4 +233,34 @@ test("verzendregistratie kan ook op boekingsnummer",()=>{
   for(const verboden of ["set status","amount_cents","price_cents","hold_expires_at"]){
     assert.ok(!fn.body.includes(verboden),`${verboden} hoort deze functie niet aan te raken`);
   }
+});
+
+test("elke functie die stoelen kan vrijgeven kent de betaalde deelnemer",async()=>{
+  // Deze migratie maakt het mogelijk dat een deelnemer op `paid` staat. Daarmee wordt elke
+  // plek die aannam dat dat nooit gebeurde ineens scherp. Vijf functies hadden de grens al;
+  // `cleanup_tavern_claims` miste hem, en dat was onvindbaar zolang niemand ooit betaalde.
+  //
+  // Deze test houdt die vijf vast. Komt er een functie bij die stoelen vrijgeeft of een
+  // deelnemer aanraakt, dan hoort hij hier ook in te staan.
+  const bronnen=Object.fromEntries(await Promise.all(
+    ["admin.sql","seat-holds.sql"].map(async naam=>
+      [naam,await readFile(path.join(root,"database",naam),"utf8")])));
+  const eisen=[
+    ["admin.sql","admin_release_participant","een betaalde deelnemer mag niet worden vrijgegeven"],
+    ["admin.sql","admin_remind_participant","een betaalde deelnemer krijgt geen herinnering"],
+    ["seat-holds.sql","release_seat_hold","een blokkering met een betaalde deelnemer geeft niets vrij"]
+  ];
+  for(const [bestand,functie,waarom] of eisen){
+    const bron=bronnen[bestand];
+    const begin=bron.indexOf(`function public.${functie}`);
+    assert.ok(begin>-1,`${functie} bestaat niet meer in ${bestand}`);
+    const einde=bron.indexOf("$$;",begin);
+    const lijf=bron.slice(begin,einde);
+    assert.match(lijf,/status='paid'/,`${functie}: ${waarom}`);
+  }
+  // En de opruimfuncties, ieder met hun eigen formulering van dezelfde regel.
+  assert.match(bronnen["seat-holds.sql"],/and p\.status='paid'\)/,
+    "expire_filling_holds hoort een betaalde deelnemer over te slaan");
+  assert.match(migration,/and p\.status='paid'\)/,
+    "cleanup_tavern_claims hoort een betaalde deelnemer over te slaan");
 });
