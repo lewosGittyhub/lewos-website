@@ -7,6 +7,199 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-10 · Claude · Requerimiento beantwoord, identificatie live, migratie op preview · TE CONTROLEREN
+
+**De korte versie.** Het requerimiento van Asturias is beantwoord en geregistreerd. De
+identificatie van de verkoper staat live in de boekingsvoorwaarden. De
+groepsbetaalmigratie staat op de preview-branch met acht groene verificaties, maar de
+scenario's zijn nog niet gedraaid. Verkoop blijft dicht.
+
+---
+
+#### 1. RECE/2026/35500 — beantwoord
+
+**Registratienummer `ENT20261033427`, 10 september 2026 om 17:17.** Oficina de Registro
+Telemático SITE, bestemming Consejería de Presidencia, Reto Demográfico, Igualdad y Turismo.
+CSV van het ontvangstbewijs: `16336617460002070661`, te verifiëren op
+`consultaCVS.asturias.es`. Zeven stukken, elk met eigen CSV en als *Original* geregistreerd.
+Termijn was 19 september; dat is negen dagen marge.
+
+**Alle zes punten van het requerimiento zijn nu gedekt.** Zie
+`operations/rece-2026-35500.md` voor de tijdlijn.
+
+**De route, want die was niet vanzelfsprekend en kostte een middag:**
+
+- Het dossier zelf heeft **geen** knop om documentatie aan te leveren. Alleen dossiergegevens,
+  de ingediende stukken, de notificatie en *Actuaciones*.
+- Trámite **B_SOL_02** (*Aporte de documentos a la Administración del Principado*) hangt de
+  aanlevering aan een **openstaande notificatie**. Die van 4 september was op dezelfde dag al
+  aanvaard, en dan meldt B_SOL_02 *"No tiene notificaciones asociadas"* en toont het geen
+  velden. Notificatie opnieuw openen verandert dat niet.
+- Wat werkte: **B_SOL_02 met de *Solicitud genérica* als verplicht formulier**, met het
+  dossiernummer in het eigen expedienteveld van dat formulier én in het onderwerp.
+- `tramita.asturias.es` stuurt nu door naar `miprincipado.asturias.es`. Een directe link naar
+  het besloten deel (`/sta/CarpetaPrivate/...`) geeft zonder sessie *"no ha sido posible
+  identificar su identidad"* — dat is een ontbrekende inlog, geen certificaatprobleem.
+- De Cl@ve-poort schiet door naar *Cl@ve Permanente* (wachtwoord). Wie met certificaat wil,
+  klikt *Volver* en kiest **DNIe / Certificado electrónico**.
+
+**Het betaalbewijs kwam uit de bank, niet van AXA.** Anben meldde op 10 september dat AXA geen
+duplicaat van de kwitanties afgeeft zolang die binnen de bancaire terugboektermijn vallen.
+Aangeleverd zijn twee afschrijvingsbewijzen van Banco Sabadell, beide met afschrijvingsdatum
+**2 september** — één dag vóór de declaración responsable van 3 september. Daarmee is niet
+alleen betaling aangetoond maar ook dat de dekking al liep toen de activiteit werd verklaard.
+De brief legt uit waarom het bewijs uit de bank komt en biedt de AXA-kwitanties na te zenden.
+
+**Nog open bij Anben, twee dingen die niet mogen wegzakken:**
+
+1. In de RC-polis staat een typefout in het e-mailadres van de verzekeringnemer (een `m` waar
+   een `w` hoort). Op 9 september gevraagd, niet beantwoord. Blokkeert niets, maar staat fout
+   in een stuk dat aan de overheid is overgelegd.
+2. **Belangrijker:** op de cautiepolis staat onder *Domicilio cobro* een rekening die begint
+   met **0049** (Banco Santander), terwijl de premies van de Sabadell-rekening (0081) zijn
+   afgeschreven. De cijfers zijn afgeschermd, dus niet hard te maken. Staat daar de verkeerde
+   rekening, dan wordt de premie van volgend jaar niet geïncasseerd en vervalt stil de
+   garantie waar de hele registratie op rust. Eén vraag aan Mayte.
+
+**Wat nu nog wacht:** het antwoord van Asturias en de registratiecode. Zolang die er niet is
+blijft de betaalpoort dicht.
+
+---
+
+#### 2. De identificatie van de verkoper staat live in `/terms/`
+
+Wie online een dienst verkoopt moet zich identificeren, en een reiziger moet weten met wie hij
+een overeenkomst sluit. Die velden stonden als "nog in te vullen" en zijn nu gevuld: trader,
+adres, fiscaal nummer, telefoon, e-mail, en de activiteit zoals bij de Belastingdienst
+ingeschreven (groep 755, zonder publiekslokaal, in Parres).
+
+De gegevens komen uit de *solicitud normalizada* die Robert op 4 september zelf heeft ingevuld
+en ondertekend voor het Principado. Niets overgenomen uit een ander stuk, niets verzonnen; het
+adres dat op een bankbewijs staat is bewust **niet** gebruikt, want dat is niet het adres dat
+hij als notificatieadres heeft opgegeven.
+
+**Robert heeft dit beperkt tot de boekingsvoorwaarden.** `/legal/` blijft zoals het was. Dat is
+zijn keuze en er staat een test op die het vastlegt, zodat niemand het daar later "voor de
+consistentie" alsnog neerzet.
+
+**De insolventiebescherming staat er nu ook volledig in**, uit de polis gelezen: AXA Seguros
+Generales, NIF A60917978, zetel Palma de Mallorca, cautiepolis 7751-86694929, gegarandeerd
+bedrag €100.000, geldig tot 28 augustus 2027. Met de zin die telt: wie geen terugbetaling
+krijgt omdat Lewos insolvent is, kan rechtstreeks op die polis claimen.
+
+**Laatste openstaande post in dat document: het toeristische registratienummer.** Eén regel
+werk zodra Asturias die afgeeft.
+
+**Let op bij `tests/repo-privacy.test.mjs`.** Die test verbood een NIE in élk bestand. Hij is
+niet uitgezet maar **smaller** gemaakt: het fiscale nummer mag in precies één bestand staan
+(`terms/index.html`) en daar precies één keer. Elk ander bestand blijft beschermd, dus een
+nummer dat per ongeluk in een commit-bericht, een operations-nota of een test belandt gooit de
+suite nog steeds om. De test die controleert dat het adres niet in `/legal/` staat, **leest**
+dat adres uit de voorwaarden in plaats van het te herhalen — anders stond het in twee
+bestanden.
+
+---
+
+#### 3. Groepsbetaalmigratie staat op de preview-branch
+
+`database/group-payment-confirmation.sql` is gedraaid op **`rece-migratie-test`** en gaf
+`{"success":true}`. Production is niet aangeraakt.
+
+`operations/verificatie-groepsbetaling.sql` gaf **acht keer `ok`**: de zes nieuwe kolommen, de
+acht functies, lege `search_path` op alle acht, uitvoerrechten alleen voor `service_role`, de
+interne functie voor niemand, de opruimgrens die een blokkering met een betaalde deelnemer laat
+staan, het bevestigde verblijf, en een schone stand.
+
+**De elf scenario's zijn nog NIET gedraaid.** Zie punt 5 hieronder.
+
+**Twee latente fouten gevonden en gerepareerd, in de SQL zelf:**
+
+1. `confirm_participant_payment` gaf de weekenddatums plat terug als `arrivalDate` en
+   `departureDate`, terwijl de webhook die leest als het **bevestigde** verblijf en ze in de
+   mail aan de accommodatie en in de agenda zet. Bij een groepsboeking met een toegezegde extra
+   nacht verdween daarmee de eerdere aankomst: een gast die maandag komt bij een kamer die pas
+   vrijdag klaarstaat. Nu `coalesce(c.arrival_date,w.starts_on)`, zoals in `stay-dates.sql`. Bij
+   een enkele boeking ging het al goed, dus niets anders vong dit op.
+2. In dezelfde functie viel de dieetwens plat terug op `dietary_notes` zonder de terugval op de
+   oudere kolommen `allergies` en `dietary_requirements`. Bij een boeking van vóór het
+   samengevoegde veld verdween daarmee een allergie uit de melding aan Lewos.
+
+**En één in de webhook, die álle boekingen raakte:** het blok *NOT YET CONFIRMED — extra nights
+requested* ging ook mee wanneer de accommodatie de nachten al had toegezegd of geweigerd. Dan
+staat de toegezegde aankomst terecht boven als bevestigd verblijf, en staat er eronder alsnog de
+vraag of ze die nacht willen leveren — met het risico dat Fontecha "nee" antwoordt op nachten
+die ze zelf al gaf. Dat blok gaat nu alleen mee zolang de aanvraag openstaat. `stayLines` blijft
+de regel wél vullen bij `confirmed`, want de beheeromgeving hoort hem te blijven zien; de keuze
+zit in de webhook.
+
+---
+
+#### 4. Wat er verder live is gegaan vandaag
+
+| Wat | Waarom |
+| --- | --- |
+| Betaalknop in het betaalverzoek als tabelcel met `bgcolor` | In Gmail was de knop leeg: wit op wit. De CSS-verkortingen `background:` en `font:` worden door Gmail weggehaald. Er staat nu een test op die die verkortingen verbiedt. |
+| Betaaltermijn in de tijdzone van de bezoeker | Dezelfde 15:02 in Madrid is 09:02 in New York en 03:02 op Hawaii. De pagina zet de eigen klok bovenaan en de Spaanse eronder; de mail kent geen tijdzone en zet Spaanse tijd met UTC ernaast. Rekenwerk in `assets/deadline.js`. |
+| Filmen als regel in plaats van per weekend | De FAQ vroeg *"Is Weekend 02 professionally filmed?"* en het antwoord op *"Will I be filmed?"* begon met **"Yes"** — onwaar voor elk niet-gefilmd weekend. Nu: gefilmd wordt aangekondigd op het weekend zelf, vóór het boeken. Er staat bewust **niet** dat dit de enige gefilmde editie blijft. |
+| De tafelfoto achter de Tavern-kaart op de hub | Dezelfde foto als de hero op `/tavern/`, zodat hub en pagina hetzelfde beeld dragen. |
+| `tests/guest-language.test.mjs` | Robert: nooit Nederlands waar een gast het leest. Negen pagina's en de uitgaande betaalmails doorgelicht: er stond niets. De woordenlijst bevat alleen woorden die niet ook Engels of Spaans kunnen zijn — "de" niet (Complejo Rural de Fontecha), "want" niet (Want to stay longer?). |
+
+**De Adventurer's Guide.** Vijf correcties aan Carmen doorgegeven
+(`Downloads/Adventurers-Guide-correcties-voor-Carmen.md`, buiten de repo). De drie over filmen
+zijn doorgevoerd: *"You have already agreed to photography and filming as part of your booking"*
+is weg — dat was het tegenovergestelde van hoe de eigen toestemming werkt — *online advertising*
+is uit het rijtje van algemeen gebruik, en er staat een voorbehoud bovenaan voor niet-gefilmde
+weekenden. Ook de reis (transfers vanaf OVD en Arriondas zijn wél inbegrepen) en de dranken
+(*non-alcoholic*) zijn recht. Niets meer open op de gids.
+
+---
+
+#### 5. Wat er voor de volgende ligt
+
+**De elf scenario's van `operations/testplan-groepsbetaling.md`.** Gebruik
+`Downloads/Prompt-Codex-scenarios-groepsbetaling.md`.
+
+Er stond een gat in dat plan dat vandaag zichtbaar werd: **alle elf scenario's nemen aan dat er
+een groepsboeking in de database staat, en er stond geen stap die die maakt.** Op de lege
+preview-branch gaf dat elf keer `not_found` en `unknown_payment` — geen fout in de migratie,
+maar ook geen bewijs. Er is nu **`operations/zaai-groepsbetaling.sql`**: één boeking van vier
+deelnemers met vaste betaalkenmerken (`tav_aaaa…a1` tot `tav_dddd…d4`), een query om de stand
+te zien, en een opruimblok.
+
+Volgorde: **zaaien, dan a tot g in alfabetische volgorde, dan h, k, i, j, dan opruimen.** a t/m
+g bouwen op elkaar voort; h, k en j hebben een deels betaalde of afgeronde boeking nodig en
+kunnen dus niet eerst. Opruimen is geen netheid — query 8 van de verificatie controleert of er
+een betaalde deelnemer staat, en achtergebleven testdata geeft de volgende ronde vals alarm.
+
+**Let op `consented_at`** op `tavern_seat_claims`: `not null` zonder default. Vergeten geeft een
+insert-fout.
+
+**Pas naar productie** als alle elf scenario's staan, de acht verificaties `ok` gaven, de linter
+niets nieuws meldt en `node --test tests/*.test.mjs` groen is op de commit die je deployt.
+
+---
+
+#### 6. Drie fouten van mij, voor de eerlijkheid van dit dossier
+
+1. **Een controle die niet kon falen.** `operations/verificatie-groepsbetaling.sql` telde in
+   query 2 met `count(*)` in plaats van `count(p.oid)`. `count(*)` telt ook de niet-gevonden
+   regels, dus die controle zou altijd "acht functies" melden, ook als er geen enkele bestond.
+   Erger dan geen controle, want je vertrouwt erop.
+2. **Een join die het gezochte geval wegfilterde.** Dezelfde query controleerde uitvoerrechten
+   met een gewone `join` op `pg_roles`. PUBLIC heeft `grantee = 0` en matcht met geen enkele
+   rol, dus een te ruime PUBLIC-toekenning — precies wat je wil vinden — bleef onzichtbaar.
+3. **Een testplan zonder de data die het nodig had.** Zie punt 5.
+
+Alle drie gerepareerd, met de reden in het commit-bericht. Het script is nu **één query die
+acht regels teruggeeft** in plaats van acht losse: de editor stopte bij de fout in de vierde en
+toonde de eerste drie niet, dus er kwam geen enkele uitkomst uit.
+
+---
+
+**Verkoop blijft dicht.** `PUBLISHED_TERMS_VERSION`, `PUBLISHED_TERMS_DOCUMENT` en
+`PUBLISHED_TRAVEL_DOCUMENT` leeg in `_booking-config.mjs`; `publicBookingOpen: false` op de live
+site. 549 tests groen. Live op `main@a40f9e5`.
+
 ### 2026-09-10 · Codex · Controle van de live agendakoppeling en overdracht · GECONTROLEERD door Codex, 10 september 2026
 
 **Wat.** De bovenste overdracht van 9 september gecontroleerd tegen `origin/main` op
