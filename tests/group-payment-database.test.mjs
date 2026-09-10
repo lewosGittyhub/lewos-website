@@ -217,7 +217,9 @@ test("een deelnemerbetaling levert de boekinggegevens apart aan",()=>{
   // `confirm_tavern_payment` teruggeeft -- zodat de webhook dat blok kan hergebruiken.
   const fn=byName("confirm_participant_payment");
   assert.match(fn.body,/'booking',case when v_rond then jsonb_build_object\(/);
-  for(const veld of ["'name',c.name","'seats',c.party_size","'dietaryNotes',c.dietary_notes",
+  // De dieetwens staat er met zijn terugval op de oude kolommen; de vorm daarvan wordt
+  // hieronder in zijn eigen test vastgehouden.
+  for(const veld of ["'name',c.name","'seats',c.party_size","'dietaryNotes',coalesce(",
                      "'extraNightsStatus',c.extra_nights_status"]){
     assert.ok(fn.body.includes(veld),`${veld} hoort in de boekinglaag te staan`);
   }
@@ -263,4 +265,45 @@ test("elke functie die stoelen kan vrijgeven kent de betaalde deelnemer",async()
     "expire_filling_holds hoort een betaalde deelnemer over te slaan");
   assert.match(migration,/and p\.status='paid'\)/,
     "cleanup_tavern_claims hoort een betaalde deelnemer over te slaan");
+});
+
+test("het verblijf in de groepsboeking is het bevestigde verblijf, niet het weekend",async()=>{
+  // Robert, 10 september 2026: "hoe zit het trouwens met extra nachten." Bij het nakijken
+  // bleek `confirm_participant_payment` de weekenddatums plat als `arrivalDate` en
+  // `departureDate` terug te geven, terwijl `stay-dates.sql` daar het BEVESTIGDE verblijf
+  // in zet. De webhook leest ze als bevestigd verblijf: hij zet ze in de mail aan de
+  // accommodatie, geeft ze aan `stayLines` als `confirmedArrival`, en zet ze in de agenda.
+  //
+  // Gevolg was dat een door de accommodatie toegezegde extra nacht bij een groepsboeking
+  // verdween: een gast die maandag aankomt bij een kamer die pas vrijdag klaarstaat. Bij een
+  // enkele boeking gebeurde dat niet — daarom moet het hier vastgehouden worden.
+  const fn=byName("confirm_participant_payment");
+  assert.ok(fn,"confirm_participant_payment bestaat niet meer");
+  assert.equal(fn.body.match(/'arrivalDate',w\.starts_on/g),null,
+    "arrivalDate mag niet plat het weekend zijn: dan verdwijnt een bevestigde extra nacht");
+  assert.equal(fn.body.match(/'departureDate',w\.ends_on/g),null,
+    "departureDate mag niet plat het weekend zijn");
+  assert.equal((fn.body.match(/'arrivalDate',coalesce\(c\.arrival_date,w\.starts_on\)/g)||[]).length,3,
+    "alle drie de teruggaven horen het bevestigde verblijf te geven");
+  assert.equal((fn.body.match(/'departureDate',coalesce\(c\.departure_date,w\.ends_on\)/g)||[]).length,3,
+    "alle drie de teruggaven horen het bevestigde vertrek te geven");
+  // En het weekend zelf blijft apart meereizen, want `stayLines` heeft beide nodig om
+  // aangevraagd van bevestigd te kunnen onderscheiden.
+  assert.match(fn.body,/'weekendStart',w\.starts_on,'weekendEnd',w\.ends_on/,
+    "het weekend hoort naast het verblijf te staan, niet in plaats daarvan");
+  assert.match(fn.body,/'requestedArrival',c\.requested_arrival/,
+    "de aanvraag van de gast hoort mee te reizen als aanvraag");
+  assert.match(fn.body,/'extraNightsStatus',c\.extra_nights_status/,
+    "zonder status kan de webhook aangevraagd niet van bevestigd onderscheiden");
+});
+
+test("de dieetwens van een groepsboeking valt terug op de oude kolommen",async()=>{
+  // Dezelfde vergelijking met `first-access.sql`: daar staat een terugval op `allergies` en
+  // `dietary_requirements` voor boekingen van voor het samengevoegde veld. Plat
+  // `c.dietary_notes` liet bij zo'n boeking een allergie weg uit de melding aan Lewos, en
+  // een weggevallen allergie is het gevaarlijkste lege veld dat we hebben.
+  const fn=byName("confirm_participant_payment");
+  assert.match(fn.body,
+    /'dietaryNotes',coalesce\(nullif\(trim\(coalesce\(c\.dietary_notes,''\)\),''\),\s*private\.merged_dietary_text\(c\.allergies,c\.dietary_requirements\)\)/,
+    "de dieetwens hoort dezelfde terugval te hebben als in first-access.sql");
 });

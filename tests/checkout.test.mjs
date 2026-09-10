@@ -340,6 +340,45 @@ test("an extra-night request travels as dates, in its own block, marked not conf
   assert.match(mail.text,/Please reply to Robert to confirm or decline these extra nights\./);
 });
 
+test("once the accommodation has confirmed the extra nights, nothing is still asked",async()=>{
+  // Robert, 10 september 2026: "hoe zit het trouwens met extra nachten." Bij het nakijken
+  // bleek het NOT YET CONFIRMED-blok ook mee te gaan wanneer de accommodatie de nachten al
+  // had toegezegd. Dan staat de maandag terecht boven als bevestigde aankomst, en staat er
+  // eronder alsnog de vraag of ze die maandag willen leveren -- met het risico dat ze "nee"
+  // antwoorden op nachten die ze zelf al hebben gegeven.
+  confirmationResult={...confirmationResult,
+    weekendStart:"2026-10-30",weekendEnd:"2026-11-02",
+    requestedArrival:"2026-10-28",requestedDeparture:"2026-11-02",
+    arrivalDate:"2026-10-28",departureDate:"2026-11-02",
+    extraNightsStatus:"confirmed"};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const mail=mailsAan("accommodation@example.invalid")[0];
+
+  // De toegezegde nachten zitten in het bevestigde verblijf, waar ze horen.
+  assert.match(mail.text,/Arrival \/ Llegada:\n {2}2026-10-28/);
+  // En er wordt niets meer gevraagd.
+  assert.equal(mail.text.includes("NOT YET CONFIRMED"),false,
+    "over bevestigde nachten hoort niets meer gevraagd te worden");
+  assert.equal(mail.text.includes("Please reply to Robert to confirm or decline"),false,
+    "en er hoort geen antwoord meer gevraagd te worden");
+});
+
+test("een geweigerde aanvraag wordt niet opnieuw gesteld",async()=>{
+  // Dezelfde reden, andere uitkomst: heeft de accommodatie de nachten geweigerd, dan is de
+  // vraag beantwoord. Hem opnieuw stellen in de bevestigingsmail zou hem heropenen.
+  confirmationResult={...confirmationResult,
+    weekendStart:"2026-10-30",weekendEnd:"2026-11-02",
+    requestedArrival:"2026-10-28",requestedDeparture:"2026-11-02",
+    extraNightsStatus:"declined"};
+  const result=await betaaldeWebhook();
+  assert.equal(result.statusCode,200);
+  const mail=mailsAan("accommodation@example.invalid")[0];
+  assert.match(mail.text,/Arrival \/ Llegada:\n {2}2026-10-30/,
+    "een geweigerde nacht is geen verblijf: het weekend blijft staan");
+  assert.equal(mail.text.includes("NOT YET CONFIRMED"),false);
+});
+
 test("an older booking keeps the guest's own words when there are no dates",async()=>{
   // Boekingen van vóór de kalender hebben hun aanvraag als vrije tekst. Die mag niet
   // stilzwijgend uit de mail verdwijnen omdat het formaat veranderd is.

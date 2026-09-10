@@ -172,6 +172,43 @@ proeven is; daarom is het niet gebouwd.*
 
 ---
 
+## Een groepsboeking, waar vier mensen apart betalen
+
+Gevraagd door Robert op 10 september 2026: *"hoe zit het trouwens met extra nachten."*
+
+**De extra nachten hangen aan de boeking, niet aan de deelnemer.** Eén gast klikt zijn
+verblijf aan bij de aanmelding; dat is de boeking waar iedereen aan hangt. Er is geen plek
+waar één van de vier een eigen aankomstdatum kan aanvragen, en dat is met opzet: de
+accommodatie zet één huis klaar, niet vier losse kamers met vier datums.
+
+**De aanvraag reist pas mee als de laatste deelnemer betaald heeft.** Zolang er nog één
+openstaat gaat er niets naar de accommodatie — precies zoals bij een enkele boeking, waar
+niets weggaat voor de betaling binnen is.
+
+**Er komt geen bedrag bij.** Iedere deelnemer betaalt zijn eigen €2.025 en verder niets.
+Wat een extra nacht kost weet de accommodatie; dat loopt buiten de site om. Dat was al zo
+en verandert niet doordat er nu vier betalingen zijn in plaats van één.
+
+Twee dingen die bij het nakijken op 10 september 2026 fout bleken te staan:
+
+1. `confirm_participant_payment` gaf de weekenddatums plat terug als `arrivalDate` en
+   `departureDate`, terwijl de webhook die leest als het **bevestigde** verblijf — hij zet
+   ze in de mail aan de accommodatie, geeft ze aan `stayLines` en zet ze in de agenda. Bij
+   een groepsboeking met toegezegde extra nachten verdween daardoor de eerdere aankomst:
+   een gast die maandag komt bij een kamer die pas vrijdag klaarstaat. Nu staat er
+   `coalesce(c.arrival_date, w.starts_on)`, hetzelfde als in `stay-dates.sql`. Ook de
+   dieetwens viel plat terug op `dietary_notes` zonder de terugval op de oude kolommen
+   `allergies` en `dietary_requirements`; een weggevallen allergie is het gevaarlijkste
+   lege veld dat we hebben.
+2. Het blok **NOT YET CONFIRMED** ging ook mee wanneer de accommodatie de nachten al had
+   toegezegd of geweigerd. Dan staat de maandag terecht boven als bevestigde aankomst, en
+   staat er eronder alsnog de vraag of ze die maandag willen leveren. Dat gold voor álle
+   boekingen, niet alleen groepen — de mail is gedeeld. Het blok gaat nu alleen mee zolang
+   de aanvraag openstaat. `stayLines` blijft de regel wél vullen bij `confirmed`, want de
+   beheeromgeving hoort hem te blijven zien; de keuze zit in de webhook.
+
+---
+
 ## Nog niet gedaan
 
 - `database/stay-dates.sql` is **nooit tegen een database gedraaid**. Er is op deze machine

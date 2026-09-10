@@ -242,7 +242,16 @@ const rondBoekingAf=async boeking=>{
     console.error("Accommodation recipient not configured: set FONTECHA_ACCOMMODATION_EMAIL");
     return response(500,{error:"accommodation_recipient_not_configured"});
   }
-  const accommodatieId=await sendAccommodationEmail({...boeking,extraNightsRequest:verblijf.extraNightsRequest},mailboxes.accommodation);
+  // Het NOT YET CONFIRMED-blok hoort alleen bij een aanvraag die nog open staat. Heeft de
+  // accommodatie de nachten al toegezegd of geweigerd, dan is er niets meer te beantwoorden
+  // -- en dan is dat blok erger dan leeg: het vraagt de accommodatie om te beslissen over
+  // nachten waarover ze al besloten heeft, terwijl de aankomstdatum erboven ze al bevat.
+  // `stayLines` vult de aanvraagregel altijd, ook bij `confirmed`; dat is met opzet, want
+  // de beheeromgeving wil hem wél blijven zien. De keuze hoort dus hier.
+  const openAanvraag=verblijf.extraNightsStatus!==STAY_STATUS.confirmed
+    &&verblijf.extraNightsStatus!==STAY_STATUS.declined
+    ?verblijf.extraNightsRequest:"";
+  const accommodatieId=await sendAccommodationEmail({...boeking,extraNightsRequest:openAanvraag},mailboxes.accommodation);
   if(!accommodatieId)return response(500,{error:"accommodation_notification_pending"});
   const bijzonderId=await sendSpecialRequirementsEmail(boeking,mailboxes.general);
   if(!bijzonderId)return response(500,{error:"special_requirements_notification_pending"});

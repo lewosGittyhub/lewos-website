@@ -218,7 +218,8 @@ begin
     return jsonb_build_object('status','paid','participantId',p.id,'claimId',c.id,
       'name',p.full_name,'email',p.email,'amountCents',p.amount_cents,
       'weekend',w.slug,'weekendLabel',w.label||' · '||w.date_label,
-      'arrivalDate',w.starts_on,'departureDate',w.ends_on,
+      'arrivalDate',coalesce(c.arrival_date,w.starts_on),
+      'departureDate',coalesce(c.departure_date,w.ends_on),
       'termsVersion',p.terms_version,'paidAt',p.paid_at,
       'bookingComplete',c.status='paid',
       'confirmationEmailSent',p.confirmation_email_sent_at is not null);
@@ -255,7 +256,8 @@ begin
   return jsonb_build_object('status','paid','participantId',p.id,'claimId',c.id,
     'name',p.full_name,'email',p.email,'amountCents',p.amount_cents,
     'weekend',w.slug,'weekendLabel',w.label||' · '||w.date_label,
-    'arrivalDate',w.starts_on,'departureDate',w.ends_on,
+    'arrivalDate',coalesce(c.arrival_date,w.starts_on),
+    'departureDate',coalesce(c.departure_date,w.ends_on),
     'termsVersion',p.terms_version,'paidAt',coalesce(p_paid_at,now()),
     'bookingComplete',v_rond,'outstanding',v_open,
     -- De bevestiging vertelt bij een gefilmd weekend dat de persoonlijke
@@ -266,11 +268,22 @@ begin
     'booking',case when v_rond then jsonb_build_object(
       'status','paid','claimId',c.id,'name',c.name,'email',c.email,'seats',c.party_size,
       'weekendLabel',w.label||' · '||w.date_label,
-      'arrivalDate',w.starts_on,'departureDate',w.ends_on,
+      -- `arrivalDate` en `departureDate` zijn het BEVESTIGDE verblijf, precies zoals in
+      -- `stay-dates.sql`. Leeg betekent: het weekend zelf. Stonden hier de weekenddatums
+      -- plat, dan verdween een door de accommodatie toegezegde extra nacht uit de mail
+      -- aan de accommodatie en uit de agenda -- een gast die maandag aankomt bij een
+      -- kamer die pas vrijdag klaarstaat.
+      'arrivalDate',coalesce(c.arrival_date,w.starts_on),
+      'departureDate',coalesce(c.departure_date,w.ends_on),
       'weekendStart',w.starts_on,'weekendEnd',w.ends_on,
       'requestedArrival',c.requested_arrival,'requestedDeparture',c.requested_departure,
       'extraNightsStatus',c.extra_nights_status,
-      'dietaryNotes',c.dietary_notes,'notes',c.message,'extraNights',c.extra_nights,
+      -- Dezelfde terugval als in `first-access.sql`: staat de dieetwens nog in de oude
+      -- kolommen `allergies` en `dietary_requirements`, dan komt hij daaruit. Plat
+      -- `c.dietary_notes` liet bij een oudere boeking een allergie weg.
+      'dietaryNotes',coalesce(nullif(trim(coalesce(c.dietary_notes,'')),''),
+        private.merged_dietary_text(c.allergies,c.dietary_requirements)),
+      'notes',c.message,'extraNights',c.extra_nights,
       'termsVersion',p.terms_version) else null end);
 end; $$;
 revoke all on function public.confirm_participant_payment(text,timestamptz) from public, anon, authenticated;
