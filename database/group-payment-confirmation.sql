@@ -258,6 +258,10 @@ begin
     'arrivalDate',w.starts_on,'departureDate',w.ends_on,
     'termsVersion',p.terms_version,'paidAt',coalesce(p_paid_at,now()),
     'bookingComplete',v_rond,'outstanding',v_open,
+    -- De bevestiging vertelt bij een gefilmd weekend dat de persoonlijke
+    -- Filming & Media Agreement nog komt. Welk weekend dat is weet de database; de
+    -- webhook hoort geen weekendnummer te kennen.
+    'filmingRequired',coalesce(public.tavern_media_agreement_required(w.slug),false),
     'confirmationEmailSent',false,
     'booking',case when v_rond then jsonb_build_object(
       'status','paid','claimId',c.id,'name',c.name,'email',c.email,'seats',c.party_size,

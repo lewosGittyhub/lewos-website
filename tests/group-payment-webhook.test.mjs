@@ -28,6 +28,7 @@ const DEELNEMER_ONVOLLEDIG={
   weekend:"weekend-01",weekendLabel:"The Halloween Table · 30 Oct to 2 Nov 2026",
   arrivalDate:"2026-10-30",departureDate:"2026-11-02",
   termsVersion:"booking-test-v1",paidAt:"2026-10-01T10:00:00.000Z",
+  filmingRequired:true,
   bookingComplete:false,outstanding:2,confirmationEmailSent:false,booking:null
 };
 const BOEKING={
@@ -237,4 +238,23 @@ test("zegt de database rond maar levert hij geen boeking, dan stopt de webhook",
   const uit=await webhook();
   assert.equal(uit.statusCode,500);
   assert.equal(JSON.parse(uit.body).error,"paid_booking_requires_attention");
+});
+
+test("bij een gefilmd weekend staat in de bevestiging dat de overeenkomst nog komt",async()=>{
+  // Dit is het enige dat een gast na het betalen nog zelf moet, en hij heeft er op zijn
+  // betaalpagina net voor afgevinkt. Dan hoort hij te lezen dat het komt.
+  await webhook();
+  const tekst=mailsAan("twee@example.invalid")[0].text;
+  assert.match(tekst,/Filming & Media Agreement/);
+  assert.match(tekst,/nobody can do it for you/);
+});
+
+test("bij een weekend zonder camera staat die regel er niet",async()=>{
+  // Weekend 02 wordt niet gefilmd. Een gast die daar komt hoort niets over filmen te lezen.
+  deelnemerResultaat={...DEELNEMER_ONVOLLEDIG,filmingRequired:false,
+    weekend:"weekend-02",weekendLabel:"The Autumn Table · 6 to 9 Nov 2026"};
+  await webhook();
+  const tekst=mailsAan("twee@example.invalid")[0].text;
+  assert.doesNotMatch(tekst,/Filming|filmed|camera/i,"geen woord over filmen bij The Autumn Table");
+  assert.match(tekst,/booking terms and the travel information are attached/,"de rest hoort er wel te staan");
 });

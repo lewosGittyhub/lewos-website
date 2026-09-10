@@ -154,7 +154,8 @@ const RPCS={
       amountCents:p.amount_cents,weekend:w.slug,weekendLabel:weekendLabel(),
       arrivalDate:w.starts_on,departureDate:w.ends_on,termsVersion:p.terms_version};
     if(p.status==="paid")return {status:"paid",...gemeen,paidAt:p.paid_at,
-      bookingComplete:c.status==="paid",confirmationEmailSent:Boolean(p.confirmation_email_sent_at)};
+      filmingRequired:filmenVerplicht(w.slug),bookingComplete:c.status==="paid",
+      confirmationEmailSent:Boolean(p.confirmation_email_sent_at)};
     if(p.status==="cancelled")return {status:"cancelled",participantId:p.id};
     if(!c.hold_expires_at||!p_paid_at
        ||new Date(p_paid_at)>new Date(new Date(c.hold_expires_at).getTime()+5*60000))
@@ -165,7 +166,7 @@ const RPCS={
     if(rond){c.status="paid";c.hold_phase="confirmed";c.hold_expires_at=null;}
     bewaar();
     return {status:"paid",...gemeen,paidAt:p.paid_at,bookingComplete:rond,outstanding:open,
-      confirmationEmailSent:false,
+      filmingRequired:filmenVerplicht(w.slug),confirmationEmailSent:false,
       booking:rond?{status:"paid",claimId:c.id,name:c.name,email:c.email,seats:c.party_size,
         weekendLabel:weekendLabel(),arrivalDate:w.starts_on,departureDate:w.ends_on,
         weekendStart:w.starts_on,weekendEnd:w.ends_on,
@@ -205,7 +206,7 @@ globalThis.fetch=(input,options)=>{
     const inhoud=JSON.parse(String(options?.body||"{}"));
     db.mails.push({op:new Date().toISOString(),aan:(inhoud.to||[]).join(", "),
       onderwerp:inhoud.subject,bijlagen:(inhoud.attachments||[]).map(a=>a.filename),
-      tekst:String(inhoud.text||"").slice(0,900)});
+      tekst:String(inhoud.text||"").slice(0,900),html:String(inhoud.html||"")});
     bewaar();
     return Promise.resolve(new Response(JSON.stringify({id:`mail_${db.mails.length}`}),
       {status:200,headers:{"content-type":"application/json"}}));

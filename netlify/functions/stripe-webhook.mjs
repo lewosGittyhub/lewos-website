@@ -102,6 +102,12 @@ const sendParticipantEmail=async deelnemer=>{
     `Hi ${deelnemer.name},`,
     `Your share of ${bedrag} is paid, and your seat at ${deelnemer.weekendLabel} is yours.`,
     "We will write again before the weekend with everything you need — how to find us, what to bring, and what to expect when you arrive.",
+    // Alleen bij een gefilmd weekend. Dit is het enige dat een gast na het betalen nog zelf
+    // moet doen, en hij heeft er op zijn betaalpagina net voor afgevinkt — dan hoort hij te
+    // lezen dat het komt. Weekend 02 wordt niet gefilmd; daar hoort deze zin niet te staan.
+    ...(deelnemer.filmingRequired===true
+      ?["Because this weekend is filmed, you will also receive your personal Filming & Media Agreement. Everyone completes their own — nobody can do it for you."]
+      :[]),
     "The booking terms and the travel information are attached. They are yours to keep.",
     "See you in the mountains.",
     "Robert\nThe Lewos Tavern"
