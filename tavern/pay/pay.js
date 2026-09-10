@@ -53,13 +53,37 @@ const klok=iso=>{
 
   if(!gegevens.paymentsOpen){$("#poortdicht").hidden=false;return;}
 
+  // De eigen bevestigingen van deze deelnemer. Ze staan pas in beeld als er ook echt
+  // betaald kan worden — anders vraag je iemand iets te bevestigen voor een knop die
+  // niet werkt.
+  const filmen=gegevens.filmingRequired===true;
+  $("#bevestigingen").hidden=false;
+  if(filmen){
+    $("#filmweekend").textContent=gegevens.weekendLabel||"this weekend";
+    $("#vink-filmen").hidden=false;
+  }
+  const vinkjes=[$("#eigen-adult"),$("#eigen-privacy"),...(filmen?[$("#eigen-filmen")]:[])];
+
   const knop=$("#betaal");
   knop.hidden=false;
+  // Alle drie zijn verplicht. De knop blijft uit tot ze staan; de server weigert het ook,
+  // maar een dode knop is duidelijker dan een foutmelding na het klikken.
+  const weegKnop=()=>{knop.disabled=!vinkjes.every(v=>v.checked);};
+  vinkjes.forEach(v=>v.addEventListener("change",weegKnop));
+  weegKnop();
+
   knop.addEventListener("click",async()=>{
+    if(knop.disabled)return;
     knop.disabled=true;knop.textContent="Opening the payment page…";
     $("#knopfout").hidden=true;
     try{
-      const r=await fetch(`/api/pay?ref=${encodeURIComponent(ref)}`,{method:"POST",headers:{accept:"application/json"}});
+      const r=await fetch(`/api/pay?ref=${encodeURIComponent(ref)}`,{method:"POST",
+        headers:{accept:"application/json","content-type":"application/json"},
+        body:JSON.stringify({
+          adultConfirmed:$("#eigen-adult").checked,
+          privacyAccepted:$("#eigen-privacy").checked,
+          filmingAcknowledged:filmen?$("#eigen-filmen").checked:false
+        })});
       const b=await r.json();
       if(r.ok&&b.checkoutUrl){location.href=b.checkoutUrl;return;}
       $("#knopfout").textContent=b.message||"We could not open the payment page. Nothing has been charged.";
@@ -67,6 +91,7 @@ const klok=iso=>{
       $("#knopfout").textContent="We could not reach the payment page. Nothing has been charged.";
     }
     $("#knopfout").hidden=false;
-    knop.disabled=false;knop.textContent="Pay my share →";
+    knop.textContent="Pay my share →";
+    weegKnop();
   });
 })();

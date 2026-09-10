@@ -24,15 +24,19 @@ const GEANNULEERD="tav_5555555555555555555555555555eeee";
 const DEELNEMERS={
   [EEN]:{status:"ok",participantId:"p-1",fullName:"TEST – Een",amountCents:202500,
     deadline:"2026-11-01T12:30:00.000Z",bookingName:"TEST – Boeker",
-    weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",checkoutSessionId:null,checkoutSessionUrl:null},
+    weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",filmingRequired:true,
+    checkoutSessionId:null,checkoutSessionUrl:null},
   [TWEE]:{status:"ok",participantId:"p-2",fullName:"TEST – Twee",amountCents:202500,
     deadline:"2026-11-01T12:30:00.000Z",bookingName:"TEST – Boeker",
-    weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",checkoutSessionId:null,checkoutSessionUrl:null},
+    weekendLabel:"Weekend 01 · 30 Oct to 2 Nov 2026",filmingRequired:true,
+    checkoutSessionId:null,checkoutSessionUrl:null},
   [BETAALD]:{status:"already_paid",fullName:"TEST – Al betaald",amountCents:202500},
   [VERLOPEN]:{status:"expired",fullName:"TEST – Te laat"},
   [GEANNULEERD]:{status:"cancelled"}
 };
 let gekoppeld={};   // kenmerk → sessie, zoals de database die vasthoudt
+let bevestigd={};   // kenmerk → wat er is vastgelegd, zoals de database dat bijhoudt
+let weigerKoppeling=false;  // om de strengere database na te bootsen
 
 before(async()=>{
   server=http.createServer((request,response)=>{
@@ -47,8 +51,28 @@ before(async()=>{
         const sessie=gekoppeld[ref];
         return response.end(JSON.stringify(sessie?{...gevonden,...sessie}:gevonden));
       }
+      if(request.url.endsWith("/record_participant_confirmations")){
+        const ref=invoer.p_reference;
+        const gevonden=DEELNEMERS[ref];
+        if(!gevonden)return response.end(JSON.stringify({status:"not_found"}));
+        if(gevonden.status!=="ok")return response.end(JSON.stringify({status:gevonden.status}));
+        // Dezelfde grenzen als de echte functie: alle verplichte vinkjes, en een versie.
+        const filmen=gevonden.filmingRequired===true;
+        if(invoer.p_adult_confirmed!==true||invoer.p_privacy_accepted!==true
+           ||(filmen&&invoer.p_filming_acknowledged!==true))
+          return response.end(JSON.stringify({status:"confirmations_required"}));
+        if(!String(invoer.p_terms_version||"").trim())
+          return response.end(JSON.stringify({status:"terms_version_missing"}));
+        bevestigd[ref]={termsVersion:invoer.p_terms_version,filmingRequired:filmen};
+        return response.end(JSON.stringify({status:"recorded",filmingRequired:filmen,
+          termsVersion:invoer.p_terms_version}));
+      }
       if(request.url.endsWith("/attach_participant_checkout_session")){
         const ref=invoer.p_reference;
+        // De echte database geeft geen sessie af zonder vastgelegde bevestigingen. Die
+        // grens hoort ook in de namaak te zitten, anders bewijst de test hem niet.
+        if(weigerKoppeling||!bevestigd[ref])
+          return response.end(JSON.stringify({status:"confirmations_required"}));
         if(gekoppeld[ref])return response.end(JSON.stringify({status:"already_attached",...gekoppeld[ref]}));
         gekoppeld[ref]={checkoutSessionId:invoer.p_session_id,checkoutSessionUrl:invoer.p_session_url};
         return response.end(JSON.stringify({status:"attached",...gekoppeld[ref]}));
@@ -80,11 +104,13 @@ before(async()=>{
   process.env.TRAVEL_INFORMATION_DOCUMENT_URL="http://127.0.0.1/reisinformatie.pdf";
 });
 after(async()=>{globalThis.fetch=nativeFetch;await stopTestServer(server);});
-beforeEach(()=>{rpcAanroepen=[];stripeAanroepen=[];gekoppeld={};process.env.TAVERN_PAYMENTS_ENABLED="true";});
+beforeEach(()=>{rpcAanroepen=[];stripeAanroepen=[];gekoppeld={};bevestigd={};weigerKoppeling=false;process.env.TAVERN_PAYMENTS_ENABLED="true";});
 
-const vraag=async(methode,ref)=>{
+const ALLES_AANGEVINKT={adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true};
+const vraag=async(methode,ref,invoer)=>{
   const {handler}=await import("../netlify/functions/pay.mjs");
-  return handler({httpMethod:methode,path:"/api/pay",headers:{},queryStringParameters:{ref}});
+  const body=methode==="POST"?JSON.stringify(invoer===undefined?ALLES_AANGEVINKT:invoer):undefined;
+  return handler({httpMethod:methode,path:"/api/pay",headers:{},queryStringParameters:{ref},body});
 };
 
 test("een kenmerk toont precies één deelnemer",async()=>{
@@ -196,4 +222,70 @@ test("de pagina rekent zelf niets uit",async()=>{
   // server, anders bepaalt een bewerkte link het bedrag.
   assert.doesNotMatch(bron,/202500|2025|price_cents/,"de pagina kent zelf een bedrag");
   assert.match(bron,/fetch\(`\/api\/pay/,"de pagina haalt de gegevens niet bij de server op");
+});
+
+// ── De eigen bevestigingen van de deelnemer ─────────────────────────────────────
+// Tot 10 september 2026 vinkte de hoofdboeker meerderjarigheid, privacy en de filmerkenning
+// aan voor de hele groep, en kwam een deelnemer met een eigen betaallink langs de drie
+// documenten zonder ze te zien. Meerderjarigheid verklaar je niet voor iemand anders.
+
+test("zonder de eigen vinkjes komt er geen betaalsessie",async()=>{
+  const uit=await vraag("POST",EEN,{});
+  assert.equal(uit.statusCode,400);
+  assert.equal(JSON.parse(uit.body).error,"confirmations_required");
+  assert.equal(stripeAanroepen.length,0,"er werd een sessie gemaakt zonder bevestigingen");
+  assert.match(JSON.parse(uit.body).message,/nothing has been charged/i);
+});
+
+test("twee van de drie is niet genoeg bij een gefilmd weekend",async()=>{
+  const uit=await vraag("POST",EEN,{adultConfirmed:true,privacyAccepted:true});
+  assert.equal(uit.statusCode,400);
+  assert.equal(JSON.parse(uit.body).error,"confirmations_required");
+  assert.equal(stripeAanroepen.length,0);
+});
+
+test("meerderjarigheid alleen is niet genoeg",async()=>{
+  const uit=await vraag("POST",EEN,{adultConfirmed:true,filmingAcknowledged:true});
+  assert.equal(uit.statusCode,400);
+  assert.equal(stripeAanroepen.length,0);
+});
+
+test("de bevestigingen komen met de voorwaardenversie bij de database aan",async()=>{
+  await vraag("POST",EEN);
+  const vastlegging=rpcAanroepen.find(a=>a.url.endsWith("/record_participant_confirmations"));
+  assert.ok(vastlegging,"de bevestigingen werden niet vastgelegd");
+  assert.equal(vastlegging.invoer.p_reference,EEN);
+  assert.equal(vastlegging.invoer.p_adult_confirmed,true);
+  assert.equal(vastlegging.invoer.p_privacy_accepted,true);
+  assert.equal(vastlegging.invoer.p_filming_acknowledged,true);
+  // De versie komt uit de omgeving en niet uit de browser: anders bepaalt de gast waarop
+  // hij ja heeft gezegd.
+  assert.equal(vastlegging.invoer.p_terms_version,"test-voorwaarden-1");
+});
+
+test("vastleggen gaat vóór Stripe, niet erna",async()=>{
+  await vraag("POST",EEN);
+  const volgorde=rpcAanroepen.map(a=>a.url.split("/").pop());
+  const vastleg=volgorde.indexOf("record_participant_confirmations");
+  const koppel=volgorde.indexOf("attach_participant_checkout_session");
+  assert.ok(vastleg>-1&&koppel>-1);
+  assert.ok(vastleg<koppel,"de sessie werd gekoppeld voordat er iets was vastgelegd");
+  assert.equal(stripeAanroepen.length,1);
+});
+
+test("weigert de database de koppeling, dan krijgt de gast geen betaallink",async()=>{
+  // De grens staat in de database en niet alleen in de functie: wie de vastlegging
+  // overslaat komt bij het koppelen alsnog niet langs. Deze test bootst dat na door de
+  // koppeling te laten weigeren terwijl de vastlegging is gelukt — zoals een database die
+  // strenger is dan de code die hem aanroept.
+  weigerKoppeling=true;
+  const uit=await vraag("POST",EEN);
+  weigerKoppeling=false;
+  assert.equal(uit.statusCode,503,"een geweigerde koppeling hoort geen 200 te geven");
+  assert.ok(!JSON.parse(uit.body).checkoutUrl,"er werd toch een betaallink teruggegeven");
+});
+
+test("de betaalpagina hoort te weten of er om een filmerkenning gevraagd moet worden",async()=>{
+  const uit=await vraag("GET",EEN);
+  assert.equal(JSON.parse(uit.body).filmingRequired,true);
 });

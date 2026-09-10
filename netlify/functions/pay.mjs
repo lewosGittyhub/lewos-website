@@ -9,7 +9,14 @@
 //   GET  /api/pay?ref=…   wat er te betalen valt — ook als de betaalpoort dicht staat, want
 //                         dan hoort de gast te lezen dat zijn plek er is en betalen nog niet
 //                         kan, in plaats van een foutmelding.
-//   POST /api/pay?ref=…   de betaalsessie openen. **Alleen als de poort open staat.**
+//   POST /api/pay?ref=…   de eigen bevestigingen van de deelnemer vastleggen en daarna de
+//                         betaalsessie openen. **Alleen als de poort open staat.**
+//
+// Die bevestigingen zijn van deze deelnemer alleen: meerderjarigheid, de privacyverklaring,
+// en bij een gefilmd weekend de filmerkenning. Tot nu toe vinkte de hoofdboeker ze aan voor
+// de hele groep, en dat kan niet — meerderjarigheid verklaar je niet voor iemand anders. De
+// database weigert een betaalsessie zonder deze vastlegging, dus dit pad is niet te omzeilen
+// door de front-end over te slaan.
 //
 // De sessie is idempotent op twee niveaus: Stripe krijgt het betaalkenmerk als
 // `idempotency-key`, en de database bewaart de eerste sessie en geeft die daarna terug. Twee
@@ -44,7 +51,10 @@ const publiek=r=>({
   ...(r.amountCents!=null?{amountCents:r.amountCents}:{}),
   ...(r.deadline?{deadline:r.deadline}:{}),
   ...(r.weekendLabel?{weekendLabel:r.weekendLabel}:{}),
-  ...(r.bookingName?{bookingName:r.bookingName}:{})
+  ...(r.bookingName?{bookingName:r.bookingName}:{}),
+  // De pagina moet weten of ze de filmerkenning hoort te vragen. Welk weekend gefilmd
+  // wordt staat in de database, niet in de front-end.
+  ...(r.filmingRequired!=null?{filmingRequired:r.filmingRequired===true}:{})
 });
 
 const stripeSessie=async({reference,bedragCenten,naam,weekendLabel,basis})=>{
@@ -109,9 +119,48 @@ export const handler=async event=>{
   if(!open)return json(503,{error:"payments_not_open",
     message:"Payment is not open yet. Your place is held and nothing has been charged. We will let you know the moment it opens."});
 
-  // Bestaat er al een sessie, dan die. Nooit een tweede.
+  // Bestaat er al een sessie, dan die. Nooit een tweede. De bevestigingen zijn dan al
+  // vastgelegd: zonder die vastlegging had de database die sessie niet afgegeven.
   if(gevonden.checkoutSessionUrl)
     return json(200,{status:"checkout_ready",checkoutUrl:gevonden.checkoutSessionUrl});
+
+  // ── De eigen bevestigingen, vóór de betaalsessie ──────────────────────────
+  // De versie komt uit de omgeving en niet uit de browser. Staat de poort open, dan is die
+  // versie ook gepubliceerd: `paymentsAreEnabled()` eist dat hij gelijk is aan
+  // PUBLISHED_TERMS_VERSION. Er wordt dus nooit een aanvaarding vastgelegd tegen een concept.
+  let invoer={};
+  try{invoer=event.body?JSON.parse(event.body):{};}
+  catch{return json(400,{error:"invalid_json"});}
+
+  let vastgelegdeBevestiging;
+  try{
+    vastgelegdeBevestiging=await rpc("record_participant_confirmations",{
+      p_reference:reference,
+      p_terms_version:String(process.env.BOOKING_TERMS_VERSION||"").trim(),
+      p_adult_confirmed:invoer.adultConfirmed===true,
+      p_privacy_accepted:invoer.privacyAccepted===true,
+      p_filming_acknowledged:invoer.filmingAcknowledged===true});
+  }catch(error){
+    console.error("Participant confirmation error",error);
+    return json(503,{error:"payment_service_unavailable"});
+  }
+
+  if(vastgelegdeBevestiging?.status==="confirmations_required")
+    return json(400,{error:"confirmations_required",
+      message:"Please confirm the three statements above. Nothing has been charged."});
+  if(vastgelegdeBevestiging?.status==="terms_version_missing"){
+    // Dit hoort niet te kunnen: de poort staat alleen open met een gepubliceerde versie.
+    // Gebeurt het toch, dan is er iets mis met de instellingen en niet met de gast.
+    console.error("Terms version missing while payments are open",{reference});
+    return json(503,{error:"payment_service_unavailable"});
+  }
+  if(vastgelegdeBevestiging?.status==="expired")return json(410,{error:"expired",
+    message:"The payment window for this booking has passed. Nothing has been charged — contact us and we will see what is still possible."});
+  if(vastgelegdeBevestiging?.status==="cancelled")return json(410,{error:"cancelled",
+    message:"This booking was released. Nothing has been charged."});
+  if(vastgelegdeBevestiging?.status==="already_paid")return json(200,{status:"already_paid",
+    message:"This share has already been paid. Nothing further is due."});
+  if(vastgelegdeBevestiging?.status!=="recorded")return json(503,{error:"payment_service_unavailable"});
 
   const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
   const sessie=await stripeSessie({reference,bedragCenten:gevonden.amountCents,
@@ -126,6 +175,13 @@ export const handler=async event=>{
 
   // Twee gelijktijdige klikken: de database hield de eerste sessie vast. Dan die gebruiken,
   // zodat beide tabbladen naar dezelfde betaling gaan.
+  // De database weigert een sessie zonder vastgelegde bevestigingen. Dat hoort hier niet te
+  // kunnen -- we hebben ze net vastgelegd -- maar als het gebeurt is het geen gastfout.
+  if(vastgelegd?.status==="confirmations_required"){
+    console.error("Database refused a session without confirmations",{reference});
+    return json(503,{error:"payment_service_unavailable"});
+  }
+
   const url=vastgelegd?.status==="already_attached"?vastgelegd.checkoutSessionUrl:sessie.url;
   return json(200,{status:"checkout_ready",checkoutUrl:url});
 };

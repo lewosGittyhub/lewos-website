@@ -164,7 +164,11 @@ const visibleText=html=>{
 // binnen de gesloten verkoopweg. De test daaronder bewaakt dat die weg ook echt dicht is.
 const salesDocuments=["standard-information","terms","travel-information"];
 const inSalesPath=file=>salesDocuments.some(name=>where(file).startsWith(`${name}${path.sep}`))
-  ||where(file).startsWith(`tavern${path.sep}book`)||where(file).startsWith(`tavern${path.sep}checkout`);
+  ||where(file).startsWith(`tavern${path.sep}book`)||where(file).startsWith(`tavern${path.sep}checkout`)
+  // `tavern/pay` hoort er sinds 10 september 2026 bij. Die pagina noemt de drie documenten
+  // met dezelfde conceptaanduiding als de boekingspagina, en om dezelfde reden: een
+  // deelnemer die zijn eigen aandeel betaalt hoort ze te kunnen lezen vóórdat hij betaalt.
+  ||where(file).startsWith(`tavern${path.sep}pay`);
 
 test("no page a guest reads carries a word from our own preparation",async()=>{
   // Robert, 1 september 2026: de klant ziet nooit interne opmerkingen. Geen conceptmelding,
@@ -212,6 +216,24 @@ test("every sales document the site links to is actually served",async()=>{
         `${where(file)} links to /${name}/, which is blocked in _redirects`);
     }
   }
+});
+
+test("de betaalpagina laat de documenten lezen zonder iemand ze te laten aanvaarden",async()=>{
+  // Tot 10 september 2026 kreeg een deelnemer die zijn eigen aandeel betaalde de drie
+  // documenten nergens te zien: de betaalpagina toonde alleen een naam, een bedrag en een
+  // termijn. Wie zijn eigen stoel koopt hoort te kunnen lezen waarop.
+  const html=await read(path.join(root,"tavern/pay/index.html"));
+  for(const name of salesDocuments){
+    assert.ok(html.includes(`href="/${name}/"`),`de betaalpagina moet /${name}/ laten lezen`);
+  }
+  assert.match(html,/published as drafts and do not apply yet/,"ook hier hoort te staan dat ze concept zijn");
+  assert.doesNotMatch(html,/I accept the booking terms/,"een concept mag nooit als aanvaard worden voorgelegd");
+  // De drie eigen bevestigingen. Meerderjarigheid en privacy verklaart niemand voor een
+  // ander, en dat staat er ook.
+  for(const veld of ["eigen-adult","eigen-privacy","eigen-filmen"]){
+    assert.ok(html.includes(`id="${veld}"`),`${veld} hoort op de betaalpagina te staan`);
+  }
+  assert.match(html,/Nobody else in your party can confirm them for you/);
 });
 
 test("the checkout links to the sales documents without asking anyone to accept them",async()=>{
