@@ -63,6 +63,32 @@ Plak het hele bestand in de SQL-editor van de **preview-branch**. Verwacht:
 
 Draai hem daarna **nog een keer**. Idempotent, dus opnieuw hetzelfde antwoord.
 
+## Eerst zaaien, anders bewijst niets iets
+
+Toegevoegd op 10 september 2026. De elf scenario's hieronder nemen allemaal aan dat er een
+groepsboeking in de database staat, en dit plan had geen stap die die boeking maakt. Op een
+lege preview-branch leverde dat elf keer `not_found` en `unknown_payment` op — geen enkele
+fout in de migratie, maar ook geen enkel bewijs.
+
+Draai daarom eerst het zaaiblok uit **`operations/zaai-groepsbetaling.sql`**. Dat maakt één
+boeking van vier deelnemers met vaste, herkenbare betaalkenmerken:
+
+| Gast | Kenmerk |
+| --- | --- |
+| TEST - Anna | `tav_aaaa…a1` |
+| TEST - Bram | `tav_bbbb…b2` |
+| TEST - Chloe | `tav_cccc…c3` |
+| TEST - Diederik | `tav_dddd…d4` |
+
+Die kenmerken zijn met opzet vast: de scenario's kunnen ze letterlijk gebruiken in plaats
+van ze eerst op te zoeken. Het `claim-id` dat je nodig hebt bij h, k en j komt uit de query
+*Wat er nu staat* in datzelfde bestand.
+
+**En ruim op als je klaar bent.** Onderaan het zaaibestand staat het opruimblok. Testdata
+hoort niet blijvend in een database te staan, ook niet in een preview: query 8 van de
+verificatie controleert of er een betaalde deelnemer staat, en die zou de volgende ronde
+vals alarm geven.
+
 ## De elf scenario's
 
 Elk in één transactie die eindigt op `rollback`, zodat er niets blijft staan.
