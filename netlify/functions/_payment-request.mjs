@@ -12,7 +12,16 @@ import {escapeHtml,labelledBlock} from "./_email.mjs";
 
 const geld=centen=>`€${(Number(centen)/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
-const klok=iso=>new Date(iso).toLocaleString("en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Madrid"});
+const klokIn=(iso,zone)=>new Date(iso).toLocaleString("en-GB",
+  {dateStyle:"medium",timeStyle:"short",timeZone:zone});
+const klok=iso=>klokIn(iso,"Europe/Madrid");
+
+// Robert, 10 september 2026: "hoe doen we dit als iemand uit Amerika boekt?" Een mail weet
+// niet in welke tijdzone hij gelezen wordt -- dat weet alleen de browser. Dus staat hier de
+// Spaanse tijd, met UTC ernaast: daarmee kan iedereen ter wereld zelf omrekenen zonder te
+// hoeven weten of Spanje op dat moment zomertijd heeft. De betaalpagina zelf zet de termijn
+// wél in de klok van de bezoeker; deze mail wijst hem daarheen.
+const termijnRegel=iso=>`${klok(iso)} in Spain · ${klokIn(iso,"UTC")} UTC`;
 
 // `reminder` verandert alleen de toon en het onderwerp. Niet de deadline, niet het bedrag,
 // niet de link — een herinnering is hetzelfde verzoek, nog een keer.
@@ -37,7 +46,7 @@ export const buildPaymentRequestEmail=({participant,booking,deadline,paymentUrl,
     ["Guest",naam],
     ["Weekend",booking.weekendLabel],
     ["Number of guests in the group",String(booking.seats||"")],
-    ["Payment deadline",`${wanneer} (Europe/Madrid)`]
+    ["Payment deadline",termijnRegel(deadline)]
   ],"Your payment:");
 
   // Robert, 10 september 2026: de knop stond ná vijf feiten, en toen hij zelf de proefmail
@@ -51,25 +60,43 @@ export const buildPaymentRequestEmail=({participant,booking,deadline,paymentUrl,
   const tekst=`${kop}\n\nHi ${naam},\n\n${uitleg.replace(/&#039;/g,"'")}\n\n`
     +`Pay your share here:\n${paymentUrl}\n\n`
     +`This is ${bedrag} — your own share, not the group total.`
-    +`${feiten.text}\n\nEveryone in the group has the same deadline: ${wanneer}.\n\n`
+    +`${feiten.text}\n\nEveryone in the group has the same deadline: ${termijnRegel(deadline)}. `
+    +`Your payment page shows it in your own time zone.\n\n`
     +`If the deadline passes, the seats already paid for stay confirmed. Nothing is released automatically.\n\n`
     +`Please check your spam folder if you cannot find this email again.\n\nRobert\nThe Lewos Tavern`;
 
-  // `display:block` met een max-width maakt er een echte knop van: op een telefoon over de
-  // volle breedte, op een laptop begrensd. En een leesbare link eronder, want een
-  // mailprogramma dat de opmaak wegstript mag een gast niet stranden met een dode knop.
+  // Robert, 10 september 2026: in Gmail was de knop leeg. De ruimte stond er, de kleur
+  // niet -- witte tekst op wit. Oorzaak: hij was opgemaakt met de CSS-verkortingen
+  // `background:` en `font:`, en de opschoner van Gmail haalt die eruit. De kleur van de
+  // tekst bleef staan, de achtergrond verdween, en dan is een knop onzichtbaar.
+  //
+  // Daarom nu de vorm die overal overleeft:
+  //   * een tabelcel met het HTML-attribuut `bgcolor`. Dat is geen CSS en wordt door geen
+  //     enkele opschoner weggegooid; valt de CSS weg, dan blijft de kleur staan.
+  //   * alle eigenschappen los uitgeschreven -- `background-color`, `font-size`,
+  //     `font-weight`, `font-family` -- nooit meer een verkorting.
+  //   * `display:block` met padding, zodat de hele cel klikbaar is.
+  //
+  // En een leesbare link eronder, want een mailprogramma dat de opmaak wegstript mag een
+  // gast niet stranden met een dode knop.
   const html=`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35">`
     +`<h1 style="font-size:24px">${escapeHtml(kop)}</h1>`
     +`<p>Hi ${escapeHtml(naam)},</p><p>${uitleg}</p>`
-    +`<p style="margin:30px 0 14px"><a href="${escapeHtml(paymentUrl)}" `
-    +`style="display:block;max-width:380px;padding:22px 24px;border-radius:12px;`
-    +`background:#E5643A;color:#ffffff;font:700 20px/1.25 Arial,sans-serif;`
-    +`text-decoration:none;text-align:center">${escapeHtml(knoplabel)}</a></p>`
+    +`<table role="presentation" border="0" cellpadding="0" cellspacing="0" `
+    +`style="margin:30px 0 14px;border-collapse:collapse"><tr>`
+    +`<td bgcolor="#E5643A" align="center" `
+    +`style="background-color:#E5643A;border-radius:12px">`
+    +`<a href="${escapeHtml(paymentUrl)}" `
+    +`style="display:block;padding:22px 34px;color:#ffffff;font-family:Arial,sans-serif;`
+    +`font-size:20px;font-weight:bold;line-height:1.25;text-decoration:none;`
+    +`text-align:center">${escapeHtml(knoplabel)}</a>`
+    +`</td></tr></table>`
     +`<p style="margin:0 0 26px"><small>If the button does not work, open this link:<br>`
     +`<a href="${escapeHtml(paymentUrl)}" style="color:#B4472A">${escapeHtml(paymentUrl)}</a></small></p>`
     +`<p>This is <strong>${escapeHtml(bedrag)}</strong> — your own share, not the group total.</p>`
     +`${feiten.html}`
-    +`<p>Everyone in the group has the same deadline: <strong>${escapeHtml(wanneer)}</strong>.</p>`
+    +`<p>Everyone in the group has the same deadline: <strong>${escapeHtml(termijnRegel(deadline))}</strong>. `
+    +`Your payment page shows it in your own time zone.</p>`
     +`<p>If the deadline passes, the seats already paid for stay confirmed. Nothing is released automatically.</p>`
     +`<p><small>Please check your spam folder if you cannot find this email again.</small></p>`
     +`<p>Robert<br>The Lewos Tavern</p></div>`;

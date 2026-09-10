@@ -251,13 +251,32 @@ test("de betaalknop staat vóór de feiten, niet erna",()=>{
 
 test("het is een echte knop en niet een linkje",()=>{
   const {html}=proefmail();
-  // display:block met een max-width: op een telefoon over de volle breedte, op een laptop
-  // begrensd. Een inline-block van 14px padding is geen knop maar een tekstlink met kleur.
+  // display:block met padding maakt de hele cel klikbaar. Een inline-block van 14px padding
+  // is geen knop maar een tekstlink met kleur.
   assert.match(html,/display:block/);
-  assert.match(html,/max-width:380px/);
   assert.match(html,/padding:22px/);
-  assert.match(html,/font:700 20px/);
   assert.match(html,/text-align:center/);
+  assert.match(html,/font-size:20px/);
+  assert.match(html,/font-weight:bold/);
+});
+
+test("de knop overleeft een mailprogramma dat CSS opschoont",()=>{
+  // Robert, 10 september 2026: in Gmail was de knop leeg -- de ruimte stond er, de kleur
+  // niet. De opmaak gebruikte de CSS-verkortingen `background:` en `font:`, en de opschoner
+  // van Gmail haalt die eruit. De witte tekstkleur bleef, de oranje achtergrond verdween,
+  // en dan is een knop wit op wit.
+  //
+  // Twee eisen houden dat tegen. Ten eerste het HTML-attribuut `bgcolor`: dat is geen CSS
+  // en wordt door geen enkele opschoner weggegooid, dus valt de CSS weg dan blijft de kleur.
+  // Ten tweede: geen verkortingen meer, alles los uitgeschreven.
+  const {html}=proefmail();
+  assert.match(html,/<td bgcolor="#E5643A"/,
+    "de knop hoort in een cel met bgcolor te staan, want dat attribuut overleeft alles");
+  assert.match(html,/background-color:#E5643A/,"en met background-color in de CSS ernaast");
+  assert.ok(!/background:#/.test(html),
+    "geen `background:`-verkorting: Gmail gooit die eruit en dan verdwijnt de knop");
+  assert.ok(!/font:\s*\d/.test(html),
+    "geen `font:`-verkorting: los uitschrijven, anders valt de hele opmaak weg");
 });
 
 test("het bedrag staat op de knop, zodat niemand blind klikt",()=>{
@@ -289,4 +308,65 @@ test("een herinnering draagt dezelfde knop en hetzelfde bedrag",()=>{
   for(const stuk of ["Pay your share — €2,025.00","display:block","tav_test"]){
     assert.ok(herinnering.html.includes(stuk),`${stuk} hoort ook in de herinnering te staan`);
   }
+});
+
+// ── De termijn voor iemand die niet in Spanje zit ────────────────────────────────
+// Robert, 10 september 2026: "hoe doen we dit als iemand uit Amerika boekt?" Dezelfde 15:02
+// in Madrid is 09:02 in New York, 06:02 in Los Angeles en 03:02 op Hawaii. Wie alleen een
+// Spaanse tijd te zien krijgt moet zelf gaan rekenen terwijl er een termijn loopt.
+//
+// De verdeling: de mail weet niet waar hij gelezen wordt, dus zet hij Spaanse tijd én UTC.
+// De betaalpagina weet het wel -- die staat in de browser -- en zet de eigen klok van de
+// bezoeker bovenaan.
+
+test("de betaalmail zet de termijn ook in UTC, want een mail kent geen tijdzone",()=>{
+  const {html,text}=proefmail({deadline:"2026-09-10T13:02:00.000Z"});
+  for(const inhoud of [html,text]){
+    assert.match(inhoud,/15:02 in Spain/,"de Spaanse tijd blijft de tijd van de groep");
+    assert.match(inhoud,/13:02 UTC/,"met UTC ernaast is het van elke tijdzone af te leiden");
+  }
+  // Nooit een tijd zonder te zeggen welke klok het is: "15:02" alleen is voor een Amerikaan
+  // geen informatie maar een valstrik.
+  assert.ok(!/\b15:02(?![^<]*(?:in Spain|Europe\/Madrid))/.test(text.replace(/\n/g," ")),
+    "elke Spaanse tijd hoort als Spaanse tijd benoemd te staan");
+});
+
+test("de mail wijst naar de pagina voor de eigen tijdzone",()=>{
+  const {html,text}=proefmail();
+  for(const inhoud of [html,text]){
+    assert.match(inhoud,/shows it in your own time zone/,
+      "de gast hoort te weten waar hij zijn eigen tijd kan zien");
+  }
+});
+
+test("de betaalpagina zet de eigen klok van de bezoeker boven de Spaanse",async()=>{
+  const {deadlineLines:termijnRegels}=await import("../assets/deadline.js");
+  const iso="2026-09-10T13:02:00.000Z";
+
+  // Iemand in New York: eigen tijd eerst, Spaanse tijd eronder als het gezamenlijke moment.
+  const newYork=termijnRegels(iso,"America/New_York");
+  assert.equal(newYork.length,2);
+  assert.match(newYork[0],/09:02/,"de eigen klok hoort bovenaan te staan");
+  assert.match(newYork[0],/your time \(America\/New York\)/,"met de zone erbij, zonder underscore");
+  assert.match(newYork[1],/15:02 in Spain/);
+  assert.match(newYork[1],/same moment for everyone in your group/,
+    "en de reden dat die tweede regel er staat");
+
+  // Hawaii is de scherpste: dezelfde termijn valt daar midden in de nacht.
+  assert.match(termijnRegels(iso,"Pacific/Honolulu")[0],/03:02/);
+
+  // Wie zelf in Spanje zit krijgt één regel. Twee keer dezelfde tijd is geen informatie.
+  const madrid=termijnRegels(iso,"Europe/Madrid");
+  assert.equal(madrid.length,1);
+  assert.match(madrid[0],/15:02 \(Europe\/Madrid\)/);
+
+  // Een andere zonenaam met dezelfde klok ook niet: het gaat om de tijd die iemand ziet.
+  assert.deepEqual(termijnRegels(iso,"Europe/Amsterdam"),madrid);
+
+  // Geen tijdzone bekend, of een onbruikbare: terugvallen op de Spaanse tijd is nooit fout.
+  assert.deepEqual(termijnRegels(iso,""),madrid);
+  assert.deepEqual(termijnRegels(iso,"Niet/EenZone"),madrid);
+
+  // Een onleesbare termijn levert geen regel op, in plaats van "Invalid Date".
+  assert.deepEqual(termijnRegels("morgen","America/New_York"),[]);
 });

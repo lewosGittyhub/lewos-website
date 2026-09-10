@@ -4,6 +4,8 @@
 // De pagina rekent niets zelf uit en gelooft niets uit de URL behalve het kenmerk. Naam,
 // bedrag en termijn komen van de server, want anders zou iemand met een bewerkte link zijn
 // eigen bedrag kunnen bepalen.
+import {deadlineLines} from "/assets/deadline.js";
+
 const $=s=>document.querySelector(s);
 const ref=new URLSearchParams(location.search).get("ref")||"";
 
@@ -15,12 +17,18 @@ const toonFout=tekst=>{
 const geld=centen=>typeof centen==="number"
   ?`€${(centen/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"";
 
-// De termijn in de tijdzone van het weekend, niet die van de bezoeker: het gaat om een tijd
-// die iedereen in de groep gelijk heeft.
-const klok=iso=>{
-  const d=new Date(iso);
-  return Number.isNaN(d.getTime())?"":d.toLocaleString("en-GB",
-    {dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Madrid"})+" (Europe/Madrid)";
+// De termijn staat in twee klokken: die van de bezoeker en die van Spanje. Het rekenwerk
+// en de reden staan in `assets/deadline.js`, zodat een tweede pagina niet zijn eigen versie
+// gaat maken en het zonder browser te testen is.
+const zetTermijn=(element,iso)=>{
+  element.textContent="";
+  const regels=deadlineLines(iso);
+  for(const [i,regel] of regels.entries()){
+    const rij=document.createElement("div");
+    rij.textContent=regel;
+    if(i>0)rij.className="termijn__spanje";
+    element.append(rij);
+  }
 };
 
 (async()=>{
@@ -48,7 +56,7 @@ const klok=iso=>{
   $("#naam").textContent=gegevens.fullName||"";
   $("#weekend").textContent=gegevens.weekendLabel||"";
   $("#bedrag").textContent=geld(gegevens.amountCents);
-  $("#termijn").textContent=klok(gegevens.deadline);
+  zetTermijn($("#termijn"),gegevens.deadline);
   $("#laden").hidden=true;$("#gevonden").hidden=false;
 
   if(!gegevens.paymentsOpen){$("#poortdicht").hidden=false;return;}
