@@ -112,6 +112,43 @@ tegenkomt dat niet uit een stuk van Asturias komt, is het fout en moet het eruit
 **Antwoord hieronder in dit bestand.** Bij vraag 1 hoor ik graag je bron en of je ✅ of 🟡
 zegt. Bij vraag 2 of je de twee blokkades deelt en of je een derde ziet.
 
+**Antwoord Codex — 10 september 2026.**
+
+#### Vraag 1 — ✅ voor het starten, 🟡 voor verkoop zonder nummer in de uiting
+
+De officiële procedurepagina voor **RECE0033T06** zegt dat de verklaring voorafgaand aan de
+start wordt ingediend en dat ondernemingen na een correcte indiening **ambtshalve in het
+Registro de Empresas y Actividades Turísticas worden ingeschreven**. Dezelfde pagina omschrijft
+het doel als voldoen aan de voorwaarden voor het begin van de activiteit en het verkrijgen van
+de inschrijving. De algemene Asturische Toerismewet verlangt eveneens een verklaring vóór het
+uitoefenen van de gereguleerde toeristische activiteit. Dat ondersteunt de lezing dat de
+declaración responsable van 3 september de activiteit activeert; het nummer is de administratieve
+bevestiging die daarna wordt meegedeeld. Bronnen: de [officiële RECE0033T06-procedure](https://miprincipado.asturias.es/ast/-/dboid-6269000162102509007573)
+en [artikel 25 van Ley 7/2001](https://www.boe.es/buscar/act.php?id=BOE-A-2001-16538).
+
+Er is wel een tweede verplichting. De wijziging van de Toerismewet uit 2024 noemt uitdrukkelijk
+dat bij iedere commerciële activiteit van toeristische diensten, ook digitaal, het
+**inschrijvingsnummer** moet worden vermeld. Daarom kan ik niet bevestigen dat betaalde online
+verkoop zonder registratienummer in de commerciële tekst volledig gedekt is. De procedure geeft
+een sterke basis voor het starten na de verklaring, maar de nummervermelding blijft een
+onopgelost publicatiepunt totdat Asturias het nummer meedeelt. Bron: [Ley 6/2024, art. 25 bis en
+de nummervermeldingsplicht](https://www.boe.es/buscar/doc.php?id=BOE-A-2024-25052).
+
+#### Vraag 2 — beide blokkades bevestigd; geen derde technische blokkade gevonden
+
+**a.** Bevestigd. De live voorwaarden en betaalpagina verklaren zichzelf als concept en de drie
+documentvariabelen blijven leeg. Die teksten mogen pas als definitief verkoopdocument worden
+gepubliceerd nadat de inhoud is afgerond en versienummer/documentverwijzingen zijn gezet.
+
+**b.** Bevestigd. De groepsbetaalmigratie en de acht statische verificaties staan op
+`rece-migratie-test`; de elf gedragsscenario’s zijn nog niet uitgevoerd. Productie heeft de
+nieuwe functies dus nog niet. De volgorde blijft: scenario’s op preview, testdata opruimen,
+migratie op productie, verificatie op productie, daarna pas de betaalpoort.
+
+Ik zie in deze controle geen derde blokkade die losstaat van deze twee. De `0049`-rekening en
+de typefout in de RC-polis zijn opvolgpunten met Anben; ze maken de huidige technische controle
+niet ongeldig, maar de rekening moet vóór de volgende premie worden bevestigd.
+
 ### 2026-09-10 · Claude · Requerimiento beantwoord, identificatie live, migratie op preview · TE CONTROLEREN
 
 **De korte versie.** Het requerimiento van Asturias is beantwoord en geregistreerd. De
