@@ -55,11 +55,25 @@ const sendBookingEmail=async booking=>{
     "We have this on file for your weekend. If anything is wrong or missing, reply to this email."
   );
   const gasten=`${booking.seats} guest${booking.seats===1?"":"s"}`;
-  const termsVersie=booking.termsVersion||"not recorded";
-  const tekst=`Your party has a table.\n\nHi ${booking.name},\n\nPayment has been received for ${gasten} at ${booking.weekendLabel}. Your booking is confirmed.${genoteerd.text}\n\nBooking terms accepted: ${termsVersie}. Keep this email and its two PDF attachments with your booking records.\n\nWe will contact you with the guest details and everything you need before the weekend.\n\nRobert\nThe Lewos Tavern`;
+  // Geen codenaam in een aankoopbevestiging; zie de toelichting bij sendParticipantEmail.
+  // De versie blijft vastgelegd in `tavern_seat_claims.terms_version`.
+  const kop="Your party has a table.";
+  const regels=[
+    `Hi ${booking.name},`,
+    `Payment has been received for ${gasten} at ${booking.weekendLabel}. Your booking is confirmed.`,
+    "We will write again before the weekend for the guest details and everything you need — how to find us, what to bring, and what to expect when you arrive.",
+    "The booking terms and the travel information are attached. They are yours to keep.",
+    "See you in the mountains.",
+    "Robert\nThe Lewos Tavern"
+  ];
+  // Het genoteerde blok hoort ná de bevestiging en vóór de rest: wie zijn allergie pas bij
+  // de checkout toevoegde, heeft hem nergens anders bevestigd gezien.
+  const tekst=`${kop}\n\n${regels[0]}\n\n${regels[1]}${genoteerd.text}\n\n${regels.slice(2).join("\n\n")}`;
   return sendEmail({to:booking.email,subject:`Your Lewos Tavern booking is confirmed`,
     idempotencyKey:`booking-confirmation-${booking.claimId}`,text:tekst,attachments,
-    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your party has a table.</h1><p>Hi ${escapeHtml(booking.name)},</p><p>Payment has been received for ${gasten} at ${escapeHtml(booking.weekendLabel)}. Your booking is confirmed.</p>${genoteerd.html}<p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with the guest details and everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`});
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">${escapeHtml(kop)}</h1>`
+      +`<p>${escapeHtml(regels[0])}</p><p>${escapeHtml(regels[1])}</p>${genoteerd.html}`
+      +regels.slice(2).map(r=>`<p>${escapeHtml(r).replace(/\n/g,"<br>")}</p>`).join("")+`</div>`});
 };
 
 // De bevestiging voor één deelnemer die zijn eigen aandeel heeft betaald. Naar hem alleen,
@@ -69,6 +83,12 @@ const sendBookingEmail=async booking=>{
 // Wat er bewust NIET in staat: het groepstotaal, de namen van de anderen, en hoeveel er nog
 // openstaat. Dat een gast weet dat hij zelf klaar is, is genoeg; wie er nog moet betalen is
 // niet zijn zaak. De hoofdboeker houdt het overzicht.
+//
+// Robert, 10 september 2026: **geen codenamen in een aankoopbevestiging.** Er stond
+// "Booking terms accepted: booking-2026-v1" — dat is een databaseveld, geen zin voor iemand
+// die net €2.025 heeft betaald voor een weekend waar hij naar uitkijkt. De versie wordt nog
+// steeds vastgelegd, in `tavern_booking_participants.terms_version`, want daar hoort het
+// bewijs. De gast krijgt de documenten zelf als bijlage en een zin die hij begrijpt.
 const sendParticipantEmail=async deelnemer=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
   const origin=process.env.URL||"https://lewos.co";
@@ -77,11 +97,20 @@ const sendParticipantEmail=async deelnemer=>{
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Participant document attachment error",error);return null;}
   const bedrag=`€${(Number(deelnemer.amountCents)/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const termsVersie=deelnemer.termsVersion||"not recorded";
-  const tekst=`Your seat is confirmed.\n\nHi ${deelnemer.name},\n\nYour own share of ${bedrag} has been received for ${deelnemer.weekendLabel}. Your seat is confirmed.\n\nBooking terms accepted: ${termsVersie}. Keep this email and its two PDF attachments with your booking records.\n\nWe will contact you with everything you need before the weekend.\n\nRobert\nThe Lewos Tavern`;
-  return verstuur({to:deelnemer.email,subject:`Your Lewos Tavern seat is confirmed`,
-    idempotencyKey:`participant-confirmation-${deelnemer.participantId}`,text:tekst,attachments,
-    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">Your seat is confirmed.</h1><p>Hi ${escapeHtml(deelnemer.name)},</p><p>Your own share of ${escapeHtml(bedrag)} has been received for ${escapeHtml(deelnemer.weekendLabel)}. Your seat is confirmed.</p><p><strong>Booking terms accepted:</strong> ${escapeHtml(termsVersie)}. Keep this email and its two PDF attachments with your booking records.</p><p>We will contact you with everything you need before the weekend.</p><p>Robert<br>The Lewos Tavern</p></div>`});
+  const kop="Your seat at the table.";
+  const regels=[
+    `Hi ${deelnemer.name},`,
+    `Your share of ${bedrag} is paid, and your seat at ${deelnemer.weekendLabel} is yours.`,
+    "We will write again before the weekend with everything you need — how to find us, what to bring, and what to expect when you arrive.",
+    "The booking terms and the travel information are attached. They are yours to keep.",
+    "See you in the mountains.",
+    "Robert\nThe Lewos Tavern"
+  ];
+  return verstuur({to:deelnemer.email,subject:`Your seat at The Lewos Tavern is confirmed`,
+    idempotencyKey:`participant-confirmation-${deelnemer.participantId}`,
+    text:`${kop}\n\n${regels.join("\n\n")}`,attachments,
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.65;color:#0F3B35"><h1 style="font-size:28px">${escapeHtml(kop)}</h1>`
+      +regels.map(r=>`<p>${escapeHtml(r).replace(/\n/g,"<br>")}</p>`).join("")+`</div>`});
 };
 
 // Eén plek voor het versturen. Elke mail uit deze functie heeft precies één ontvanger,

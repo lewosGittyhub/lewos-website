@@ -10,12 +10,15 @@ import assert from "node:assert/strict";
 import {createHmac} from "node:crypto";
 import {after, before, beforeEach, test} from "node:test";
 import http from "node:http";
+import {readFile} from "node:fs/promises";
+import path from "node:path";
 import {listenOnTestPort,stopTestServer} from "./_test-server.mjs";
 
 process.env.LEWOS_PREVIEW_SAFE="true";
 
 let server, base, aanroepen=[], mails=[], mailFaalt=false, markFaalt=false, markWeigert=false;
 const nativeFetch=globalThis.fetch;
+const root=path.resolve(import.meta.dirname,"..");
 
 // Wat de database zou teruggeven. Twee standen: nog niet iedereen betaald, en de laatste.
 let deelnemerResultaat;
@@ -122,7 +125,35 @@ test("de deelnemer krijgt zijn eigen bevestiging met de twee documenten",async()
   assert.equal(aanHem.length,1,"precies één bevestiging naar deze deelnemer");
   assert.equal(aanHem[0].attachments.length,2,"de twee PDF's horen erbij");
   assert.match(aanHem[0].text,/€2,025\.00/,"zijn eigen bedrag hoort erin te staan");
-  assert.match(aanHem[0].text,/booking-test-v1/,"de aanvaarde voorwaardenversie hoort erin");
+  assert.match(aanHem[0].text,/booking terms and the travel information are attached/,
+    "de documenten horen benoemd te worden, in gewone woorden");
+});
+
+test("in een aankoopbevestiging staat geen codenaam",async()=>{
+  // Robert, 10 september 2026: er stond "Booking terms accepted: booking-2026-v1". Dat is
+  // een databaseveld, geen zin voor iemand die net €2.025 heeft betaald. De versie wordt
+  // nog steeds vastgelegd -- daar is `terms_version` voor -- maar de gast krijgt de
+  // documenten zelf en een zin die hij begrijpt.
+  await webhook();
+  const tekst=JSON.stringify(mailsAan("twee@example.invalid")[0]);
+  assert.doesNotMatch(tekst,/booking-test-v1/,"de voorwaardenversie hoort niet in de mail");
+  assert.doesNotMatch(tekst,/terms accepted:/i,"geen veldnaam met een dubbele punt erachter");
+  assert.doesNotMatch(tekst,/not recorded/,"al helemaal geen foutwaarde uit de database");
+  // En hij hoort wel te klinken als een bevestiging van iets leuks.
+  assert.match(tekst,/Your seat at the table/);
+  assert.match(tekst,/See you in the mountains/);
+});
+
+test("dezelfde regel geldt voor de bevestiging aan de boeker",async()=>{
+  // Twee mails die hetzelfde doen horen niet uit elkaar te lopen.
+  const bron=await readFile(path.join(root,"netlify/functions/stripe-webhook.mjs"),"utf8");
+  // Commentaar eraf. De toelichting bij deze wijziging noemt de oude zin juist omdát hij
+  // fout was; alleen de code zelf mag hem niet meer versturen.
+  const code=bron.split("\n").filter(regel=>!regel.trim().startsWith("//")).join("\n");
+  assert.ok(!code.includes("Booking terms accepted:"),
+    "de codenaam hoort in geen enkele gastmail meer te staan");
+  const treffers=(code.match(/booking terms and the travel information are attached/g)||[]).length;
+  assert.equal(treffers,2,"beide gastmails horen dezelfde zin over de documenten te dragen");
 });
 
 test("de bevestiging noemt het groepstotaal niet en de anderen niet",async()=>{
