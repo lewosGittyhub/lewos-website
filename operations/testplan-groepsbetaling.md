@@ -63,7 +63,7 @@ Plak het hele bestand in de SQL-editor van de **preview-branch**. Verwacht:
 
 Draai hem daarna **nog een keer**. Idempotent, dus opnieuw hetzelfde antwoord.
 
-## De negen scenario's
+## De elf scenario's
 
 Elk in één transactie die eindigt op `rollback`, zodat er niets blijft staan.
 
@@ -171,6 +171,59 @@ select public.admin_extend_participant('<een beheerdersadres>',
 rollback;
 ```
 
+### k. Het bevestigde verblijf reist mee, niet het weekend
+
+Toegevoegd op 10 september 2026, ná de rest van dit plan. Robert vroeg hoe extra nachten in
+een groepsboeking lopen, en toen bleek `confirm_participant_payment` de weekenddatums plat
+terug te geven als `arrivalDate` en `departureDate` — terwijl de webhook die leest als het
+**bevestigde** verblijf en ze in de mail aan de accommodatie en in de agenda zet. Bij een
+groepsboeking met een toegezegde extra nacht verdween daarmee de eerdere aankomst: een gast
+die maandag komt bij een kamer die pas vrijdag klaarstaat. Bij een enkele boeking ging het
+al goed, dus dit is niet ergens anders opgevangen.
+
+Neem een boeking waarvan alle deelnemers op één na betaald hebben en zeg de extra nachten
+toe:
+
+```sql
+begin;
+update public.tavern_seat_claims
+   set extra_nights_status='confirmed',
+       requested_arrival=(select starts_on from public.tavern_weekends
+                          where id=assigned_weekend_id) - interval '4 days',
+       arrival_date=(select starts_on from public.tavern_weekends
+                     where id=assigned_weekend_id) - interval '4 days'
+ where id='<claim-id>';
+
+select public.confirm_participant_payment('<kenmerk van de laatste deelnemer>', now());
+```
+
+Verwacht in de `booking`-laag van de uitkomst:
+
+- `arrivalDate` is de **toegezegde** aankomst, dus vier dagen vóór `weekendStart`
+- `weekendStart` en `weekendEnd` staan er náást en zijn onveranderd het weekend zelf
+- `extraNightsStatus` is `confirmed`
+- `requestedArrival` staat er ook nog
+
+Staat `arrivalDate` gelijk aan `weekendStart`, dan is de correctie niet aangekomen en mag
+deze migratie niet naar productie. Query 7 van `operations/verificatie-groepsbetaling.sql`
+controleert hetzelfde statisch; dit scenario controleert het gedrag.
+
+**En de dieetwens in dezelfde uitkomst.** Een boeking van vóór het samengevoegde veld heeft
+zijn allergie nog in de oude kolommen staan:
+
+```sql
+update public.tavern_seat_claims
+   set dietary_notes=null, allergies='TEST - noten', dietary_requirements=null
+ where id='<claim-id>';
+
+select public.confirm_participant_payment('<kenmerk>', now());
+rollback;
+```
+
+`dietaryNotes` in de `booking`-laag hoort `TEST - noten` te bevatten en niet leeg te zijn.
+Leeg betekent dat de melding aan Lewos een allergie weglaat, en dat is het gevaarlijkste
+lege veld dat we hebben.
+
 ## Na het draaien
 
 1. **De Supabase-linter.** Database → Advisors. Verwacht geen nieuwe
@@ -201,5 +254,6 @@ order by 1;
 
 ## Pas op productie draaien als
 
-De preview-branch alle tien de scenario's heeft doorstaan, de linter niets nieuws meldt, en
+De preview-branch alle elf de scenario's heeft doorstaan, alle acht queries van
+`operations/verificatie-groepsbetaling.sql` `ok` teruggaven, de linter niets nieuws meldt, en
 `node --test tests/*.test.mjs` groen is op de commit die je deployt.
