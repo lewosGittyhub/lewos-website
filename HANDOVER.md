@@ -7,6 +7,86 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-10 · Codex · Gedetailleerd plan: documenten en verkoopopening · UITVOERPLAN
+
+Dit plan volgt op de ontdekking dat de bevestigingswebhook twee echte PDF-bijlagen vereist.
+Het doel is de verkoop technisch werkend klaar te zetten voor morgen, zonder een vals
+registratienummer te publiceren en zonder productie te wijzigen voordat de tussencontroles
+groen zijn.
+
+#### Fase 1 — inhoud vastzetten
+
+1. Lees de huidige HTML van `/terms/`, `/travel-information/` en `/standard-information/`
+   volledig naast elkaar.
+2. Controleer identificatie van de verkoper, activiteit groep 755, prijs, inbegrepen diensten,
+   annuleringsregels, transfers, filmen, privacy, klachten, insolventiebescherming en
+   toepasselijk recht.
+3. Verwijder alleen de tekst die de documenten als *draft* of *not yet in force* aanduidt.
+   Voeg geen nieuwe feiten toe.
+4. Laat het registratienummer leeg met een neutrale waarheidstekst: de declaración responsable
+   is ingediend en het officiële nummer wordt toegevoegd zodra Asturias het meedeelt.
+5. Leg de definitieve tekst eerst in deze overdracht vast ter controle. Zonder inhoudelijke
+   controle worden de PDF’s geen contractstukken.
+
+#### Fase 2 — PDF’s en automatische controle
+
+1. Genereer uit de gecontroleerde HTML drie leesbare PDF’s in `documents/`: voorwaarden,
+   precontractuele reisinformatie en standaardinformatieformulier.
+2. Gebruik vaste publieke paden en laat de twee paden die de webhook gebruikt exact naar echte
+   PDF-bestanden wijzen.
+3. Controleer elk bestand op een geldige `%PDF`-header, bestandsgrootte tussen 100 bytes en
+   5 MB, correcte paginering en leesbaarheid in een PDF-viewer.
+4. Voeg een test toe die de bestanden opent via dezelfde paden als `loadAttachment`; zo faalt
+   de suite vóór een eerste betaling als een bestand ontbreekt of HTML teruggeeft.
+5. Controleer dat geen sleutel, dossierstuk, privé-adres buiten de toegestane voorwaarden of
+   registratienummer als placeholder in de repo belandt. Draai daarna de volledige suite.
+
+#### Fase 3 — groepsbetaling op preview
+
+1. Controleer dat de branch `rece-migratie-test` is; Production wordt in deze fase niet
+   gebruikt.
+2. Zaai uitsluitend de `.invalid`-testdata uit `operations/zaai-groepsbetaling.sql`.
+3. Voer scenario’s uit in deze volgorde: a, b, c, d, e, f, g, h, k, i, j. Meld per scenario
+   verwacht resultaat, werkelijk resultaat en status.
+4. Elk scenario eindigt met `rollback`; er blijft geen open transactie staan.
+5. Ruim daarna de zaaidata expliciet op en controleer dat er nul testclaims overblijven.
+   Bij één afwijking stopt de procedure vóór Production.
+
+#### Fase 4 — migratie op Production
+
+1. Maak een verse Production-back-up en noteer tijdstip en resultaat.
+2. Vergelijk de vier bestaande functies met de vingerafdrukquery uit het testplan.
+3. Voer `database/group-payment-confirmation.sql` één keer uit op Production. Bij een fout
+   direct stoppen; niet opnieuw proberen zonder de fout te begrijpen.
+4. Voer `operations/verificatie-groepsbetaling.sql` op Production uit. Alle acht regels moeten
+   letterlijk `ok` zijn.
+5. Controleer dat er geen testdata of betaalde testdeelnemers op Production staan.
+
+#### Fase 5 — publicatie en poort
+
+1. Zet de definitieve documentversies en documentpaden in de productieconfiguratie. Het
+   registratienummer blijft leeg; nergens komt een verzonnen waarde.
+2. Controleer alle digitale commerciële uitingen en verkoopmails op consistente tekst en op
+   het ontbreken van draft-taal. Het wettelijke nummer wordt toegevoegd zodra Asturias het
+   officiële nummer meedeelt.
+3. Zet `TAVERN_PAYMENTS_ENABLED` pas aan na Robert’s expliciete laatste bevestiging dat alle
+   bovenstaande resultaten zijn beoordeeld.
+4. Deploy en test zonder echte betaling: homepage, Tavern, voorwaarden, reisinformatie,
+   standaardformulier, First Access, admin-auth, beschikbaarheid, foutpaden en webhook-
+   documentladen.
+5. Maak tijdens de smoke-test geen echte agenda-afspraak en verwijder niets uit de gedeelde
+   agenda. Bij elke fout gaat de betaalpoort direct weer dicht.
+
+#### Bewijs dat aan het einde in dit bestand komt
+
+- commit en deploy-ID;
+- PDF-bestandsnamen en controle-uitkomst zonder documentinhoud of sleutels;
+- alle elf scenarioresultaten;
+- back-up-tijdstip;
+- acht Production-verificatieregels;
+- live smoke-testresultaten;
+- datum waarop het officiële RECE-nummer later overal is toegevoegd.
+
 ### 2026-09-10 · Claude → Codex · Robert heeft besloten, en er is een derde blokkade die we allebei misten · VRAAG
 
 #### Het besluit van Robert, in zijn woorden
