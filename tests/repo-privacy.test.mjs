@@ -90,15 +90,49 @@ test("er staan geen sleutels, tokens of connection strings in de repo",()=>{
   }
 });
 
-test("er staat geen echt agenda-id en geen NIE of IBAN van Robert in de repo",()=>{
+// De boekingsvoorwaarden zijn de enige plek waar het fiscale nummer wél hoort te staan.
+// Robert heeft op 10 september 2026 besloten de identificatie van de verkoper daar te
+// publiceren, en alleen daar -- niet in /legal/. Dat is geen uitzondering uit gemak: wie
+// online een dienst verkoopt moet zich identificeren met naam, domicilie en fiscaal nummer,
+// en een reiziger moet weten met wie hij een overeenkomst sluit. Op een publieke
+// voorwaardenpagina is dat een publicatie en geen lek.
+//
+// De bewaking gaat daarom niet uit, hij wordt smaller: nergens, behalve precies daar, en
+// daar precies één keer. Zo blijft elk ander bestand beschermd en zou een NIE die per
+// ongeluk in een commit-bericht, een operations-nota of een testbestand belandt nog steeds
+// deze suite omgooien.
+const NIE_MAG_ALLEEN_IN="terms/index.html";
+const NIE=/\b[XYZ]-?\d{7}-?[A-Z]\b/g;
+
+test("er staat geen echt agenda-id en geen IBAN van Robert in de repo",()=>{
   for(const pad of bestanden){
     const inhoud=lees(pad);
     assert.doesNotMatch(inhoud,/[0-9a-f]{32,}@group\.calendar\.google\.com/,
       `${pad} bevat een echt agenda-id`);
-    // Een Spaans NIE: X, Y of Z, zeven cijfers, een letter. Robert-specifiek, dus nooit.
-    assert.doesNotMatch(inhoud,/\b[XYZ]-?\d{7}-?[A-Z]\b/,`${pad} lijkt een NIE te bevatten`);
     // Een IBAN van 20 tekens of meer. De NIF van de verzekeraar is geen IBAN.
     assert.doesNotMatch(inhoud,/\b[A-Z]{2}\d{2}[ ]?(?:[A-Z0-9]{4}[ ]?){4,}\b/,
       `${pad} lijkt een IBAN te bevatten`);
   }
+});
+
+test("het fiscale nummer staat alleen in de boekingsvoorwaarden, en daar één keer",()=>{
+  for(const pad of bestanden){
+    const treffers=(lees(pad).match(NIE)||[]).length;
+    if(pad===NIE_MAG_ALLEEN_IN){
+      // Precies één. Twee keer betekent dat hij ook ergens anders op de pagina is beland,
+      // bijvoorbeeld in een meta-tag of een tweede blok, en dat hoort niet.
+      assert.equal(treffers,1,
+        `${pad} hoort het fiscale nummer precies één keer te dragen, gevonden: ${treffers}`);
+      continue;
+    }
+    assert.equal(treffers,0,`${pad} lijkt een NIE te bevatten en dat mag alleen in ${NIE_MAG_ALLEEN_IN}`);
+  }
+});
+
+test("de identificatie van de verkoper staat niet in de juridische kennisgeving",()=>{
+  // Robert wilde het uitdrukkelijk alleen in de voorwaarden. Dat is zijn keuze en die hoort
+  // vastgelegd te staan, zodat niemand het later "voor de consistentie" ook in /legal/ zet.
+  const legal=lees("legal/index.html");
+  assert.doesNotMatch(legal,NIE,"legal/index.html hoort geen fiscaal nummer te dragen");
+  assert.ok(!legal.includes("Llerandi"),"legal/index.html hoort geen woonadres te dragen");
 });
