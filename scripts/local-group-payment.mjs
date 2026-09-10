@@ -80,7 +80,13 @@ const zaad=()=>{
       // rond het verstrijken van de deadline heeft zijn eigen tests.
       hold_expires_at:new Date(Date.now()+120*60000).toISOString(),
       dietary_notes:"TEST – noten bij Chloë",message:null,extra_nights:null,
-      requested_arrival:null,requested_departure:null,extra_nights_status:"none",
+      // Een aangevraagde extra nacht vooraf: aankomst op de maandag voor het weekend. Dat
+      // is een aanvraag en geen reservering, dus `arrival_date` blijft leeg tot de
+      // accommodatie hem toezegt. Zo is in de doorloop te zien dat de mail aan de
+      // accommodatie hem onder NOT YET CONFIRMED zet en de agenda hem buiten de afspraak
+      // houdt.
+      requested_arrival:"2026-10-26",requested_departure:null,
+      extra_nights_status:"requested",arrival_date:null,departure_date:null,
       accommodation_email_sent_at:null,special_requirements_email_sent_at:null},
     deelnemers:gasten.map(([naam,email],i)=>({
       id:randomUUID(),claim_id:claimId,full_name:naam,email,amount_cents:PRIJS,
@@ -156,7 +162,9 @@ const RPCS={
     const c=db.claim,w=db.weekend;
     const gemeen={participantId:p.id,claimId:c.id,name:p.full_name,email:p.email,
       amountCents:p.amount_cents,weekend:w.slug,weekendLabel:weekendLabel(),
-      arrivalDate:w.starts_on,departureDate:w.ends_on,termsVersion:p.terms_version};
+      // Het bevestigde verblijf, net als in de echte functie: leeg betekent het weekend zelf.
+      arrivalDate:c.arrival_date||w.starts_on,departureDate:c.departure_date||w.ends_on,
+      termsVersion:p.terms_version};
     if(p.status==="paid")return {status:"paid",...gemeen,paidAt:p.paid_at,
       filmingRequired:filmenVerplicht(w.slug),bookingComplete:c.status==="paid",
       confirmationEmailSent:Boolean(p.confirmation_email_sent_at)};
@@ -172,7 +180,8 @@ const RPCS={
     return {status:"paid",...gemeen,paidAt:p.paid_at,bookingComplete:rond,outstanding:open,
       filmingRequired:filmenVerplicht(w.slug),confirmationEmailSent:false,
       booking:rond?{status:"paid",claimId:c.id,name:c.name,email:c.email,seats:c.party_size,
-        weekendLabel:weekendLabel(),arrivalDate:w.starts_on,departureDate:w.ends_on,
+        weekendLabel:weekendLabel(),
+        arrivalDate:c.arrival_date||w.starts_on,departureDate:c.departure_date||w.ends_on,
         weekendStart:w.starts_on,weekendEnd:w.ends_on,
         requestedArrival:c.requested_arrival,requestedDeparture:c.requested_departure,
         extraNightsStatus:c.extra_nights_status,dietaryNotes:c.dietary_notes,
@@ -220,6 +229,7 @@ globalThis.fetch=(input,options)=>{
 
 const {handler:payHandler}=await import("../netlify/functions/pay.mjs");
 const {handler:webhookHandler}=await import("../netlify/functions/stripe-webhook.mjs");
+const {buildPaymentRequestEmail}=await import("../netlify/functions/_payment-request.mjs");
 
 // ── Het overzicht ─────────────────────────────────────────────────────────────
 const bedrag=c=>`€${(c/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -235,6 +245,7 @@ const overzicht=()=>{
     const bevestigd=p.adult_confirmed_at?"✔":"—";
     const knop=p.status==="paid"?"<em>betaald</em>"
       :`<a class="k" href="/tavern/pay/?ref=${p.payment_reference}">betaalpagina openen</a>`
+        +`<a class="k grijs" href="/proefmail?ref=${p.payment_reference}">betaalverzoek bekijken</a>`
         +(p.checkout_session_id
           ?`<a class="k grijs" href="/simuleer/betaling?ref=${p.payment_reference}">Stripe-betaling simuleren</a>`
           :`<br><small>eerst de betaalpagina doorlopen — zonder sessie stuurt Stripe geen webhook</small>`);
@@ -334,6 +345,29 @@ http.createServer(async(req,res)=>{
     laatsteWebhook=String(uit.statusCode);
     return res.writeHead(303,{location:"/","cache-control":"no-store"}).end();
   }
+  // Het betaalverzoek zoals het eruitziet. Robert, 10 september 2026: Gmail haalde de
+  // achtergrond van de knop weg en zette er zijn eigen omleidingswaarschuwing voor de link
+  // tussen. Dat is Gmail en niet onze mail -- dus hier staat hij zonder mailprogramma
+  // ertussen, met een knop die rechtstreeks naar de betaalpagina gaat.
+  if(url.pathname==="/proefmail"){
+    const deel=zoekDeelnemer(url.searchParams.get("ref")||"");
+    if(!deel)return stuur(404,"<p>onbekende deelnemer</p>");
+    const c=db.claim;
+    const mail=buildPaymentRequestEmail({
+      participant:deel,
+      booking:{name:c.name,weekendLabel:weekendLabel(),seats:c.party_size},
+      deadline:c.hold_expires_at,
+      paymentUrl:`${BASIS}/tavern/pay/?ref=${deel.payment_reference}`
+    });
+    return stuur(200,`<!doctype html><meta charset="utf-8"><title>Betaalverzoek — ${deel.full_name}</title>
+<style>:root{color-scheme:light}html,body{background:#F7F3EC;margin:0}
+.blad{max-width:640px;margin:2rem auto;background:#fff;padding:1.6rem 1.8rem;border:1px solid #e6ded0;border-radius:10px}
+.terug{display:block;max-width:640px;margin:1rem auto 0;font:14px/1.5 Arial,sans-serif;color:#B4472A}</style>
+<a class="terug" href="/">&larr; terug naar het overzicht</a>
+<div class="blad"><p style="font:13px/1.5 Arial,sans-serif;color:#6B6F72;margin:0 0 1.2em">
+Aan: ${deel.email} &middot; Onderwerp: ${mail.subject}</p>${mail.html}</div>`);
+  }
+
   if(url.pathname==="/simuleer/opnieuw"){db=zaad();bewaar();return res.writeHead(303,{location:"/"}).end();}
   if(url.pathname==="/nep-stripe/")
     return stuur(200,`<!doctype html><meta charset="utf-8"><title>Nagebootste Stripe</title>
