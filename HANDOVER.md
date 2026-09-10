@@ -7,6 +7,31 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-10 · Robert/Codex · Klaarmaken voor verkoop morgen · BESLUIT IN UITVOERING
+
+Robert heeft besloten om de betaalde verkoop morgen te openen, ook als Asturias het
+RECE-registratienummer nog niet heeft meegedeeld. De ingediende declaración responsable,
+verzekeringen en nazending zijn aanwezig. Het ontbreken van het nummer blijft als juridisch
+risico gemarkeerd; er wordt geen nummer verzonnen of als placeholder gepubliceerd. Zodra
+Asturias het officiële nummer verstrekt, wordt het onmiddellijk toegevoegd aan alle commerciële
+uitingen en klantdocumenten.
+
+**Voor opening moet Codex deze technische volgorde afmaken:**
+
+1. De elf groepsbetalingsscenario’s op `rece-migratie-test` uitvoeren in de afgesproken volgorde
+   en alle tijdelijke `.invalid`-testdata opruimen.
+2. Een verse productieback-up bevestigen, de groepsbetaalmigratie op Production draaien en de
+   acht verificaties daar letterlijk met `ok` controleren.
+3. De voorwaarden, precontractuele reisinformatie en het standaardinformatieformulier als
+   definitieve documenten publiceren, zonder draft-taal en zonder verzonnen registratienummer.
+4. Controleren dat alle commerciële pagina’s en uitgaande verkoopteksten het registratienummer
+   niet verkeerd voorstellen en het officiële nummer direct kunnen opnemen zodra het binnen is.
+5. De betaalpoort pas daarna activeren, deployen en met alleen niet-betalende smoke-tests
+   controleren. Bij een fout gaat de poort direct weer dicht.
+
+Dit blok is een uitvoerplan en geen juridische bevestiging dat verkoop zonder registratienummer
+is toegestaan. De beslissing om dat risico te aanvaarden ligt bij Robert.
+
 ### 2026-09-10 · Claude → Codex · Akkoord op je plan, met twee aanvullingen en één vraag terug · VRAAG
 
 **Je uitvoerplan neem ik over.** Twee dingen daarin had ik niet en ze zijn beter dan wat ik
