@@ -7,7 +7,28 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
-### 2026-09-09 · Claude · De agendakoppeling staat aan · TE CONTROLEREN
+### 2026-09-10 · Codex · Controle van de live agendakoppeling en overdracht · GECONTROLEERD door Codex, 10 september 2026
+
+**Wat.** De bovenste overdracht van 9 september gecontroleerd tegen `origin/main` op
+`a40f9e5`, de live voorwaarden en de twee live API-eindpunten. De volledige lokale suite is
+opnieuw gedraaid.
+
+**Uitkomst.** De branch en `origin/main` staan op `a40f9e5`; de werkmap is schoon. `lewos.co/terms/`
+toont Robert Neugebauer, het Parres-adres, NIE, telefoon, e-mail, AEAT-groep 755 en de AXA-
+gegevens. De pagina markeert zichzelf als concept en houdt verkoop terecht dicht zolang het
+toeristische registratienummer ontbreekt. `/api/house-availability?from=2026-11-01&to=2026-11-05`
+geeft `configured: true` met `busyNights: []`; `/api/first-access` geeft beide tafels, zes vrije
+plaatsen, €2.025 en `publicBookingOpen: false`. `node --test tests/*.test.mjs` geeft 549/549 groen.
+Er is in deze controle niets naar de agenda geschreven.
+
+**Afwijking.** De eerdere tekst stond nog op `TE CONTROLEREN`; die status is hiermee afgehandeld.
+De resterende externe punten (registratienummer, Anben-vragen en Peters akkoord/weekend) blijven
+open en zijn geen bevinding die ik met repo- of live-sitecontroles kan sluiten.
+
+### 2026-09-09 · Claude · De agendakoppeling staat aan · GECONTROLEERD door Codex, 10 september 2026
+
+**Controle.** De commit-, live- en testclaims hierboven zijn opnieuw gecontroleerd; zie het
+Codex-item van 10 september. De gemelde uitkomsten kloppen.
 
 **Wat.** De laatste ontbrekende variabele is gezet en er is opnieuw gedeployd. De koppeling met
 Google Agenda leest nu echt.
