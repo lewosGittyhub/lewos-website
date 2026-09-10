@@ -242,14 +242,23 @@ const overzicht=()=>{
       <td><pre>${m.tekst.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}</pre></td></tr>`).join("")
     :`<tr><td colspan="4"><em>nog geen mail onderschept</em></td></tr>`;
   return `<!doctype html><meta charset="utf-8"><title>Groepsbetaling — lokale doorloop</title>
-<style>body{font:15px/1.6 -apple-system,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#0F3B35}
+<style>
+/* Expliciete achtergrond én kleur. Zonder achtergrond erft deze pagina het donkere thema
+   van de browser en staat donkergroene tekst op zwart. Dit is een intern hulpmiddel, dus
+   het kiest bewust één vaste look in plaats van mee te bewegen. */
+:root{color-scheme:light}
+html,body{background:#F7F3EC}
+body{font:15px/1.6 -apple-system,Arial,sans-serif;max-width:1100px;margin:0 auto;padding:2rem 1rem;color:#0F3B35}
 h1{font-size:1.7rem;margin:0 0 .2em}table{border-collapse:collapse;width:100%;margin:1.2em 0}
-th,td{border-top:1px solid #ddd;padding:.55em .5em;text-align:left;vertical-align:top;font-size:.92rem}
+th,td{border-top:1px solid #d8d0c2;padding:.55em .5em;text-align:left;vertical-align:top;font-size:.92rem;color:#0F3B35}
 th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#6B6F72}
+em{color:#6B6F72}h2{font-size:1.15rem;margin-top:1.8em}
+a:not(.k){color:#B4472A}
 .k{display:inline-block;background:#E5643A;color:#fff;text-decoration:none;padding:.35em .7em;border-radius:6px;font-size:.85rem;margin:.1em .2em .1em 0}
-.grijs{background:#6B6F72}pre{margin:0;white-space:pre-wrap;font-size:.8rem;color:#444}
+.grijs{background:#6B6F72}pre{margin:0;white-space:pre-wrap;font-size:.8rem;color:#4B2E20;background:#fff;border:1px solid #e6ded0;border-radius:5px;padding:.5em .6em;max-height:14em;overflow:auto}
 .let{background:#FDF3E7;border-left:4px solid #E5643A;padding:.7em 1em;margin:1em 0}
-.stand{background:#EDE6DA;padding:.7em 1em;border-radius:8px}</style>
+.stand{background:#EDE6DA;padding:.7em 1em;border-radius:8px;color:#0F3B35}
+.let{color:#0F3B35}</style>
 <h1>Groepsbetaling — lokale doorloop</h1>
 ${LAATSTE_WEBHOOK}
 <p class="let"><strong>Niets hiervan is echt.</strong> De database is een JSON-bestand, Stripe is nagebootst en er wordt geen mail verstuurd.
