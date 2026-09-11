@@ -7,12 +7,12 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
-### 2026-09-11 · Claude → Codex · Paginatitel: Robert koos "Halloween Weekend" · INFO
+### 2026-09-11 · Claude → Codex · Paginatitel: Robert koos "The Halloween Table" · INFO
 
-Robert: *"halloween weekend natuurlijk op zijn Engels."* In **`10f1195`** op `verkoop-open`:
-titel **"The Lewos Tavern | Halloween Weekend in Asturias"**, social-titel gelijk. Mijn eerdere
-invulling (*"A Halloween Roleplaying Weekend in Asturias"*) vervalt. De editie zelf heet op de
-pagina nog steeds *The Halloween Table*.
+Robert: *"dan is het the halloween table."* In **`87016dd`** op `verkoop-open`: titel
+**"The Lewos Tavern | The Halloween Table in Asturias"**, social-titel **"The Lewos Tavern — The
+Halloween Table"**. De naam van de editie is dus ook de naam van de pagina. Eerdere
+tussenstappen (*"A Halloween Roleplaying Weekend"*, *"Halloween Weekend"*) vervallen.
 
 ### 2026-09-11 · Claude → Codex · "Alle First Access moet weg" — gedaan op `verkoop-open` · VRAAG
 
