@@ -7,6 +7,70 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude → Robert · STAND VAN ZAKEN en de volgorde voor morgen · VOOR ROBERT
+
+Robert ging slapen om 01:49 op 12 september. Dit is het overzicht waar hij morgen mee begint.
+
+**Wat af is.**
+- De omslag naar open verkoop staat compleet op `verkoop-open`: 9 commits, **560/560 tests
+  groen**. Daarin: de drie definitieve PDF's met versie 2026-09-11, de boekpagina open in
+  `_redirects`, het nieuwe vinkje, alle First Access-teksten weg, de titel "The Halloween
+  Table", de huisletters op boek-, betaal-, checkout- en voorwaardenpagina, de
+  registratieteksten kloppend, groepsboeking die op het openingsmoment wacht, alleen directe
+  betaalmethodes (card, iDEAL, Bancontact) en de blokkade van testbetalingen in productie.
+- De hele site is nagelopen: 19 pagina's, geen kapotte links, geen ontbrekende alt-teksten,
+  mobiel in orde, alle koppelingen reageren zoals ze moeten.
+- Het besluit om zonder registratienummer live te gaan is afgetekend in dit dossier. De
+  nazending voor RECE/2026/35500 is ingediend (`ENT20261033427`).
+- Op `lewos.co` is niets veranderd: de verkoop staat dicht, de betaalpoort staat dicht.
+
+**De enige echte blokkade.** Stripe live is nog niet geactiveerd. Er is nog geen
+uitbetalingsrekening, geen live-webhook en geen beperkte sleutel. Zolang dat niet af is, kan
+niemand echt betalen — ook niet als de site zou opengaan.
+
+**Morgen, in deze volgorde.**
+1. **Bellen naar Asturias, 9:00** (012 of 985 279 100) over het *número de inscripción* voor
+   expediente RECE/2026/35500. Duurt tien minuten en kan parallel met de rest.
+2. **Stripe activeren, met Codex** (reken op 20 tot 40 minuten). Codex vult de
+   bedrijfsgegevens en jouw gegevens in uit het eenmalige bestand in Downloads. Jij doet:
+   **geboortedatum doorgeven, wachtwoord, 2FA-code, identiteitsbewijs uploaden en het akkoord
+   op de voorwaarden.** Daarna zet Codex de Sabadell-rekening als uitbetalingsrekening.
+3. **Codex maakt af:** live-webhook op `https://lewos.co/api/stripe-webhook` met de twee
+   events, het signing secret in `STRIPE_WEBHOOK_SECRET`, een beperkte sleutel `rk_live_…`
+   in `STRIPE_SECRET_KEY`, `LEWOS_ENVIRONMENT=production` overschrijven, en in live **card,
+   iDEAL en Bancontact aan** met de vertraagde methodes uit.
+4. **Deploy.** Eén keer jouw "ja" voor een nieuwe Production-deploy van `origin/main`. Die is
+   veilig: de verkoop blijft dicht.
+5. **Proefrit.** De keten boeken → betalen → bevestigingsmail is nog nooit echt gelopen,
+   alleen met tests. Mijn voorstel: één keer helemaal doorlopen op een Netlify-preview met
+   sandbox-sleutels en een testkaart. Dat doe ik, zodra jij zegt dat de branch gepusht mag
+   worden.
+6. **Productiemigratie van de database** volgens `operations/` (back-up, migratie, de acht
+   verificatieregels). Op de preview is die al goed gegaan.
+7. **Openen.** Merge van `verkoop-open` naar `main`, dan in Netlify
+   `TAVERN_PAYMENTS_ENABLED=true`, `BOOKING_TERMS_VERSION=2026-09-11` en
+   `PUBLIC_BOOKING_OPENS_AT`. Dat is jouw hand, in één zitting.
+
+**Beslissingen die morgen van jou nodig zijn.**
+- Naam op het bankafschrift van de gast: voorstel `LEWOS TAVERN`. Accountnaam in Stripe:
+  voorstel `Lewos`.
+- iDEAL en Bancontact aanhouden (mijn advies) of alleen kaart.
+- De voorwaarden-PDF bevat je NIE, adres en telefoon en gaat mee met elke bevestigingsmail.
+  Voorstel: je uitzondering "alleen in de voorwaarden" ook voor die PDF laten gelden.
+- Welke ingangsdatum van de verzekeringspolis klopt: /terms/ zegt 28 augustus, CLAUDE.md
+  zegt 1 september.
+- Mag `main` gepusht worden? Dan gaat ook de reisinformatiepagina met je organisatorgegevens
+  live. Lokaal staat `main` 46 commits vóór `origin/main`.
+- Het eenmalige gegevensbestand in Downloads
+  (`Gegevens-Stripe-EENMALIG-daarna-verwijderen.md`) wordt weggegooid zodra Stripe klaar is.
+  Zeg het woord en ik verwijder het.
+
+**Openstaand en klein:** de deelfoto (`og:image`) is nog de liggende heldfoto, de tafelfoto
+moet daarvoor liggend gesneden worden · `tavern/assets/manifesto-lewos.jpg` is 1,0 MB en kan
+naar ongeveer 300 KB · `thanks/index.html` bevat nog een First Access-tekst en is alleen via
+een directe link te bereiken · de kleuren op boek-, betaal- en checkoutpagina wijken iets af
+van de huisstijl · dit dossier is 7.000 regels en mag gesplitst worden.
+
 ### 2026-09-12 · Claude → Codex · OPDRACHT bijgewerkt: punt 2 hoef je niet te lézen, overschrijf hem · UITVOEREN door Codex
 
 Je voortgang (`672c676`) gelezen. Punt 2 liep vast omdat Netlify de waarde niet leesbaar
