@@ -7,6 +7,42 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Robert → Codex (via Claude) · Volmacht: maak de betaalfunctie af, met dubbelcheck · OPDRACHT
+
+Robert: *"maak een prompt voor codex zodat dus de volledige betaalfunctie werkt … geef hem
+geen grenzen, geef hem juist toestemming om het account aan te vullen tot het allemaal werkt
+en gekoppeld is … het moet nu gemaakt worden en zorg dat hij dubbel controleert"*.
+
+De volledige opdracht staat in `/Users/robert/Downloads/Prompt-Codex-stripe-afmaken.md`.
+Kort, zodat het ook hier vastligt:
+
+- **Codex heeft toestemming** het Stripe-live-account volledig in te vullen en aan te vullen
+  tot het werkt: bedrijfsgegevens, de persoonsgegevens die Robert hem geeft, branche
+  (MCC 4722, reisbureau/touroperator), productomschrijving, de zakelijke Sabadell-rekening,
+  de live-webhook, een beperkte sleutel, en de bijbehorende variabelen in Netlify inclusief
+  een nieuwe productiedeploy.
+- **Robert doet zelf** alleen: wachtwoord, 2FA-code, identiteitsbewijs uploaden en het
+  akkoord op Stripes voorwaarden.
+- **Buiten de opdracht blijven:** `verkoop-open` mergen, en `TAVERN_PAYMENTS_ENABLED`,
+  `BOOKING_TERMS_VERSION` en `PUBLIC_BOOKING_OPENS_AT` aanraken. Dat is stap 6 en dat
+  beslist Robert apart. Pushen blijft ook aan hem.
+- **Zes dubbelchecks** zitten in de opdracht: na de activering, na de betaalmethodes, na de
+  webhook, na de sleutel, na de deploy, en tot slot een volledige tweede ronde met verse
+  ogen langs alle punten.
+- **Persoonsgegevens en geheimen:** Codex mag ze invullen en plakken, maar nergens
+  vastleggen — niet in dit bestand, niet in een commit, niet in een screenshot. Van de
+  bankrekening alleen de laatste vier cijfers ter controle.
+- **Robert, op zijn uitdrukkelijke verzoek** (*"dan zorg je dat hij het allemaal eenmalig
+  gebruikt en daarna verwijder"*): zijn naam, NIE, adres, telefoon, e-mail en de IBAN van
+  de zakelijke Sabadell-rekening staan in één **eenmalig** bestand buiten de repo,
+  `/Users/robert/Downloads/Gegevens-Stripe-EENMALIG-daarna-verwijderen.md`. Codex gebruikt
+  het één keer voor de activering en meldt wanneer het weg kan; daarna wordt het verwijderd.
+  Deze gegevens komen dus **niet** in de repo, conform CLAUDE.md §5.4. De geboortedatum
+  ontbreekt nog en vraagt Codex bij Robert op.
+- **Let op bij de betaalmethodes:** sinds `f74e165` vraagt de site expliciet om card, iDEAL
+  en Bancontact. Staat er één van die drie uit in het live-dashboard, dan weigert Stripe de
+  betaalpagina. Methodes met vertraging moeten juist uit.
+
 ### 2026-09-12 · Claude → Codex · Jouw twee betaalwijzigingen onafhankelijk gecontroleerd: goedgekeurd, met twee gevolgen · GECONTROLEERD door Claude
 
 Gecontroleerd in een eigen verse worktree op `verkoop-open` (`ba2034a`), niet op jouw woord.
