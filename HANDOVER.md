@@ -7,6 +7,56 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude → Codex · OPDRACHT: dicht deze drie gaten, daarna de stand rapporteren · UITVOEREN door Codex
+
+Robert: *"maak het niet een vraag maar maak het een opdracht"*. Dit is dus geen overleg.
+Je entry over de Production-sleutel (`759711e`) is gelezen en in orde, maar de configuratie
+is nog niet af. Voer de punten hieronder uit; je hebt er volmacht voor (zie de entry
+"Volmacht: maak de betaalfunctie af").
+
+**Eerst de stand die ik zelf heb gecontroleerd, net nu, alleen met GET op `lewos.co`:**
+`/api/first-access` → 200 met `"publicBookingOpen":false` · `GET /api/checkout` → 405 ·
+`GET /api/stripe-webhook` → 405 · `/tavern/` → 200 · `/tavern/book/` → 404. Er staat dus
+niets per ongeluk open. Goed.
+
+**Zonder de drie punten hieronder betaalt een gast wél, maar bevestigt de site niets. Doe
+ze in deze volgorde.**
+
+1. **Zet `STRIPE_WEBHOOK_SECRET` in de context Production op het secret van het
+   live-endpoint.** Bestaat dat endpoint nog niet, maak het dan aan:
+   `https://lewos.co/api/stripe-webhook`, live-modus, met precies twee events
+   (`checkout.session.completed` en `checkout.session.expired`). Staat er nu nog een secret
+   van een sandbox-endpoint, dan valt elk echt event van Stripe op de handtekeningcontrole
+   (`stripe-webhook.mjs:302` → 400 `invalid_signature`): de gast betaalt, de stoel wordt
+   nooit bevestigd en er gaat geen bevestigingsmail uit. Kopieer en plak het secret
+   rechtstreeks; schrijf het nergens op.
+2. **Zorg dat `LEWOS_ENVIRONMENT` in de context Production op `production` staat.** Daaraan
+   hangt `isProduction()` en dus je eigen bewaking uit `ba2034a`. Ontbreekt die waarde, dan
+   weigert productie geen enkel testevent meer en kan een testbetaling stoelen bevestigen
+   zonder dat er geld binnenkomt. Bevestig de waarde expliciet in je verslag.
+3. **Controleer welk soort sleutel er nu in `STRIPE_SECRET_KEY` staat.** Is het een volledige
+   `sk_live_…`, vervang hem dan door een **beperkte** sleutel `rk_live_…` met alleen
+   **Checkout Sessions → Schrijven**, naam `lewos-netlify-productie`, en laat de oude sleutel
+   in Stripe verlopen. Is het al een beperkte sleutel, laat hem staan. Noem in je verslag
+   alleen het soort, nooit een waarde.
+
+**Maak daarna de stappen af die nog niet in dit dossier staan:**
+4. Het live-account activeren en de **Sabadell-rekening** als uitbetalingsrekening
+   instellen (gegevens: het eenmalige bestand in Downloads).
+5. In live **card, iDEAL en Bancontact aanzetten** en de vertraagde methodes uitzetten.
+   Dit is geen detail: sinds `f74e165` vraagt de site die drie expliciet op, en Stripe
+   weigert de betaalpagina als er één van uit staat.
+6. Daarna een nieuwe **Production-deploy** van `origin/main`. Dat is veilig — daar staat
+   `PUBLISHED_TERMS_VERSION=""`, dus de betaalpoort blijft dicht ongeacht wat er in Netlify
+   staat. Doe die deploy pas als 1 en 2 klaar zijn; anders zet je een halve configuratie
+   live. Vraag Robert één keer om zijn "ja" voor de deploy, en ga daarna door.
+7. Voer tot slot de zes dubbelchecks uit de opdracht uit en schrijf per punt "ja" of "nee"
+   in dit bestand, plus de laatste vier cijfers van de gekoppelde rekening ter controle.
+
+**Onveranderd:** niet pushen, `verkoop-open` niet mergen, en `TAVERN_PAYMENTS_ENABLED`,
+`BOOKING_TERMS_VERSION` en `PUBLIC_BOOKING_OPENS_AT` niet aanraken. Dat is stap 6 van de
+opening en dat doet Robert zelf.
+
 ### 2026-09-12 · Robert → Codex (via Claude) · Volmacht: maak de betaalfunctie af, met dubbelcheck · OPDRACHT
 
 Robert: *"maak een prompt voor codex zodat dus de volledige betaalfunctie werkt … geef hem
