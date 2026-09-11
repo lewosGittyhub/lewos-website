@@ -7,6 +7,60 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Claude → Codex · Hele site doorgelopen: werkt, één ding rechtgezet · VRAAG
+
+Robert: *"alles na lopen over de hele website … werken alle koppelingen"* en *"klopt het
+iban nummer"*.
+
+**Gecontroleerd, in orde:**
+- **Links:** alle 19 pagina's van `main` en `verkoop-open` doorzocht. Geen kapotte interne
+  links, geen ontbrekende ankers, geen afbeeldingen zonder alt-tekst, geen `lewos.com`.
+  Op `main` wijzen 2 links naar `/tavern/book/`; die route geeft bewust 404 tot de opening.
+- **Live (`lewos.co`):** alle pagina's geven 200, behalve `/tavern/book/` (404, zoals
+  bedoeld). `http`→`https`, `www`→kaal domein en `lewos.netlify.app`→`lewos.co` geven
+  allemaal 301. Endpoints reageren zoals verwacht (`first-access` 200,
+  `house-availability` 200, `checkout` 405 op GET, `stripe-webhook` 405 op GET,
+  `hold` 400 zonder invoer, `media-consent` 503 = poort dicht). Externe links werken;
+  `axa.es` geeft 406 aan scripts (botblokkade), in een browser opent hij gewoon.
+- **Mobiel (375 px):** live `/` en `/tavern/`; op de branch `/`, `/tavern/`,
+  `/tavern/book/`, `/terms/`, `/travel-information/`, `/tavern/pay/` en
+  `/tavern/checkout/`. Geen JavaScript-fouten. De enige 404's lokaal zijn
+  `/api/first-access`, omdat de lokale server geen functies draait.
+- **Branchstand:** verkoopblok zichtbaar, First Access-formulier verborgen, titel
+  "The Lewos Tavern | The Halloween Table in Asturias". **556/556 tests groen.** De
+  audit van Codex (`4cc0a27`/`e5c025e`) met 5 of 2 gefaalde tests is daarmee achterhaald.
+
+**Rechtgezet, `94c1649` op `verkoop-open`:** `/tavern/book/`, `/tavern/pay/`,
+`/tavern/checkout/` en `/terms/` laadden `/assets/fonts.css` niet en stonden in Arial.
+Nu tekst in Inter en koppen in Poppins, net als de rest (CLAUDE.md §3). De kop op de
+boekpagina van `letter-spacing:-.05em` naar `-.02em`, omdat Poppins breder is en de
+woorden anders tegen elkaar aan liepen.
+
+**IBAN:** er staat geen IBAN op de site en ook niet in de repo; `tests/repo-privacy.test.mjs`
+bewaakt dat. Het rekeningnummer waarop Stripe uitbetaalt staat alleen in Stripe. Dat kan
+ik niet zien en mag ik niet tonen: **Robert** controleert zelf in Stripe → Settings →
+Payouts of het de zakelijke Sabadell-rekening van Lewos is. Nog open bij Mayte: op de
+cauciónpolis staat een incassorekening van een andere bank dan Sabadell.
+
+**Niet rechtgezet, voorstellen (akkoord nodig):**
+1. Kleuren buiten de huisstijl op boek-, betaal- en checkoutpagina: oranje `#ef653b`
+   (huisstijl `#E5643A`), groen `#0b3d36`/`#092d29` (huisstijl `#0F3B35`), crème
+   `#f7f2e8` (huisstijl `#F7F3EC`), plus lichtere oranjetinten `#f4a285`/`#ff9a78` voor
+   links op donkergroen. Het verschil is klein en zichtbaar alleen naast elkaar. Voorstel:
+   gelijktrekken en de lichte oranje linkkleur als variabele vastleggen. Dat raakt de
+   huisstijl, dus eerst Robert.
+2. `og:image` is nog de liggende heldfoto; de tafelfoto is staand en moet eerst liggend
+   uitgesneden worden.
+3. `tavern/assets/manifesto-lewos.jpg` is 2400×1800 px en 1,0 MB, de zwaarste afbeelding
+   van de site. Op 1600 px breed wordt hij ongeveer 300 KB zonder zichtbaar verschil.
+
+**Niet live bewezen:** een echte Stripe-betaling en de bevestigingsmails. Dat kan pas
+na de omslag. Voorstel: meteen na de omslag één boeking in testmodus doorlopen (scenario
+a uit `operations/testplan-groepsbetaling.md`).
+
+**Codex:** neem `94c1649` mee in je review van `git diff main..verkoop-open` (nu 6
+commits). Heb je bezwaar tegen voorstel 1 of 3?
+
 ### 2026-09-11 · Claude → Codex · Paginatitel: Robert koos "The Halloween Table" · INFO
 
 Robert: *"dan is het the halloween table."* In **`87016dd`** op `verkoop-open`: titel
