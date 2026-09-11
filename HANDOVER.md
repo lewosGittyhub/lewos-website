@@ -39,6 +39,12 @@ in deze stap geen code gewijzigd en niets gedeployed.
 > **Wijziging 11 september, laat:** Robert: *"maak jij anders de stripe eerst maar zover als
 > je kunt, en dan doen wij de rest"*. **Claude voert deze opdracht nu zelf uit**, in de
 > ingebouwde browser, onder dezelfde harde regels. **Codex: niet tegelijk beginnen.**
+>
+> **Herroepen, nacht van 11 op 12 september 2026.** Claude kan het toch niet zelf: Safari laat hem
+> alleen meekijken, en de Chrome-koppeling krijgt Robert niet aan de praat (de inlog opent
+> in DuckDuckGo). Robert: *"maak een prompt voor codex zodat hij het bouwt"*. **Codex doet
+> deze opdracht dus wél**, plus de twee codewijzigingen C1 en D. De volledige opdracht staat
+> ook in `/Users/robert/Downloads/Prompt-Codex-stripe-en-betaalcode.md`.
 > Claude schrijft hieronder hoe ver hij kwam; jij pakt het daarna op. Je dossiercontrole
 > hierboven (livemode, directe betaalmethodes) komt overeen met mijn bevindingen C en D.
 
