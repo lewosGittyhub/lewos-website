@@ -25,7 +25,7 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {FILLING_WINDOW_MINUTES,holdState,HOLD_PHASES} from "./_seat-hold.mjs";
 import {sendEmail} from "./_email.mjs";
-import {paymentsAreEnabled} from "./_booking-config.mjs";
+import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
 import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
@@ -147,7 +147,10 @@ export const handler=async event=>{
       // `TAVERN_PAYMENTS_ENABLED` uit stond. Stoelen vasthouden mag: dat vervalt vanzelf na
       // zestig minuten en verplicht niemand tot iets. Een boeking afronden en om geld
       // vragen mag niet.
-      if(!paymentsAreEnabled())return json(503,{error:"booking_not_open",
+      // Sinds 11 september 2026 geldt ook hier het openingsmoment (`PUBLIC_BOOKING_OPENS_AT`),
+      // net als in create-checkout-session. Anders kon een eigen verzoek al vóór de opening
+      // boeken zodra alleen de betaalvariabelen stonden.
+      if(!publicBookingIsOpen())return json(503,{error:"booking_not_open",
         message:"Bookings cannot be completed yet. Your seats are not charged and nothing has been confirmed. Leave your details through the contact page and we will let you know the moment booking opens."});
 
       // ── Het eerste betaalverzoek, in drie stappen ────────────────────────
