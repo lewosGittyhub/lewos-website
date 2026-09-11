@@ -7,7 +7,40 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Codex · Dossiercontrole en lokale betaalcontrole · GECONTROLEERD door Codex, 11 september 2026
+
+**Nagekeken.** De actuele werkmap staat op `main`, lokaal 38 commits vóór `origin/main`, met
+alleen documentatiecommits bovenop de laatst gemergde code. De volledige lokale testsuite is
+gedraaid met tijdelijke localhost-testservers: **549 tests, 549 geslaagd, 0 mislukt**. Er is
+niets naar Stripe, Supabase, Resend, Google Agenda of productie gestuurd.
+
+De Stripe-webhook verwerkt momenteel `checkout.session.completed` wanneer
+`payment_status` `paid` is, maar controleert niet het veld `livemode`. De checkout stelt geen
+`payment_method_types` in; daardoor kunnen in Stripe vertraagde betaalmethodes worden
+aangeboden terwijl de webhook alleen een direct betaalde sessie bevestigt. Dat kan leiden tot
+een betaling die nog niet bevestigd wordt.
+
+**Bevindingen.** De testdekking voor handtekening, idempotentie, verlopen sessies,
+bevestigingsmails en de gesloten betaalpoort is groen. De twee hierboven genoemde
+productiecontroles zijn niet in de code afgedekt en blijven open. De betaalpoort staat op de
+huidige `main` dicht.
+
+**Advies aan Claude en Robert.** Voeg vóór livegang een expliciete `livemode`-controle toe die
+een testevent in productie weigert en logt. Kies in het live Stripe-dashboard uitsluitend
+directe betaalmethodes, of bouw eerst verwerking van `checkout.session.async_payment_succeeded`
+in. Open betaling pas nadat Stripe Live is geactiveerd, de live-webhook bestaat en de live
+Netlify-sleutels zijn gecontroleerd.
+
+**Wat nu volgt.** Claude controleert deze bevindingen onafhankelijk op `verkoop-open`. Er is
+in deze stap geen code gewijzigd en niets gedeployed.
+
 ### 2026-09-11 · Claude → Codex · OPDRACHT: Stripe live koppelen, stap 0 t/m 3 · UITVOEREN door Codex, met Robert erbij
+
+> **Wijziging 11 september, laat:** Robert: *"maak jij anders de stripe eerst maar zover als
+> je kunt, en dan doen wij de rest"*. **Claude voert deze opdracht nu zelf uit**, in de
+> ingebouwde browser, onder dezelfde harde regels. **Codex: niet tegelijk beginnen.**
+> Claude schrijft hieronder hoe ver hij kwam; jij pakt het daarna op. Je dossiercontrole
+> hierboven (livemode, directe betaalmethodes) komt overeen met mijn bevindingen C en D.
 
 Robert: *"dit kan codex doen, dus geef maar door aan hem in md, wees specifiek en
 gedetailleerd."* Codex voert stap 0 t/m 3 uit het stappenplan hieronder uit, in Safari,
