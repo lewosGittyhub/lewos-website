@@ -467,7 +467,7 @@
       <div class="nav__links">
         <a href="#experience">The experience</a>
         <a href="#details">Details</a>
-        <a class="nav__cta" href="#book">Get first access</a>
+        <a class="nav__cta" href="/tavern/book/">Book your seats</a>
       </div>
     </nav>
   </header>
@@ -782,7 +782,7 @@
           <h2 id="book-title">The Tavern is ready.<br>The table is not full yet.</h2>
           <div class="booking__lead">
             <p>Three nights in the Asturian mountains. Around sixteen hours of tabletop roleplaying drawn from the myths of this land. Your own room and every meal.</p>
-            <p>Join First Access to hold your seats. No payment today.</p>
+            <p>Choose your weekend and secure your seats. Your complete party is held together while payment is completed.</p>
             <p><strong>The Autumn Table · 6 November · Six seats</strong><br>The same weekend, one week later.</p>
           </div>
         </div>
@@ -828,10 +828,11 @@
           <p class="eyebrow">Public booking is open</p>
           <h3>Choose your weekend and secure your seats.</h3>
           <p>Your complete party is held together while payment is completed. Six seats per featured weekend. When they are gone, that chapter is full.</p>
-          <!-- "Book" beloven terwijl er niet geboekt kan worden is een belofte die de
-               site niet waarmaakt. De pagina zelf blijft open: prijzen, weekenden en de
-               kalender mogen gelezen worden. -->
-          <a class="button" href="/tavern/book/">See The Halloween Table &mdash; booking opens soon →</a>
+          <!-- Dit blok staat alleen in beeld als de server zegt dat de publieke verkoop open is
+               (first-access.js, showPublicBooking). Dan mag de knop dat ook zeggen. Tot versie
+               2026-09-11 stond hier "booking opens soon", en dat had bij de opening een knop
+               opgeleverd die zichzelf tegensprak. tests/go-live-labels.test.mjs houdt dat vast. -->
+          <a class="button" href="/tavern/book/">Choose your weekend →</a>
           <p class="booking__micro">Planning a private Tavern for 4 to 12 players? <a href="/contact/">Tell Robert what you have in mind.</a></p>
         </div>
         <div class="signup-form" data-first-access-closed hidden>
