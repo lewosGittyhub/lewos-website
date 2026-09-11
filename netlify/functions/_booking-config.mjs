@@ -1,8 +1,10 @@
-// Deliberately empty while the public booking terms still contain placeholders.
-// Publishing final terms requires a reviewed code change as well as the matching environment value.
-export const PUBLISHED_TERMS_VERSION="";
-export const PUBLISHED_TERMS_DOCUMENT="";
-export const PUBLISHED_TRAVEL_DOCUMENT="";
+// Version 2026-09-11 of the three sales documents. These values open nothing on their own: payment
+// also needs TAVERN_PAYMENTS_ENABLED=true and BOOKING_TERMS_VERSION set to this same version in
+// Netlify. The two documents are attached to every confirmation email by loadAttachment in
+// stripe-webhook.mjs; tests/sales-documents.test.mjs checks that they are real PDFs.
+export const PUBLISHED_TERMS_VERSION="2026-09-11";
+export const PUBLISHED_TERMS_DOCUMENT="/documents/lewos-tavern-booking-terms-2026-09-11.pdf";
+export const PUBLISHED_TRAVEL_DOCUMENT="/documents/lewos-tavern-travel-information-2026-09-11.pdf";
 
 // The published booking terms promise a 40 minute hold. The database hold and
 // the Stripe session must expire together: a shorter Stripe session would hand

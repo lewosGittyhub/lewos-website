@@ -93,9 +93,11 @@ test("payments remain gated on explicit configuration and a reviewed code versio
   const config=await read(path.join(root,"netlify/functions/_booking-config.mjs"));
   assert.match(config,/TAVERN_PAYMENTS_ENABLED/);
   assert.match(config,/PUBLIC_BOOKING_OPENS_AT/);
-  assert.match(config,/PUBLISHED_TERMS_VERSION=""/);
-  assert.match(config,/PUBLISHED_TERMS_DOCUMENT=""/);
-  assert.match(config,/PUBLISHED_TRAVEL_DOCUMENT=""/);
+  // Sinds versie 2026-09-11 gevuld. De poort gaat daar niet van open: dat doen
+  // TAVERN_PAYMENTS_ENABLED en BOOKING_TERMS_VERSION in Netlify.
+  assert.match(config,/PUBLISHED_TERMS_VERSION="\d{4}-\d{2}-\d{2}"/);
+  assert.match(config,/PUBLISHED_TERMS_DOCUMENT="\/documents\/[a-z0-9-]+\.pdf"/);
+  assert.match(config,/PUBLISHED_TRAVEL_DOCUMENT="\/documents\/[a-z0-9-]+\.pdf"/);
   assert.match(config,/BOOKING_TERMS_VERSION/);
 });
 

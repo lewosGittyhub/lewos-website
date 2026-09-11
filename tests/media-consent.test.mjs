@@ -404,10 +404,9 @@ test("the media gate cannot open or weaken the payment gate",async()=>{
   assert.doesNotMatch(media,/TAVERN_PAYMENTS_ENABLED|PUBLISHED_TERMS|paymentsAreEnabled/);
   assert.doesNotMatch(mediaFunction,/stripe|payment|checkout/i);
   assert.doesNotMatch(booking,/_media-config|MEDIA_/);
-  // De betaalpoort staat nog net zo dicht als hij stond.
-  for(const constant of ["PUBLISHED_TERMS_VERSION","PUBLISHED_TERMS_DOCUMENT","PUBLISHED_TRAVEL_DOCUMENT"]){
-    assert.match(booking,new RegExp(`export const ${constant}="";`));
-  }
+  // Tot versie 2026-09-11 stond hier ook dat de drie documentconstanten leeg moesten zijn. Die
+  // zijn nu gevuld, maar de scheiding hierboven is waar deze test om gaat: de mediaflow leest
+  // niets van de betaalpoort en de betaalpoort niets van de mediaflow.
 });
 
 test("every environment variable the media flow needs is written down for the operator",async()=>{

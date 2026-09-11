@@ -19,15 +19,10 @@
     </dl>
     <p class="stil">This is your own share, not the group total. Everyone in the group pays separately.</p>
 
-    <!-- JURIDISCHE COPY — CONCEPTVERSIE. Dezelfde afspraak als op /tavern/book/: zolang de
-         drie documenten hun conceptaanduiding dragen, vraagt deze pagina niemand om ze te
-         aanvaarden. Ze staan er wél, want een deelnemer die zijn eigen aandeel betaalt hoort
-         ze te kunnen lezen vóórdat hij betaalt — en tot nu toe kreeg hij ze nergens te zien.
-         De bindende aanvaarding hangt aan `terms_version`, en die kan alleen worden
-         vastgelegd als de documenten definitief zijn: `paymentsAreEnabled()` eist een
-         gepubliceerde versie. Worden ze definitief, dan wordt dit blok in één bewerking
-         vervangen door de bindende formulering, net als op de boekingspagina. -->
-    <p class="stil">The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> are published as drafts and do not apply yet. The final versions are provided before any payment is requested.</p>
+    <!-- JURIDISCHE COPY — DEFINITIEF sinds versie 2026-09-11, net als op /tavern/book/. De
+         deelnemer leest de drie documenten hier en aanvaardt ze zelf met het vinkje hieronder;
+         die aanvaarding wordt vastgelegd met terms_version. -->
+    <p class="stil">The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> apply to your booking. Please read them before you continue: you accept them below.</p>
 
     <!-- De hoofdboeker vinkte deze tot nu toe aan voor de hele groep. Meerderjarigheid
          verklaar je niet voor iemand anders, en privacytoestemming al helemaal niet. De
@@ -40,7 +35,7 @@
       </div>
       <div class="vink">
         <input id="eigen-privacy" type="checkbox">
-        <label for="eigen-privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I understand that the full booking terms are provided before any payment is requested.</label>
+        <label for="eigen-privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I accept the <a href="/terms/" target="_blank">booking terms</a>, the <a href="/travel-information/" target="_blank">pre-contract travel information</a> and the <a href="/standard-information/" target="_blank">standard information form</a>.</label>
       </div>
       <div class="vink" id="vink-filmen" hidden>
         <input id="eigen-filmen" type="checkbox">
