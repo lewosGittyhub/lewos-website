@@ -101,11 +101,13 @@ test("payments remain gated on explicit configuration and a reviewed code versio
   assert.match(config,/BOOKING_TERMS_VERSION/);
 });
 
-test("First Access and paid-booking wording describe the same legal moment",async()=>{
+test("paid-booking wording describes the same legal moment everywhere",async()=>{
   const legal=await read(path.join(root,"legal/index.html"));
   const travel=await read(path.join(root,"travel-information/index.html"));
   const terms=await read(path.join(root,"terms/index.html"));
-  assert.match(legal,/First Access can temporarily set aside the requested seats/);
+  // Sinds de opening bestaat First Access niet meer voor de gast (Robert, 11 september 2026:
+  // "alle first access moet weg"). De juridische kennisgeving noemt het dus ook niet meer.
+  assert.doesNotMatch(legal,/First Access/,"de juridische kennisgeving hoort First Access niet meer te noemen");
   assert.match(legal,/paid booking becomes binding only after successful payment/);
   assert.match(travel,/group booking becomes binding after successful payment/);
   assert.match(terms,/booking becomes binding when payment is successfully accepted/);
