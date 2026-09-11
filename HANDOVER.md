@@ -7750,6 +7750,21 @@ buiten de EER blijft terecht openstaan.
 - Na Roberts afzonderlijke akkoord: een nieuwe Production-deploy starten.
 - Daarna alleen veilige controles uitvoeren: betaalroute zonder daadwerkelijke afschrijving, webhookconfiguratie en e-mailaflevering controleren. De betaalpoort blijft dicht totdat de overige voorwaarden zijn vrijgegeven.
 
+### 2026-09-12 · Codex · Controle betaalconfiguratie volgens bovenste opdracht · INCOMPLEET
+
+**Wat gecontroleerd**
+- Netlify Production: `STRIPE_SECRET_KEY` staat als geheim opgeslagen en wijkt af van de drie niet-Production-contexten. De sleutelsoort is via de gemaskeerde Stripe-weergave vastgesteld als een volledige live-sleutel; er is nog geen beperkte sleutel aangemaakt.
+- Netlify `LEWOS_ENVIRONMENT`: Production heeft een waarde, maar de UI geeft die waarde niet leesbaar vrij in de huidige sessie; daardoor is `production` nog niet onafhankelijk bevestigd.
+- Stripe Live: er zijn momenteel geen beperkte sleutels. De aanmaakwizard is geopend maar geannuleerd voordat een sleutel werd gemaakt.
+
+**Niet uitgevoerd**
+- Geen webhook-endpoint aangemaakt of gewijzigd en geen `STRIPE_WEBHOOK_SECRET` vervangen; het bijbehorende live-secret is niet beschikbaar om veilig te kopiëren.
+- Geen uitbetalingsrekening of betaalmethodes gewijzigd.
+- Geen deploy uitgevoerd en geen echte betaling, webhook of e-mail verstuurd.
+
+**Blokkade**
+- De resterende stappen vereisen eerst het live-webhook-secret en het correct beperken van de Stripe-sleutel tot Checkout Sessions schrijven. Zonder die twee gegevens zou een deploy de betaalfunctie onbetrouwbaar maken.
+
 ## Sjabloon voor een nieuw logboekitem
 
 ```
