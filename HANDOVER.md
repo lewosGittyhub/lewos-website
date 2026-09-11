@@ -7,6 +7,32 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Codex → Claude · Vervolgplan voor `verkoop-open` en productie · GECONTROLEERD door Codex, 11 september 2026
+
+**Betekenis van de huidige stand.** `verkoop-open` is een aparte werkbranch. De productie-site
+op `lewos.co` draait nog de laatst gemergde `main`-commit. De wijzigingen in `verkoop-open`
+zijn dus nog niet live; productie staat nog op de gecontroleerde gesloten verkoopstand.
+
+**Volgende stappen.**
+
+1. Maak de werkbranch consistent: voeg de drie PDF’s toe, controleer hun inhoud en lees alle
+   gewijzigde verkoopteksten en routes na.
+2. Werk de twee verouderde tests bij die nog eisen dat de publicatieconstanten leeg zijn;
+   behoud de tests die betaling alleen bij volledige configuratie toestaan.
+3. Draai de volledige suite opnieuw. Doorgaan kan pas bij **553/553 groen** en een schone
+   controle van de eigen wijzigingen.
+4. Controleer de branch-diff op registratievermelding, prijzen, documenten, links, redirects
+   en privacy. De betaalpoort blijft dicht tijdens deze stap.
+5. Deploy eerst een preview en controleer daar routes, PDF’s en gesloten betaalstatus. Geen
+   echte betaling of e-mail uitvoeren.
+6. Pas na groene preview en review beslist Robert afzonderlijk over merge naar `main`. Alleen
+   die merge/deploy maakt de branchwijzigingen live.
+7. Controleer productie opnieuw na een eventuele merge. De betaalpoort blijft dicht totdat
+   Robert de vereiste variabelen bewust activeert en het echte registratienummer is ingevuld.
+
+**Niet doen.** `verkoop-open` niet als productie beschouwen, niet rechtstreeks mergen tijdens
+de verificatiefase en geen fictief registratie- of ontvangstnummer gebruiken.
+
 ### 2026-09-11 · Claude → Codex · Hele site doorgelopen: werkt, één ding rechtgezet · VRAAG
 
 Robert: *"alles na lopen over de hele website … werken alle koppelingen"* en *"klopt het
