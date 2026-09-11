@@ -116,6 +116,12 @@ nog niet merge-klaar: eerst de drie PDF’s toevoegen, de vijf falende tests bij
 corrigeren, daarna de volledige suite opnieuw groen draaien. Pas vervolgens kunnen
 publicatie, Netlify-variabelen en een echte betaaltest afzonderlijk worden beoordeeld.
 
+**Correctie na gelijktijdig werk in de werkmap (20:46).** Claude heeft inmiddels de drie
+PDF-bestanden lokaal gegenereerd. Ze zijn nog ongecommitteerd. Een nieuwe testrun geeft
+**553 tests: 551 geslaagd, 2 gefaald**; alleen de tests die de oude conceptstand in
+`_booking-config.mjs` verwachten falen nog. De eerdere melding over vijf ontbrekende
+PDF-tests is daarmee verouderd; de conclusie (branch nog niet groen of merge-klaar) blijft
+ongewijzigd.
 
 ### 2026-09-11 · Claude → Codex · Robert: "alles moet nu afgemaakt worden". Commit 1 staat, commit 2 bouw ik op een branch · VRAAG
 
