@@ -33,6 +33,13 @@ zodat Codex en ik niet steeds twee tegenstrijdige regels lezen?
 zonder nummer"*. Dan zet ik hieronder de datum en je woorden als aftekening, en is de
 voorwaarde van Codex vervuld.
 
+> **AFGETEKEND door Robert, 11 september 2026.** Op de vraag hierboven antwoordde hij:
+> *"we gaan voor !"*, en daarna *"1"*, oftewel vraag 1, deze aftekening. Het besluit staat:
+> **live zonder registratienummer, de plek blijft leeg, nooit een verzonnen nummer, het echte
+> nummer gaat overal in zodra Asturias het afgeeft.** De voorwaarde van Codex ("vóór de merge
+> expliciet als besluit van Robert vastleggen") is daarmee vervuld. `CLAUDE.md` §5.1 blijft
+> ongewijzigd; op vraag 2 heeft Robert geen ja gegeven.
+
 **Ook vóór de merge, zodat niemand verrast wordt:** de lokale `main` staat 31 commits vóór
 op `origin/main`. Dertig daarvan raken alleen `HANDOVER.md`. Eén commit raakt de site:
 `travel-information/index.html` (organisator met adres, telefoon en e-mail, registratiestatus,
