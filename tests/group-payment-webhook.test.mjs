@@ -120,6 +120,18 @@ test("een deelnemerbetaling wordt vastgelegd in plaats van te blijven steken",as
   assert.equal(JSON.parse(uit.body).participantPaid,true);
 });
 
+test("een testevent in productie bevestigt niets",async()=>{
+  delete process.env.LEWOS_PREVIEW_SAFE;
+  process.env.LEWOS_ENVIRONMENT="production";
+  const uit=await webhook();
+  assert.equal(uit.statusCode,200);
+  assert.deepEqual(JSON.parse(uit.body),{received:true,ignored:true,reason:"test_event_in_production"});
+  assert.equal(aanroepen.length,0);
+  assert.equal(mails.length,0);
+  delete process.env.LEWOS_ENVIRONMENT;
+  process.env.LEWOS_PREVIEW_SAFE="true";
+});
+
 test("de deelnemer krijgt zijn eigen bevestiging met de twee documenten",async()=>{
   await webhook();
   const aanHem=mailsAan("twee@example.invalid");

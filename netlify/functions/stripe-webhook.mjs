@@ -4,7 +4,7 @@ import {bookingDocuments} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,isProduction,unsafeEnvironmentBody} from "./_deploy-context.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -302,6 +302,10 @@ export const handler=async event=>{
   if(!validSignature(rawBody,getHeader(event,"stripe-signature"),process.env.STRIPE_WEBHOOK_SECRET))return response(400,{error:"invalid_signature"});
   let stripeEvent;
   try{stripeEvent=JSON.parse(rawBody);}catch{return response(400,{error:"invalid_payload"});}
+  if(isProduction()&&stripeEvent.livemode!==true){
+    console.error("Ignored non-live Stripe event in production");
+    return response(200,{received:true,ignored:true,reason:"test_event_in_production"});
+  }
   const session=stripeEvent.data?.object||{};
   const reference=session.metadata?.payment_reference||session.client_reference_id;
   if(stripeEvent.type==="checkout.session.expired"){
