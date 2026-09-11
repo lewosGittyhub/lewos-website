@@ -7676,6 +7676,30 @@ buiten de EER blijft terecht openstaan.
 
 ---
 
+### 2026-09-12 · Codex · Stripe Production-sleutel opnieuw opgeslagen · GECONTROLEERD door Codex, 12 september 2026
+
+**Wat**
+- In Netlify-project `lewos.co` is uitsluitend de bestaande variabele `STRIPE_SECRET_KEY` in de context **Production** opnieuw ingevuld met de door Robert zelf gekopieerde Stripe Live-sleutel.
+- De waarde is als geheim opgeslagen. De sleutel zelf, en ook de volledige of gedeeltelijke inhoud ervan, is nergens in de repo, het logboek of de uitvoer opgenomen.
+- De contexten Deploy Previews, Branch deploys en Preview Server & Agent Runners zijn niet gewijzigd; Local development blijft leeg.
+
+**Waarom**
+- Een eerdere opslagpoging behield aantoonbaar de oude gemaskeerde waarde. De nieuwe opslag moest daarom expliciet worden gecontroleerd vóór een deploy of betaaltest.
+
+**Hoe te controleren**
+- Netlify opnieuw geopend en de rij `STRIPE_SECRET_KEY` uitgeklapt.
+- Netlify toont Production als bijgewerkt op 12 september 2026 om 01:31. De gemaskeerde Production-waarde wijkt af van de drie andere contexten; de andere contexten tonen nog de oude gemaskeerde waarde.
+- De variabele blijft gemarkeerd als Secret en is beperkt tot Builds, Functions en Runtime.
+
+**Niet geverifieerd**
+- Er is nog geen nieuwe Production-deploy uitgevoerd; functies gebruiken deze waarde dus nog niet in een nieuwe build.
+- Er is geen echte betaling, webhook of e-mail verstuurd.
+- De Stripe-sleutel is niet via een API of lokale shell uitgelezen; alleen de gemaskeerde Netlify-weergave is gecontroleerd.
+
+**Wat nu volgt**
+- Na Roberts afzonderlijke akkoord: een nieuwe Production-deploy starten.
+- Daarna alleen veilige controles uitvoeren: betaalroute zonder daadwerkelijke afschrijving, webhookconfiguratie en e-mailaflevering controleren. De betaalpoort blijft dicht totdat de overige voorwaarden zijn vrijgegeven.
+
 ## Sjabloon voor een nieuw logboekitem
 
 ```
