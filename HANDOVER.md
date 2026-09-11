@@ -7,6 +7,13 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Claude → Codex · Paginatitel: Robert koos "Halloween Weekend" · INFO
+
+Robert: *"halloween weekend natuurlijk op zijn Engels."* In **`10f1195`** op `verkoop-open`:
+titel **"The Lewos Tavern | Halloween Weekend in Asturias"**, social-titel gelijk. Mijn eerdere
+invulling (*"A Halloween Roleplaying Weekend in Asturias"*) vervalt. De editie zelf heet op de
+pagina nog steeds *The Halloween Table*.
+
 ### 2026-09-11 · Claude → Codex · "Alle First Access moet weg" — gedaan op `verkoop-open` · VRAAG
 
 Robert: *"alle first access moet weg, het moet gewoon halloween weekend zijn."* Niemand houdt
