@@ -7,6 +7,177 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Claude → Codex · OPDRACHT: Stripe live koppelen, stap 0 t/m 3 · UITVOEREN door Codex, met Robert erbij
+
+Robert: *"dit kan codex doen, dus geef maar door aan hem in md, wees specifiek en
+gedetailleerd."* Codex voert stap 0 t/m 3 uit het stappenplan hieronder uit, in Safari,
+**met Robert naast zich**. Stap 4 (code) en 5 (test) blijven bij Claude en wachten op je
+antwoorden op de vier vragen onderaan het stappenplan.
+
+#### Harde regels, ze gelden de hele opdracht
+
+1. **Robert typt zelf:** wachtwoorden, 2FA-codes, geboortedatum, NIE, woonadres,
+   identiteitsdocumenten, IBAN, en elk "akkoord" op voorwaarden van Stripe. Kom je bij zo'n
+   veld, stop dan en zeg Robert welk veld het is. Vul het niet in, ook niet als je de
+   waarde ergens ziet staan.
+2. **Geheimen zie, kopieer, noteer en screenshot je niet:** API-sleutels (`sk_…`, `rk_…`),
+   webhook-secrets (`whsec_…`), IBAN. Ook geen stukjes of eerste tekens. Een geheim gaat
+   rechtstreeks van Stripe naar Netlify, en Robert plakt het. Vraag nooit om een waarde in
+   de chat.
+3. **Niets verzinnen.** Weet je een waarde niet, laat het veld leeg en schrijf de
+   veldnaam in dit bestand.
+4. **In Netlify niets verwijderen**, en geen bestaande Production-waarde wijzigen behalve
+   `STRIPE_SECRET_KEY` en `STRIPE_WEBHOOK_SECRET` in stap 3 (door Robert geplakt).
+   `TAVERN_PAYMENTS_ENABLED`, `BOOKING_TERMS_VERSION` en `PUBLIC_BOOKING_OPENS_AT` raak je
+   **niet** aan: die horen bij stap 6.
+5. **Geen betaling, geen checkout, geen POST naar `/api/checkout`, `/api/hold` of
+   `/api/pay`** op `lewos.co`. Controleren doe je alleen met GET.
+6. **Na elke stap** schrijf je hieronder een korte entry: wat gedaan, wat Stripe of Netlify
+   toont, wat nog open is. Zonder één geheime waarde.
+
+#### Stap 0 — Inventaris, alleen lezen
+
+**0a. Netlify** → site van lewos.co → *Site configuration* → *Environment variables*.
+Noteer per variabele in een tabel: **aanwezig ja/nee** en **voor welke contexts** (Production /
+Deploy Previews / Branch deploys / Local). Geen waarden, behalve waar hieronder "waarde
+mag" staat.
+
+| Variabele | Waarde noteren? |
+|---|---|
+| `STRIPE_SECRET_KEY` | nee. Vraag Robert of het een test- of live-sleutel is; hij kijkt, jij niet |
+| `STRIPE_WEBHOOK_SECRET` | nee |
+| `LEWOS_ENVIRONMENT` | waarde mag (hoort `production` te zijn in Production) |
+| `LEWOS_PREVIEW_SAFE` | waarde mag |
+| `TAVERN_PAYMENTS_ENABLED` | waarde mag |
+| `BOOKING_TERMS_VERSION` | waarde mag |
+| `PUBLIC_BOOKING_OPENS_AT` | waarde mag |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` | nee |
+| `RESEND_API_KEY`, `RATE_LIMIT_SECRET` | nee |
+| `TAVERN_FROM_EMAIL`, `TAVERN_TIMEZONE` | waarde mag |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, `LEWOS_CALENDAR_ID` | nee |
+| `LEWOS_ADMIN_EMAILS`, `LEWOS_ACCOMMODATION_EMAILS` | nee (persoonsgegevens) |
+
+Dit zijn alle variabelen die de functies op `verkoop-open` lezen (`git grep process.env`).
+Ontbreekt er een in Production, zet dat er dan met hoofdletters bij.
+
+**0b. Stripe:** met welk e-mailadres is het account aangemaakt (instellingen → persoonlijke
+gegevens of team)? Het hoort `lewos.co@gmail.com` te zijn. Zo niet: stop en meld het.
+Is er meer dan één Stripe-account of organisatie zichtbaar (menu linksboven)? Noteer de
+namen.
+
+#### Stap 1 — Live-account activeren *(Codex navigeert en vult de bedrijfsvelden, Robert de persoonlijke)*
+
+- Menu linksboven: van **Sandbox** naar het echte account, dan **"Je onderneming
+  verifiëren"** of "Doorgaan met configuratie".
+- **Land:** Spanje. **Soort onderneming:** individu of eenmanszaak (autónomo). Geen SL,
+  geen vereniging.
+- **Wat Codex mag invullen:**
+  - **Website:** `https://lewos.co/tavern/`
+  - **Branche:** de categorie voor reisbureaus en touroperators (kaartcode MCC 4722, "Travel
+    agencies and tour operators"). Heet het in de lijst anders, kies dan wat daar het
+    dichtst bij ligt en noteer het exacte label. Nooit een andere branche kiezen om de
+    beoordeling te ontlopen; Stripe zet reisboekingen op zijn lijst van beperkte
+    bedrijven.
+  - **Productomschrijving** (Engels, voor de beoordelaar):
+    *"Lewos sells three-night, all-inclusive tabletop roleplaying weekends in Asturias,
+    Spain, as a package travel organiser (viaje combinado): accommodation, all meals,
+    transfers and a professional Game Master. Six guests per weekend, €2,025 per person,
+    paid online before the weekend. Declaración responsable filed with the Principado de
+    Asturias under procedure RECE0033T06."*
+  - **Klantenservice-e-mail:** `lewos.co@gmail.com`. **Telefoon:** het nummer dat op
+    `https://lewos.co/terms/` staat. Neem het daar over; zet het niet in dit bestand.
+  - **Statement descriptor:** `LEWOS TAVERN`, verkort `LEWOS`. **Eerst Robert laten
+    bevestigen**, want het is een naamkeuze.
+  - **Accountnaam:** "Nieuwe onderneming" → voorstel `Lewos`. Ook eerst Robert.
+- **Wat Robert invult:** naam zoals bij de AEAT, geboortedatum, NIE/NIF, woonadres zoals
+  op modelo 036, identiteitsdocument, IBAN van de zakelijke Sabadell-rekening (EUR), 2FA,
+  en het akkoord op Stripes voorwaarden.
+- **Na het indienen:** noteer de status die Stripe toont (in beoordeling, extra
+  informatie gevraagd, geactiveerd) en de vragen die Stripe stelt. Beantwoord geen vraag
+  over het bedrijfsmodel zonder Robert.
+
+#### Stap 2 — Live-webhook *(Codex klikt; alleen het geheim is voor Robert)*
+
+✅ Volgens [Stripe](https://docs.stripe.com/webhooks.md): Workbench → tab **Webhooks** →
+**"Crear un destino de evento"** (Nederlands label kan anders zijn). Controleer eerst dat
+je in **live-modus** staat, niet in de sandbox.
+- **Events van:** je eigen account.
+- **Events:** precies deze twee: `checkout.session.completed` en
+  `checkout.session.expired`. Voeg geen andere toe. De async-events komen er pas bij als
+  bij vraag (2) voor C2 wordt gekozen.
+- **Soort bestemming:** webhook-endpoint. **URL:** `https://lewos.co/api/stripe-webhook`.
+  **Beschrijving:** `Lewos Tavern — productie`.
+- Daarna toont Stripe een signing secret (`whsec_…`) achter **"Revelar secreto"**. Klik
+  daar **niet** op. Robert onthult het zelf en plakt het in Netlify (stap 3c).
+- 🟡 Of Stripe een live-endpoint al toelaat vóór de activering rond is, weet ik niet. Kan
+  het niet, noteer dat en ga door met stap 3a.
+
+#### Stap 3 — Beperkte API-sleutel en Netlify
+
+**3a. Beperkte sleutel, live-modus** (✅ [Stripe](https://docs.stripe.com/keys/restricted-api-keys.md)):
+Workbench → API-sleutels → **"Crear clave restringida"**.
+- **Naam:** `lewos-netlify-productie`.
+- **Rechten:** alleen **Checkout Sessions → Schrijven**, al het andere **Geen**. Schrijven
+  omvat lezen.
+- Dat is genoeg voor alle Stripe-aanroepen die er zijn:
+  - `POST /v1/checkout/sessions` in `create-checkout-session.mjs:54` en `pay.mjs:72`;
+  - `POST /v1/checkout/sessions/{id}/expire` in `create-checkout-session.mjs:59`;
+  - het beheerscript `scripts/audit-payment-reconciliation.mjs`, dat een sessie leest
+    (`GET /v1/checkout/sessions/{id}`).
+
+  Vind je in de code een Stripe-aanroep die ik gemist heb, stop dan en meld hem.
+- Heet het recht in het dashboard anders, noteer dan het exacte label.
+- **Robert** doet de 2FA. ✅ Stripe toont de sleutel **één keer**: Robert kopieert hem en
+  plakt hem direct in 3b.
+
+**3b. Netlify, `STRIPE_SECRET_KEY`, context Production.** Bestaat de variabele al (zie 0a):
+Robert vervangt alleen de **Production**-waarde. Andere contexts laat je staan. Bestaat hij
+niet: aanmaken met alleen een Production-waarde, en "Contains secret values" aan als
+Netlify dat aanbiedt.
+
+**3c. Netlify, `STRIPE_WEBHOOK_SECRET`, context Production.** Robert klikt in Stripe op
+"Revelar secreto" bij het endpoint uit stap 2, kopieert het en plakt het hier. Verder
+hetzelfde als 3b.
+
+**3d. Opnieuw deployen.** ✅ Volgens [Netlify](https://docs.netlify.com/build/functions/environment-variables/)
+gelden nieuwe waarden pas na een nieuwe deploy. Start in Netlify een nieuwe
+productiedeploy van de huidige `origin/main`, via Deploys → Trigger deploy → Deploy site.
+Dat is veilig: op `origin/main` staat `PUBLISHED_TERMS_VERSION=""`, dus de betaalpoort
+blijft dicht, wat er ook in Netlify staat. **Push niets**; dat blijft Roberts beslissing.
+
+**3e. Controle, alleen GET, na de deploy:**
+- `https://lewos.co/api/first-access` geeft nog steeds `"publicBookingOpen":false`.
+- `GET https://lewos.co/api/checkout` geeft 405.
+- `GET https://lewos.co/api/stripe-webhook` geeft 405.
+- In Stripe staat het endpoint op actief.
+
+Noteer de uitkomsten.
+
+**3f. Betaalmethodes (alleen lezen).** Instellingen → Betaalmethodes, live-modus: noteer
+welke methodes aan staan. Let vooral op methodes met vertraging, zoals SEPA-incasso,
+bankoverschrijving en uitgestelde betaling. **Zet niets aan of uit**: dat hangt af van
+vraag (2) en van Robert.
+
+#### Wanneer je stopt
+- Stripe vraagt om iets wat alleen Robert weet of mag.
+- Stripe weigert of beperkt de branche.
+- Het account staat op een ander e-mailadres dan `lewos.co@gmail.com`.
+- Je ziet een geheim onbedoeld volledig in beeld. Zeg het, noteer niets, en laat Robert
+  beslissen of de sleutel vervangen moet worden.
+
+In al die gevallen: niets forceren. Schrijf het hieronder en wacht op Robert.
+
+#### Wat ik terug wil in dit bestand
+1. De tabel uit 0a.
+2. Het e-mailadres en de accountnamen uit 0b.
+3. De status van de activering en de vragen van Stripe.
+4. De bevestiging van de webhook: URL, de twee events, actief ja/nee.
+5. De bevestiging van de sleutel: naam en rechten, zonder waarde.
+6. De uitkomsten van 3e en de lijst betaalmethodes uit 3f.
+7. Je antwoorden op de vier vragen onder het stappenplan.
+
+Daarna bouwt Claude stap 4 en test hij stap 5.
+
 ### 2026-09-11 · Claude → Codex → Robert · Stappenplan Stripe: van sandbox naar echte betalingen · VRAAG (eerst Codex, dan Robert)
 
 Robert: *"wat zijn volgens jou nu dus de stappen voor stripe, overleg in MD"*. Hieronder
