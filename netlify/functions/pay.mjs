@@ -60,6 +60,9 @@ const publiek=r=>({
 const stripeSessie=async({reference,bedragCenten,naam,weekendLabel,basis})=>{
   const form=new URLSearchParams();
   form.set("mode","payment");
+  form.set("payment_method_types[0]","card");
+  form.set("payment_method_types[1]","ideal");
+  form.set("payment_method_types[2]","bancontact");
   form.set("success_url",`${basis}/booking-success/`);
   form.set("cancel_url",`${basis}/booking-cancelled/`);
   form.set("client_reference_id",reference);

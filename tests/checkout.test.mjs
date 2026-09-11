@@ -64,6 +64,15 @@ test("First Access invitation creates a Stripe session only after a seat hold",a
   assert.equal(calls.filter(call=>call.url==="/rest/v1/rpc/check_tavern_request_limit").length,2);assert.equal(calls[2].url,"/rest/v1/rpc/begin_tavern_first_access_checkout");assert.equal(calls[3].url,"/v1/checkout/sessions");assert.equal(calls[4].url,"/rest/v1/rpc/attach_tavern_checkout_session");
 });
 
+test("Checkout beperkt Stripe tot directe EUR-betaalmethodes",async()=>{
+  const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
+  const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"first_access",token:"abcdefghijklmnopqrstuvwxyzABCDEF123456",adultConfirmed:true,privacyAccepted:true,filmingAcknowledged:true})});
+  assert.equal(result.statusCode,200);
+  const sent=new URLSearchParams(calls.find(call=>call.url==="/v1/checkout/sessions").body);
+  assert.deepEqual([0,1,2].map(i=>sent.get(`payment_method_types[${i}]`)),["card","ideal","bancontact"]);
+  assert.equal(sent.get("payment_method_types[3]"),null);
+});
+
 test("public checkout holds the complete group before contacting Stripe",async()=>{
   const {handler}=await import("../netlify/functions/create-checkout-session.mjs");
   const result=await handler({httpMethod:"POST",body:JSON.stringify({mode:"public",name:"Robert",email:"robert@example.com",weekend:"weekend-02",people:3,adultConfirmed:true,privacyAccepted:true})});

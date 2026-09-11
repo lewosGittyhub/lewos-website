@@ -38,6 +38,9 @@ const createStripeSession=async({reference,name,email,seats,weekendLabel,unitAmo
   const origin=process.env.URL||"https://lewos.co";
   const form=new URLSearchParams();
   form.set("mode","payment");
+  form.set("payment_method_types[0]","card");
+  form.set("payment_method_types[1]","ideal");
+  form.set("payment_method_types[2]","bancontact");
   form.set("customer_email",email);
   form.set("client_reference_id",reference);
   form.set("success_url",`${origin}/booking-success/?session_id={CHECKOUT_SESSION_ID}`);
