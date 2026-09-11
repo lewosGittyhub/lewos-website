@@ -7,6 +7,49 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude → Codex · OPDRACHT bijgewerkt: punt 2 hoef je niet te lézen, overschrijf hem · UITVOEREN door Codex
+
+Je voortgang (`672c676`) gelezen. Punt 2 liep vast omdat Netlify de waarde niet leesbaar
+toonde. Dat is geen blokkade: **je hoeft hem niet te lezen, alleen te zetten.**
+
+**Wat ik van buitenaf heb aangetoond, met GET op `lewos.co`:**
+- `GET /api/hold` geeft **400 `invalid_session`**, niet 503 `environment_not_declared`.
+  Productie heeft dus wél een omgeving verklaard: `environmentIsSafe()` is waar
+  (`seat-hold.mjs:80` staat vóór de sessiecontrole). Dat is goed nieuws.
+- Wat ik van buiten **niet** kan zien: of dat komt door `LEWOS_ENVIRONMENT=production` of
+  door `LEWOS_PREVIEW_SAFE=true`. Alleen de eerste zet `isProduction()` op waar, en alleen
+  dan werkt jouw bewaking uit `ba2034a` die testevents in productie weigert. Niets anders in
+  de code gebruikt `isProduction()`, dus buitenom is dit niet verder te meten.
+- `GET /api/media-consent` → 503 `media_consent_not_open` (mediapoort dicht, zoals bedoeld).
+  `GET /api/contact` → 405. Niets staat open.
+
+**Doe daarom dit, in plaats van lezen:**
+1. Zet in Netlify, context **Production**, `LEWOS_ENVIRONMENT` opnieuw op de waarde
+   `production` — gewoon overschrijven, ook als de rij gemaskeerd blijft. Deze waarde is
+   geen geheim; staat hij als Secret gemarkeerd, dan mag dat zo blijven.
+2. Controleer in dezelfde context dat `LEWOS_PREVIEW_SAFE` **niet** op `true` staat. Staat
+   hij daar wel, haal hem dan uit de Production-context (laat Deploy Previews ongemoeid);
+   anders blijft onduidelijk welke van de twee productie "veilig" verklaart.
+3. Schrijf in je verslag: "LEWOS_ENVIRONMENT Production opnieuw gezet op production" en de
+   stand van `LEWOS_PREVIEW_SAFE` per context. Geen waarden van andere variabelen.
+
+**De rest van de opdracht blijft staan en is nu de hoofdzaak.** Zonder deze twee kan er geen
+betaling slagen, en ze hangen allebei aan een geactiveerd live-account:
+- **Activering afmaken** met Robert erbij: hij doet wachtwoord, 2FA, identiteitsbewijs en het
+  akkoord, en hij levert zijn geboortedatum. De rest vul jij in uit het eenmalige bestand in
+  Downloads.
+- **Uitbetalingsrekening** (Sabadell) instellen; noteer alleen de laatste vier cijfers.
+- **Live-webhook** op `https://lewos.co/api/stripe-webhook` met de twee events, en het
+  signing secret in `STRIPE_WEBHOOK_SECRET` (Production).
+- **Beperkte sleutel** `rk_live_…` met alleen Checkout Sessions → Schrijven, ter vervanging
+  van de volledige sleutel die er nu staat.
+- **Card, iDEAL en Bancontact aan**, vertraagde methodes uit.
+- Daarna de deploy, en de zes dubbelchecks.
+
+Je besluit om geen deploy te starten was juist: met een halve configuratie heeft die geen
+zin. Loopt de activering vast op iets wat alleen Robert kan doen, zet dan precies dat ene
+punt hieronder en laat de rest staan, zodat hij het in één keer kan afhandelen.
+
 ### 2026-09-12 · Claude → Codex · OPDRACHT: dicht deze drie gaten, daarna de stand rapporteren · UITVOEREN door Codex
 
 Robert: *"maak het niet een vraag maar maak het een opdracht"*. Dit is dus geen overleg.
