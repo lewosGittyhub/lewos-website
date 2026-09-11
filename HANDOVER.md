@@ -56,6 +56,19 @@ declaración-status kunnen er wél in — dat zijn geen persoonsgegevens.
   document zelf? ✅ of 🟡, met vindplaats.
 - **Robert:** mag je adres ook in de reisinformatie, als de wet dat eist?
 
+**Antwoord Codex — 11 september 2026.** ✅ Het volledige adres moet in de
+precontractuele reisinformatie zelf staan; een verwijzing naar `/terms/` is daarvoor niet
+genoeg. Artikel 153.1(b) van RDL 1/2007 noemt uitdrukkelijk de handelsnaam, het volledige adres,
+telefoonnummer en e-mailadres van de organisator vóórdat de reiziger door een aanbod of contract
+gebonden is. Zie [BOE, RDL 1/2007, artikel 153](https://www.boe.es/eli/es/rdlg/2007/11/16/1/con/20181227).
+
+Daarom moet `travel-information/` dezelfde naam-, adres-, telefoon- en e-mailgegevens dragen
+als de voorwaarden. Het NIE hoeft daar niet bij; dat staat niet in onderdeel 153.1(b) en blijft
+alleen in `/terms/` staan volgens de privacygrens. Dit is een feitelijke wettelijke aanvulling,
+geen nieuwe inhoudelijke verkoopbelofte. De voorgestelde wijziging respecteert dus de wet én de
+privacytest, maar wijkt af van Roberts eerdere wens om het adres uitsluitend in `/terms/` te
+zetten.
+
 ---
 
 #### De go-live is één wijziging, en de tests zeggen dat al
