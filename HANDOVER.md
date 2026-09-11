@@ -68,6 +68,55 @@ Tussen stap 2 en 3 staat de boekingspagina open met de melding *"Booking opens s
 
 **Aan jou:** lees de diff, oordeel over het vinkje, en draai de elf scenario's.
 
+### 2026-09-11 · Codex → Claude · Technische sitecontrole · GECONTROLEERD door Codex, 11 september 2026
+
+Robert vroeg om een technische controle van routes, knoppen, betaling, e-mail en agenda. Ik
+heb geen echte betaling gestart, geen e-mail verstuurd en geen agenda-afspraak gemaakt.
+
+**Lokale testsuite.** `node --test tests/*.test.mjs` geeft **553 tests: 548 geslaagd, 5
+gefaald**. De vijf fouten zitten in de nog niet afgeronde omslag naar definitieve
+verkoopdocumenten:
+
+- de bestaande tests verwachten nog `PUBLISHED_TERMS_VERSION=""` en een gesloten mediapoort;
+- `tests/sales-documents.test.mjs` kan de drie PDF’s niet openen, omdat
+  `documents/lewos-tavern-booking-terms-2026-09-11.pdf`,
+  `documents/lewos-tavern-travel-information-2026-09-11.pdf` en
+  `documents/lewos-tavern-standard-information-2026-09-11.pdf` niet in de repo staan.
+
+Dat betekent dat de branchwijzigingen in `verkoop-open` nog niet klaar zijn om te mergen.
+De werkmap bevat daarnaast on-gecommitte wijzigingen van Claude; die zijn in deze controle
+niet aangepast.
+
+**Live read-only smoke-test op `lewos.co`.** De volgende routes gaven HTTP 200: `/`,
+`/tavern/`, `/terms/`, `/travel-information/`, `/standard-information/`, `/admin/`,
+`/tavern/pay/` en `/tavern/checkout/`. `/tavern/book/` gaf HTTP 404; dat is op de live
+deploy nog de verwachte gesloten route. `GET /api/checkout` gaf 405
+`method_not_allowed`, wat correct is voor een GET.
+
+`/api/first-access` gaf HTTP 200 met `The Halloween Table` (30 okt–2 nov, 6 plaatsen,
+€2.025) en `The Autumn Table` (6–9 nov, 6 plaatsen, €2.025). De respons meldt
+`publicBookingOpen: false` en `firstAccessClosed: false`.
+
+`/api/house-availability?from=2026-11-01&to=2026-11-05` gaf
+`configured: true` en `busyNights: []`.
+
+**Betaling en e-mail.** De live betaalpoort blijft dicht. In de branch verwijst
+`_booking-config.mjs` inmiddels naar versie `2026-09-11`, maar de bijbehorende PDF’s
+ontbreken nog; daardoor kan de lokale suite niet groen zijn. De betaalcode en webhook zijn
+alleen met mocks getest. Werkelijke Stripe-betaling en aflevering van bevestigingsmails zijn
+bewust niet uitgevoerd en kunnen met deze controle dus niet als live bewezen worden.
+
+**Knoppen en links.** De bestaande lokale site-tests voor lokale HTML-links/media,
+verborgen verkoopblokken en de koppeling tussen boekingsknop en gesloten route zijn
+meegenomen in de suite; die controles slagen voor zover ze niet door de onafgemaakte
+publicatieconstanten worden geblokkeerd. Een echte klik- en betaaldoorloop is niet uitgevoerd.
+
+**Conclusie.** De huidige live site reageert en de verkoop staat veilig dicht. De branch is
+nog niet merge-klaar: eerst de drie PDF’s toevoegen, de vijf falende tests bijwerken of
+corrigeren, daarna de volledige suite opnieuw groen draaien. Pas vervolgens kunnen
+publicatie, Netlify-variabelen en een echte betaaltest afzonderlijk worden beoordeeld.
+
+
 ### 2026-09-11 · Claude → Codex · Robert: "alles moet nu afgemaakt worden". Commit 1 staat, commit 2 bouw ik op een branch · VRAAG
 
 **Robert heeft ja gezegd** op het adres in de reisinformatie, en daarmee is de kring rond: ik
