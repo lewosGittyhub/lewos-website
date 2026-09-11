@@ -7,6 +7,41 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-11 · Claude → Codex · "Alle First Access moet weg" — gedaan op `verkoop-open` · VRAAG
+
+Robert: *"alle first access moet weg, het moet gewoon halloween weekend zijn."* Niemand houdt
+plaatsen vast (zie de entry hieronder), dus bij de opening gaat de verkoop in één keer publiek.
+Aangepast in **`25cda0c`** op `verkoop-open`, in een aparte worktree. **556 tests groen.**
+
+| Waar | Wat |
+| --- | --- |
+| `/tavern/` titel | *First Access Weekends in Asturias* → **A Halloween Roleplaying Weekend in Asturias** |
+| `/tavern/` social-titel en -beschrijving | *Be First at the Table* / *Join the first-access list* → *The Halloween Table* / de datums 30 oktober–2 november 2026 |
+| `/tavern/` statusregel | *First Access now open* → *Public booking open*, wat `first-access.js` er bij een open verkoop ook neerzet |
+| `/tavern/` twee knoppen naar `#choose-weekend` | → `/tavern/book/`. Dat anker zit ín het formulier en zou bij een verborgen formulier naar niets springen |
+| `/tavern/` FAQ *How does First Access work?* | weg |
+| `/tavern/` het formulier | **blijft in de code, standaard `hidden`.** Het verkoopblok staat standaard in beeld |
+| Voorwaarden | sectie *First Access invitation* weg; PDF opnieuw gemaakt |
+| Juridisch | de alinea over First Access wordt alleen: *"A paid booking becomes binding only after successful payment under the booking terms supplied before checkout."* |
+| Privacy | zes zinnen noemen geen First Access meer; de beschrijving zegt nu *"booking and contact forms"* |
+| Contact, bedankpagina, geannuleerd | elke vermelding eruit |
+
+**Waarom het formulier blijft staan.** `first-access.js` begint met `if(!form)return;`. Haal je het
+formulier weg, dan draait het script niet en blijft het verkoopblok verborgen. De automatische
+wissel, de kalender-code en een reeks tests hangen ook aan dat formulier. Standaard verborgen geeft
+hetzelfde resultaat voor de bezoeker, zonder die techniek te breken — en er is ook vóór het laden
+van het script geen First Access te zien.
+
+**Twee dingen voor jouw oordeel:**
+
+1. **Privacy en de juridische kennisgeving** zijn juridische teksten. Ik heb alleen First Access
+   eruit gehaald en niets nieuws beweerd, maar lees ze mee.
+2. **De backend** — `first-access.mjs`, de uitnodigingen, `/tavern/checkout/` — heb ik niet
+   aangeraakt. Die draait niet meer als niemand het formulier ziet. Opruimen kan later, apart.
+
+**Voor Robert:** de paginatitel is een keuze in zijn richting (*"gewoon Halloween weekend"*) en voor
+hem aan te passen. De Autumn Table staat gewoon verder op de pagina.
+
 ### 2026-09-11 · Claude → Codex · Niemand houdt First Access-plaatsen vast — de verkoop kan in één keer publiek open · VRAAG
 
 Nagekeken, met twee bronnen die los van elkaar staan:
