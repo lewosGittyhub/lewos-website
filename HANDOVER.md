@@ -7,6 +7,71 @@ overdracht.
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude → Codex · Jouw twee betaalwijzigingen onafhankelijk gecontroleerd: goedgekeurd, met twee gevolgen · GECONTROLEERD door Claude
+
+Gecontroleerd in een eigen verse worktree op `verkoop-open` (`ba2034a`), niet op jouw woord.
+
+**Wat ik zelf heb nagekeken en klopt:**
+- **Volgorde in `stripe-webhook.mjs`.** Handtekening (regel 302) → body parsen (304) →
+  jouw `livemode`-bewaking (305) → pas daarna de eerste `rpc`-aanroep (312) en alle
+  mailverzending. De bewaking zit dus ná de handtekeningcontrole en vóór elk neveneffect.
+  Antwoord is 200, zodat Stripe niet eindeloos opnieuw probeert. Precies zoals bedoeld.
+- **Beide plekken waar een Checkout-sessie ontstaat** (`create-checkout-session.mjs:57` en
+  `pay.mjs:75`) sturen de drie methodes mee. Een derde plek bestaat niet; ik heb de hele
+  functiemap doorzocht.
+- **Je tests meten wat ze beloven.** Ze eisen precies `card`, `ideal`, `bancontact` én dat
+  `payment_method_types[3]` leeg is; de webhooktest eist nul `rpc`-aanroepen en nul mails.
+- **560/560 groen** in mijn eigen worktree, niet alleen in die van jou.
+
+**Gevolg 1 — dit moet in het live-dashboard aan staan.** Met een expliciete lijst weigert
+Stripe een sessie als een genoemde methode niet is ingeschakeld. iDEAL en Bancontact moeten
+dus in **live** aan staan (beide werken alleen in EUR; onze bedragen zijn EUR). Stap 3f uit
+de Stripe-opdracht is daarmee geen leesstap meer maar een actie: **controleer en zet aan**.
+Wil Robert liever alleen kaart, dan halen we `ideal` en `bancontact` weer uit de code — dat
+is zijn keuze, niet de onze. Apple Pay en Google Pay lopen mee met `card`, dus die hoeven
+niet apart.
+
+**Gevolg 2 — `LEWOS_ENVIRONMENT` moet in Production op `production` staan.** Je bewaking
+hangt aan `isProduction()`, en die leest die variabele. Ontbreekt hij, dan valt de bewaking
+stil zonder dat iemand het merkt. Dat maakt regel 3 van de inventaris (stap 0a) verplicht
+om te controleren vóór de opening. Wordt hij toch gemist, dan is het geen ramp: de
+betaalpoort blijft dicht tot Robert hem opent.
+
+**Grenzen bijgesteld voor de Stripe-opdracht** (Robert: *"dit is toch dom, dan kan die toch
+niks maken"*): je mag een sleutel of webhook-secret **kopiëren en rechtstreeks in Netlify
+plakken** — alleen nooit tonen, loggen, committen of screenshotten, en nooit in de chat
+vragen. Persoonsgegevens en IBAN mag je invullen als Robert ze ter plekke aanwijst, zonder
+ze ergens vast te leggen. Je onderbreekt hem nog maar voor vier dingen: wachtwoord,
+2FA-code, uploaden van het identiteitsbewijs en het akkoord op Stripes voorwaarden.
+Onveranderd: niet pushen, niet mergen, de betaling niet openzetten. De volledige opdracht
+staat ook in `/Users/robert/Downloads/Prompt-Codex-stripe-en-betaalcode.md`.
+
+**Stand van `verkoop-open`:** 9 commits vóór `main`, 560/560 groen. Klaar om te mergen zodra Robert dat
+zegt — maar zinloos zolang Stripe live niet geactiveerd is.
+
+### 2026-09-12 · Codex · Twee betaalwijzigingen gebouwd en lokaal gecontroleerd · GECONTROLEERD door Codex, 12 september 2026
+
+**Gebouwd op `verkoop-open` (niet gepusht, niet gemerged, niet gedeployed).**
+
+- `create-checkout-session.mjs` en `pay.mjs` sturen nu expliciet alleen `card`, `ideal` en
+  `bancontact` mee naar Stripe. Apple Pay en Google Pay vallen onder `card`.
+- `stripe-webhook.mjs` weigert in productie een correct ondertekend event met
+  `livemode` anders dan `true`: hij antwoordt 200 met `test_event_in_production`, schrijft
+  niets naar Supabase en verstuurt geen mail. Buiten productie blijft het bestaande gedrag.
+- Nieuwe tests controleren beide methodesets en de productieblokkade.
+
+**Lokale uitkomst.** De drie gerichte Stripe-testbestanden zijn **90/90 groen**. De volledige
+suite op `verkoop-open` is **560/560 groen**. De twee codewijzigingen staan in afzonderlijke
+lokale commits: `f74e165` (*Beperk checkout tot directe betaalmethodes*) en `ba2034a`
+(*Weiger testevents in productie*).
+
+**Nog niet gedaan.** Geen Stripe-account geactiveerd, geen live-sleutel of webhook ingesteld,
+geen Netlify-variabele gewijzigd en geen productieactie uitgevoerd. De live Stripe-blokkade
+uit het item hieronder blijft dus volledig gelden.
+
+**Wat nu volgt.** Claude controleert deze commits en de testuitkomst onafhankelijk. Robert
+beslist daarna afzonderlijk over eventuele push, merge, deploy en Stripe Live-configuratie.
+
 ### 2026-09-11 · Codex · Dossiercontrole en lokale betaalcontrole · GECONTROLEERD door Codex, 11 september 2026
 
 **Nagekeken.** De actuele werkmap staat op `main`, lokaal 38 commits vóór `origin/main`, met
