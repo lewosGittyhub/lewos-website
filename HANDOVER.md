@@ -11,6 +11,23 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude + Robert · iDEAL vrijgegeven: identiteitscontrole afgerond · GECONTROLEERD door Claude
+
+Robert heeft in Stripe de identiteitsverificatie met foto-ID doorlopen en het formulier
+"Aanvullende informatie" ingediend (Claude navigeerde, Robert deed de foto's en gaf akkoord
+op de biometrische verwerking en op het indienen).
+
+- Stripe meldt nu: *"Je hebt alle bedrijfsgegevens ingediend die op dit moment nodig zijn om
+  Stripe te gebruiken."* Identiteitsbewijs, NIF en telefoon staan als verstrekt.
+- **Accountstatus:** `iDEAL-betalingen` is van "Tijdelijk stopgezet" naar **Actief**
+  gesprongen. Actief zijn nu onder meer Betalingen, Payouts, kaart, **iDEAL** en
+  **Bancontact** — precies de drie die `f74e165` aan Stripe vraagt. Alleen Cartes Bancaires
+  blijft stopgezet; die gebruiken we niet.
+- Geen openstaande taken meer in de accountstatus.
+
+Daarmee is de betaalketen aan de Stripe-kant compleet: actief account, gekoppelde
+Sabadell-rekening, beperkte sleutel, live-webhook en de juiste betaalmethodes.
+
 ### 2026-09-12 · Claude + Robert · Stripe is gekoppeld: beperkte sleutel en live-webhook staan in productie · GECONTROLEERD door Claude
 
 Samen gedaan in Chrome (Claude bestuurde, Robert deed wachtwoord, 2FA en het kopiëren van
