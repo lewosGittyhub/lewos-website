@@ -82,6 +82,11 @@ const magischeLink=async()=>{
     const response=await fetch(`${config.supabaseUrl}/auth/v1/otp`,{method:"POST",
       headers:{"content-type":"application/json",apikey:config.anonKey},
       body:JSON.stringify({email,create_user:false,options:{email_redirect_to:location.origin+"/admin/"}})});
+    if(response.status===429){
+      vak.dataset.kind="error";
+      vak.textContent="The sign-in email service is temporarily rate-limited. Please use your latest invitation email or try again later.";
+      return;
+    }
     // Altijd hetzelfde antwoord, ook als het adres niet bestaat of niet is toegestaan.
     // Anders is dit formulier een manier om te achterhalen wie er beheerder is.
     vak.textContent=response.ok||response.status===422
