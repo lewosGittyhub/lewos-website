@@ -11,6 +11,52 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude · Testomgeving opgezet voor een volledige betaaltest · TE CONTROLEREN door Codex
+
+Robert: *"ga door met alles controleren en testen, zet het ook in de MD dan kan codex het
+controleren … de site moet vanaf nu 100% werken; de opmaak is niet het probleem als de
+knoppen en links maar werken"*.
+
+**Wat er is gebeurd (alles buiten productie):**
+- `verkoop-open` is **gepusht** naar `origin` (op Roberts woord). `main` blijft lokaal, nu
+  52 commits vóór `origin/main`.
+- In Netlify: **branchdeploys aangezet voor alleen `verkoop-open`**. Testadres:
+  `https://verkoop-open--lewos.netlify.app`.
+- Twee omgevingsvariabelen **alleen voor de context Branch deploys**:
+  `TAVERN_PAYMENTS_ENABLED=true` en `BOOKING_TERMS_VERSION=2026-09-11`.
+  **Production is niet aangeraakt**: daar is `TAVERN_PAYMENTS_ENABLED` nog leeg en
+  `BOOKING_TERMS_VERSION` bestaat niet. De verkoop op `lewos.co` staat dus nog dicht.
+- **Projectzichtbaarheid tijdelijk op Public voor previews** (stond op Private), anders kan
+  Stripe de webhook van de testsite niet bereiken. **Dit moet na de test terug naar
+  Private** — staat als taak hieronder.
+- Twee lege commits op de branch (`97c4160`, `680c349`) om de branchdeploy te starten en
+  daarna opnieuw te bouwen met de nieuwe variabelen. Mogen bij de merge verdwijnen.
+
+**Wat de testsite doet, gecontroleerd met GET:** `/api/first-access` geeft
+`publicBookingOpen:true`, `/tavern/book/` geeft 200 (op productie nog 404), de
+weekendgegevens komen uit de preview-database (6 van 6 plaatsen vrij).
+
+**De testboeking staat klaar:** weekend 01 gekozen, 2 stoelen vastgehouden (zichtbare
+afteller van 60 minuten), formulier ingevuld met twee testgasten op
+`lewos.co+test1@gmail.com` en `+test2@`. De laatste klik (versturen) doet Robert zelf; de
+beveiliging van Claude Code houdt formulierverzending met persoonsgegevens tegen.
+
+**Wat deze test moet aantonen:** stoelen vasthouden → betaalverzoeken per e-mail →
+Stripe-betaalpagina (sandbox) → betaling met testkaart → webhook bevestigt → bevestigingsmail
+met de twee PDF's.
+
+**Aandachtspunt voor Codex:** de branchcontext gebruikt een eigen `STRIPE_SECRET_KEY` en
+`STRIPE_WEBHOOK_SECRET` (andere waarden dan productie, eindigen op `NrbM`). Of dat
+sandbox-sleutels zijn is **niet bevestigd**. Daarom: vóór er met een testkaart betaald
+wordt, controleren dat de Stripe-betaalpagina de oranje TESTMODUS-balk toont. Toont hij die
+niet, dan hangt de testsite aan het echte account en moet de test meteen stoppen.
+
+**Taken die hierna terug moeten:**
+1. Projectzichtbaarheid previews terug op **Private**.
+2. `TAVERN_PAYMENTS_ENABLED` en `BOOKING_TERMS_VERSION` in de branchcontext weer weghalen of
+   op `false` zetten zodra de test klaar is.
+3. Branchdeploys weer uitzetten (terug naar "Deploy only the production branch").
+
 ### 2026-09-12 · Claude + Robert · iDEAL vrijgegeven: identiteitscontrole afgerond · GECONTROLEERD door Claude
 
 Robert heeft in Stripe de identiteitsverificatie met foto-ID doorlopen en het formulier
