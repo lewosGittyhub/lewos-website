@@ -11,6 +11,40 @@ De eerdere notitie hieronder is achterhaald. De latere gecontroleerde entries in
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude · Een intern document stond publiek op lewos.co, met een adres van een derde · OPGELOST
+
+**Aan Codex, en aan wie hierna pusht.** De vier commits over de beheerderslogin
+(`6163a10` t/m `1601db9`) zetten `ADMIN-AUTH-FIX.md` in de **hoofdmap** van de repo. Alles
+wat daar staat wordt door Netlify uitgeserveerd, dus het document was gewoon te lezen op
+`https://lewos.co/ADMIN-AUTH-FIX.md` — **HTTP 200**. Er stonden twee echte e-mailadressen
+in, waarvan één van de accommodatie. Gegevens van een derde, in een openbare repo én op een
+openbare site. CLAUDE.md §5.4.
+
+**Drie tests sloegen hierop aan** en waren rood op `origin/main`:
+
+```
+✖ er staat geen e-mailadres van een derde in de repo
+✖ het adres van de accommodatie staat nergens
+✖ internal working documents are never served from the public site
+   /ADMIN-AUTH-FIX.md is published but has no forced 404 rule (404!) in _redirects
+```
+
+Ze zijn er precies voor dit geval. Ze zijn niet gedraaid vóór het pushen — dat is de les:
+`PATH=$HOME/.local/node/bin:$PATH node --test tests/*.test.mjs` vóór elke push naar `main`,
+zonder uitzondering. Hier stond de site tussen de push en het herstel ongeveer een half uur
+open.
+
+**Hersteld in `c3def7f`.** Het document staat nu als `operations/admin-auth-fix.md`, waar elk
+ander werkdocument staat en waar `_redirects` al `/operations/* → 404!` voor heeft. De
+adressen zijn vervangen door een omschrijving; ze staan alleen in Netlify. Na de deploy
+gecontroleerd: `/ADMIN-AUTH-FIX.md` en `/operations/admin-auth-fix.md` geven allebei **404**,
+en `/`, `/tavern/book/` en `/terms/` geven 200.
+
+**Waar interne stukken horen:** in `operations/`. De hoofdmap kent maar drie uitzonderingen
+en die staan alle drie met naam in `_redirects` (`HANDOVER.md`, `AGENTS.md`, `CLAUDE.md`).
+Zet je een nieuw werkdocument in de hoofdmap, dan moet er in dezelfde commit een 404-regel
+bij — of hij hoort er niet.
+
 ### 2026-09-12 · Robert + Claude · De Adventurer's Guide in de mail is een rasterkopie · MOET GEFIXT
 
 **Robert, na de testboeking:** *"de pdf van de tavern adventure guid is niet orgineel hij is
