@@ -26,7 +26,7 @@
 import {authenticate,authErrorResponse} from "./_admin-auth.mjs";
 import {sendEmail} from "./_email.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const ID=/^[0-9a-z-]{6,64}$/i;
@@ -91,7 +91,7 @@ export const handler=async event=>{
       if(klaar?.status!=="ready")return json(503,{error:"admin_unavailable"});
 
       // Dezelfde link als in het eerste betaalverzoek, uit hetzelfde kenmerk opgebouwd.
-      const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+      const basis=siteOrigin();
       const betaalUrl=`${basis}/tavern/pay/?ref=${encodeURIComponent(klaar.paymentReference)}`;
       const mail=buildPaymentRequestEmail({participant:klaar.participant,booking:klaar.booking,
         deadline:klaar.deadline,paymentUrl:betaalUrl,reminder:true});

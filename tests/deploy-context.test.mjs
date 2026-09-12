@@ -146,3 +146,42 @@ test("de poort staat vóór het werk, niet erna",async()=>{
     if(rpc>0)assert.ok(poort<rpc,`${naam}: de poort staat ná de eerste database-aanroep`);
   }
 });
+
+// 12 september 2026: op de branchdeploy wees de betaallink in de mail naar lewos.co. Netlify
+// zet `URL` namelijk ook op een preview op het productieadres. De gast kreeg daardoor een
+// link naar een boeking die op productie niet bestaat ("we do not recognise this payment
+// link"). Buiten productie hoort DEPLOY_PRIME_URL te winnen; op productie juist niet.
+test("buiten productie wijzen links naar de deploy zelf, op productie naar lewos.co",async()=>{
+  const {siteOrigin}=await import("../netlify/functions/_deploy-context.mjs");
+  const eerder={u:process.env.URL,d:process.env.DEPLOY_PRIME_URL,e:process.env.LEWOS_ENVIRONMENT};
+  process.env.URL="https://lewos.co";
+  process.env.DEPLOY_PRIME_URL="https://verkoop-open--lewos.netlify.app";
+
+  process.env.LEWOS_ENVIRONMENT="production";
+  assert.equal(siteOrigin(),"https://lewos.co","productie moet het eigen domein houden");
+
+  delete process.env.LEWOS_ENVIRONMENT;
+  assert.equal(siteOrigin(),"https://verkoop-open--lewos.netlify.app",
+    "een preview moet naar zichzelf wijzen, niet naar productie");
+
+  delete process.env.DEPLOY_PRIME_URL;
+  assert.equal(siteOrigin(),"https://lewos.co","zonder deploy-adres blijft URL over");
+
+  process.env.URL=""; 
+  assert.equal(siteOrigin(),"https://lewos.co","zonder enige instelling blijft het domein staan");
+
+  for(const [k,v] of [["URL",eerder.u],["DEPLOY_PRIME_URL",eerder.d],["LEWOS_ENVIRONMENT",eerder.e]])
+    if(v===undefined)delete process.env[k]; else process.env[k]=v;
+});
+
+// Elke plek die een gastlink of terugkeerpagina bouwt, hoort door siteOrigin te gaan.
+test("alle plekken die een link naar onszelf bouwen gebruiken siteOrigin",async()=>{
+  for(const pad of ["netlify/functions/seat-hold.mjs","netlify/functions/pay.mjs",
+    "netlify/functions/create-checkout-session.mjs","netlify/functions/stripe-webhook.mjs",
+    "netlify/functions/admin-actions.mjs"]){
+    const bron=await lees(pad);
+    assert.match(bron,/siteOrigin\(\)/,`${pad} bouwt zijn eigen adres in plaats van siteOrigin()`);
+    assert.doesNotMatch(bron,/process\.env\.URL\|\|"https:\/\/lewos\.co"/,
+      `${pad} gebruikt process.env.URL nog rechtstreeks`);
+  }
+});

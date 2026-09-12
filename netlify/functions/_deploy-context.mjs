@@ -32,6 +32,18 @@ export const previewIsConfigured=()=>String(process.env.LEWOS_PREVIEW_SAFE||"").
 export const environmentIsSafe=()=>isProduction()||previewIsConfigured();
 
 // Welke verklaring er ligt, zonder waarden. Alleen voor de foutmelding en de logregel.
+
+// Het adres waar de site zelf op draait. Op productie is dat URL (lewos.co). Op een
+// branchdeploy of preview zet Netlify URL óók op lewos.co, en dan wezen betaallinks en
+// bevestigingspaginas naar productie: een gast op de testomgeving kreeg een link naar een
+// boeking die daar niet bestaat. Buiten productie gaat DEPLOY_PRIME_URL dus voor.
+export const siteOrigin=()=>{
+  const productie=String(process.env.URL||"").trim();
+  const deploy=String(process.env.DEPLOY_PRIME_URL||"").trim();
+  const gekozen=isProduction()?productie:(deploy||productie);
+  return (gekozen||"https://lewos.co").replace(/\/+$/,"");
+};
+
 export const environmentLabel=()=>
   isProduction()?"production":previewIsConfigured()?"preview-safe":"niet verklaard";
 

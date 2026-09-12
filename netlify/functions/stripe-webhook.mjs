@@ -4,7 +4,7 @@ import {bookingDocuments} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
-import {environmentIsSafe,isProduction,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,isProduction,unsafeEnvironmentBody,siteOrigin} from "./_deploy-context.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -42,7 +42,7 @@ const loadAttachment=async(origin,documentPath,filename)=>{
 };
 const sendBookingEmail=async booking=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
-  const origin=process.env.URL||"https://lewos.co";
+  const origin=siteOrigin();
   const documents=bookingDocuments();
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
@@ -91,7 +91,7 @@ const sendBookingEmail=async booking=>{
 // bewijs. De gast krijgt de documenten zelf als bijlage en een zin die hij begrijpt.
 const sendParticipantEmail=async deelnemer=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
-  const origin=process.env.URL||"https://lewos.co";
+  const origin=siteOrigin();
   const documents=bookingDocuments();
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}

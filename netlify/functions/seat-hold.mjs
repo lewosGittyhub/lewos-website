@@ -28,7 +28,7 @@ import {sendEmail} from "./_email.mjs";
 import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const header=(event,naam)=>Object.entries(event.headers||{}).find(([k])=>k.toLowerCase()===naam.toLowerCase())?.[1]||"";
@@ -180,7 +180,7 @@ export const handler=async event=>{
         // deelnemer, niet naar een Stripe-sessie. Zo hoeft er bij het boeken geen betaling
         // te worden aangemaakt, blijft de link stabiel bij een herhaalde poging, en werkt
         // hij zodra de betaalpoort opengaat.
-        const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+        const basis=siteOrigin();
         const verzonden=[];
         for(const d of voorbereid.participants||[]){
           const betaalUrl=`${basis}/tavern/pay/?ref=${encodeURIComponent(d.paymentReference)}`;

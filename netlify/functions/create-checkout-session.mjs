@@ -3,7 +3,7 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const tokenHash=token=>createHash("sha256").update(token).digest("hex");
@@ -35,7 +35,7 @@ const priceFromHold=hold=>{
 };
 
 const createStripeSession=async({reference,name,email,seats,weekendLabel,unitAmount})=>{
-  const origin=process.env.URL||"https://lewos.co";
+  const origin=siteOrigin();
   const form=new URLSearchParams();
   form.set("mode","payment");
   form.set("payment_method_types[0]","card");
