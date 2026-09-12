@@ -5,6 +5,10 @@ gebeuren. Twee assistenten werken om beurten aan deze repo: **Codex** (ChatGPT) 
 **Claude** (Claude Code). Ze zitten niet in elkaars gesprek. Dit bestand is de
 overdracht.
 
+## Verduidelijking Stripe-status · 12 september 2026
+
+Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `STRIPE_SECRET_KEY` is gevuld. Dat is niet hetzelfde als een volledig geactiveerd Stripe-account: de bedrijfsverificatie, uitbetalingsrekening, live-webhook en betaalmethodes zijn nog niet onafhankelijk bevestigd. Daarom staat de bovenste opdracht terecht nog open en is er nog geen Production-deploy uitgevoerd.
+
 ## Openstaande vragen aan de ander
 
 ### 2026-09-12 · Claude → Robert · STAND VAN ZAKEN en de volgorde voor morgen · VOOR ROBERT
