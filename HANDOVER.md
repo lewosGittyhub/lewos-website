@@ -11,6 +11,50 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude · Betaalketen volledig bewezen op de testsite — en één instelling die live alles zou blokkeren · TE CONTROLEREN door Codex
+
+**De hele keten is doorlopen op `verkoop-open--lewos.netlify.app`, met sandbox-Stripe:**
+boeken → stoel 60 minuten vast → gegevens en drie vinkjes → **betaalverzoek per e-mail**
+(link wijst nu naar de testsite zelf, niet meer naar productie) → betaalpagina → **Stripe
+Checkout in sandbox** met kaart, iDEAL en Bancontact → betaling met testkaart geslaagd →
+**webhook bevestigt de stoel** → **bevestigingsmail binnen met drie bijlagen**:
+`Lewos-Tavern-booking-terms.pdf`, `Lewos-Tavern-travel-information.pdf` en
+`Lewos-Tavern-adventurers-guide.pdf`. De inhoud van de reisinformatie klopt (organisator,
+registratiestatus, AXA).
+
+**Blokkade voor livegang, gevonden in het functielog:**
+`Accommodation recipient not configured: set FONTECHA_ACCOMMODATION_EMAIL`. Die variabele
+bestaat **in geen enkele context** in Netlify. Gevolg in productie: de gast is bevestigd en
+heeft zijn mail, maar de webhook geeft daarna **500** (`accommodation_recipient_not_configured`),
+dus **de accommodatie krijgt geen bericht, de agenda-afspraak wordt niet gezet, en Stripe
+blijft het drie dagen opnieuw proberen**. Dit moet vóór de opening gezet worden; het adres
+heeft alleen Robert. `LEWOS_ACCOMMODATION_EMAILS` (voor de agenda) is een andere variabele en
+staat er wel.
+
+**Niet te testen op de branch:** de agenda-afspraak. `LEWOS_CALENDAR_ID` bestaat maar in één
+context (productie), dus op de testsite slaat de code de agenda over. Dat is bewust gedrag.
+
+**Drie fouten gevonden en gerepareerd** (`fc191c1`, `e9ef1bc`+`f49691a`, `7b0b4e2`):
+1. Stille mailstoring bij een ontbrekende instelling — nu logt de code welke naam ontbreekt.
+2. Gastlinks wezen op previews naar productie — nu komt het adres uit de host van het
+   verzoek, met een slot op onze eigen domeinen.
+3. Na het verlopen van de betaaltermijn bleef de boekpagina op 00:00 hangen zonder weg
+   terug — nu een uitleg met een knop "Start again".
+
+**Stand van de repo:** `verkoop-open` is samengevoegd in de lokale `main` (`4a329d8`),
+**564 tests groen**. `main` staat 72 commits vóór `origin/main` en is **nog niet gepusht**:
+pushen zet de verkooppagina's live en dat gebeurt pas als de database van productie klaar is.
+
+**Wat er nog moet, in deze volgorde:**
+1. `FONTECHA_ACCOMMODATION_EMAIL` in Netlify (Production) — waarde van Robert.
+2. Productiemigratie `database/group-payment-confirmation.sql` draaien in Supabase, daarna
+   `operations/verificatie-groepsbetaling.sql`: acht regels, allemaal `ok`. Claude kan niet
+   in Supabase; inloggen gaat via GitHub en dat vraagt Roberts wachtwoord.
+3. `main` pushen (dan staat de site live met de boekpagina open).
+4. In Netlify Production: `BOOKING_TERMS_VERSION=2026-09-11` en `TAVERN_PAYMENTS_ENABLED=true`.
+5. Opruimen: previews weer privé, testvariabelen uit de branchcontext, branchdeploys uit, de
+   vier volledige `sk_live`-sleutels laten vervallen.
+
 ### 2026-09-12 · Claude · Betaaltest op de testsite: keten grotendeels bewezen, twee echte fouten gevonden en gerepareerd · TE CONTROLEREN door Codex
 
 **Wat er bewezen is op `https://verkoop-open--lewos.netlify.app` (sandbox-Stripe, geen echt geld):**
@@ -81,7 +125,7 @@ weekendgegevens komen uit de preview-database (6 van 6 plaatsen vrij).
 
 **De testboeking staat klaar:** weekend 01 gekozen, 2 stoelen vastgehouden (zichtbare
 afteller van 60 minuten), formulier ingevuld met twee testgasten op
-`lewos.co+test1@gmail.com` en `+test2@`. De laatste klik (versturen) doet Robert zelf; de
+`lewos.co+test1@… (Roberts eigen inbox)` en `+test2@`. De laatste klik (versturen) doet Robert zelf; de
 beveiliging van Claude Code houdt formulierverzending met persoonsgegevens tegen.
 
 **Wat deze test moet aantonen:** stoelen vasthouden → betaalverzoeken per e-mail →
