@@ -1,6 +1,6 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {stayLines,STAY_STATUS} from "./_stay.mjs";
-import {bookingDocuments} from "./_booking-config.mjs";
+import {bookingDocuments,PUBLISHED_GUIDE_DOCUMENT} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
@@ -40,12 +40,23 @@ const loadAttachment=async(origin,documentPath,filename)=>{
   if(content.length<100||content.length>5_000_000||content.subarray(0,4).toString()!=="%PDF")throw new Error("invalid_booking_document");
   return {filename,content:content.toString("base64")};
 };
+
+// De gids is geen verkoopdocument: ontbreekt hij of is hij stuk, dan gaat de bevestiging
+// gewoon door zonder. Een gast zonder gids is een ongemak; een gast zonder bevestiging na
+// betaling is een incident.
+const laadGids=async origin=>{
+  if(!PUBLISHED_GUIDE_DOCUMENT)return null;
+  try{return await loadAttachment(origin,PUBLISHED_GUIDE_DOCUMENT,"Lewos-Tavern-adventurers-guide.pdf");}
+  catch(error){console.error("Guide attachment error",error);return null;}
+};
+
 const sendBookingEmail=async(booking,origin)=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
   const documents=bookingDocuments();
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Booking document attachment error",error);return null;}
+  const gids=await laadGids(origin); if(gids)attachments=[...attachments,gids];
   // De laatste mail vóór aankomst. Wie zijn allergie pas bij de checkout toevoegde, heeft
   // hem nergens anders bevestigd gezien — de ontvangstbevestiging ging al bij de aanmelding
   // de deur uit. Daarom staat hij hier, in beide formaten en met zijn regeleindes.
@@ -94,6 +105,7 @@ const sendParticipantEmail=async(deelnemer,origin)=>{
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Participant document attachment error",error);return null;}
+  const gids=await laadGids(origin); if(gids)attachments=[...attachments,gids];
   const bedrag=`€${(Number(deelnemer.amountCents)/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const kop="Your seat at the table.";
   const regels=[

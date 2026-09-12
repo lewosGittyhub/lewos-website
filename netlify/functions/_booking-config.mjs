@@ -6,6 +6,11 @@ export const PUBLISHED_TERMS_VERSION="2026-09-11";
 export const PUBLISHED_TERMS_DOCUMENT="/documents/lewos-tavern-booking-terms-2026-09-11.pdf";
 export const PUBLISHED_TRAVEL_DOCUMENT="/documents/lewos-tavern-travel-information-2026-09-11.pdf";
 
+// De Adventurer's Guide. Robert, 12 september 2026: die gaat als derde bijlage mee met de
+// bevestigingsmail, pas ná betaling. Hij hoort niet bij de verkoopdocumenten: de betaalpoort
+// hangt er niet aan, en ontbreekt hij, dan gaat de bevestiging gewoon door.
+export const PUBLISHED_GUIDE_DOCUMENT="/documents/lewos-tavern-adventurers-guide-2026-09-12.pdf";
+
 // The published booking terms promise a 40 minute hold. The database hold and
 // the Stripe session must expire together: a shorter Stripe session would hand
 // a returning guest a dead payment link while the seat is still reserved.

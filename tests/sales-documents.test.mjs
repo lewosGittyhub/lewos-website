@@ -43,3 +43,25 @@ test("de PDF's blijven uit zoekmachines, net als de pagina's",async()=>{
   assert.match(await lees("robots.txt"),/Disallow: \/documents\//);
   assert.match(await lees("_headers"),/\/documents\/\*\s*\n\s*X-Robots-Tag: noindex/);
 });
+
+// Robert, 12 september 2026: de Adventurer's Guide gaat als derde bijlage mee met de
+// bevestigingsmail, pas ná betaling. Hij is géén verkoopdocument: de betaalpoort hangt er
+// niet aan, en ontbreekt hij, dan hoort de bevestiging gewoon door te gaan.
+test("de Adventurer's Guide is een echte PDF en past als bijlage",async()=>{
+  const {PUBLISHED_GUIDE_DOCUMENT}=await import("../netlify/functions/_booking-config.mjs");
+  assert.match(PUBLISHED_GUIDE_DOCUMENT,/^\/documents\/.+\.pdf$/,"de gids hoort in /documents/ te staan");
+  const pad=path.join(root,PUBLISHED_GUIDE_DOCUMENT.replace(/^\//,""));
+  const bytes=await readFile(pad);
+  assert.equal(bytes.subarray(0,4).toString(),"%PDF","de gids is geen PDF");
+  assert.ok(bytes.length<5_000_000,
+    `de gids is ${(bytes.length/1e6).toFixed(1)} MB; loadAttachment weigert alles boven 5 MB`);
+});
+
+test("de bevestigingsmails sturen de gids mee, maar vallen er niet over",async()=>{
+  const bron=await readFile(path.join(root,"netlify/functions/stripe-webhook.mjs"),"utf8");
+  assert.match(bron,/const laadGids=async/,"er is geen aparte laadstap voor de gids");
+  assert.match(bron,/catch\(error\)\{console\.error\("Guide attachment error",error\);return null;\}/,
+    "een kapotte gids mag de bevestiging niet tegenhouden");
+  assert.equal((bron.match(/const gids=await laadGids\(origin\)/g)||[]).length,2,
+    "beide bevestigingsmails horen de gids mee te sturen");
+});
