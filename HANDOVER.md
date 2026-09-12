@@ -11,6 +11,52 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude + Robert · Stripe is gekoppeld: beperkte sleutel en live-webhook staan in productie · GECONTROLEERD door Claude
+
+Samen gedaan in Chrome (Claude bestuurde, Robert deed wachtwoord, 2FA en het kopiëren van
+de twee geheime waarden). Geen enkele geheime waarde staat in dit bestand of in de repo.
+
+**Wat er nu staat:**
+- **Stripe-account `Lewos`, live en actief.** Betalingen en Payouts staan op "Actief";
+  alleen Cartes Bancaires is "Tijdelijk stopgezet" (Frans kaartsysteem, niet nodig).
+- **Uitbetalingsrekening:** Banco De Sabadell, EUR standaard, eindigend op **3846**.
+- **Beperkte API-sleutel** `lewos-netlify-productie` aangemaakt met als enige recht
+  **Checkout Sessions → Schrijven**. Staat in Netlify als `STRIPE_SECRET_KEY`, context
+  Production (eindigt op `3jie`). De andere contexts zijn ongemoeid gelaten.
+- **Live-webhook** `lewos-tavern-productie` → `https://lewos.co/api/stripe-webhook`, actief,
+  precies twee events (`checkout.session.completed`, `checkout.session.expired`), API-versie
+  2026-08-26.dahlia. Het signing secret staat in Netlify als `STRIPE_WEBHOOK_SECRET`,
+  context Production (eindigt op `CFkD`). **Gecontroleerd vóór het opslaan** door van beide
+  kanten een SHA-256-vingerafdruk te vergelijken: identiek (`3153456cf31f`, 38 tekens).
+- **Betaalmethodes:** kaart, Bancontact en Link staan aan, SEPA-incasso en de andere
+  vertraagde methodes staan uit. **iDEAL is ingeschakeld maar nog "Tijdelijk stopgezet"**:
+  Stripe wil eerst een identiteitscontrole van Robert.
+- **Netlify-variabelen nagekeken:** `LEWOS_ENVIRONMENT` = `production` (dus de
+  livemode-bewaking uit `ba2034a` werkt), `TAVERN_PAYMENTS_ENABLED` is **leeg** in
+  Production, `PUBLIC_BOOKING_OPENS_AT` = `2026-09-09T09:00:00Z` (verleden tijd).
+  **`BOOKING_TERMS_VERSION` bestaat nog niet** en moet er bij de opening bij, waarde
+  `2026-09-11`.
+- **Nieuwe productiedeploy gedraaid** (`main@62a4656`, 24 functies), zodat de functies de
+  nieuwe waarden gebruiken.
+
+**Live gecontroleerd na de deploy, alleen met GET:** `/api/first-access` 200 met
+`publicBookingOpen:false` · `/api/checkout` 405 · `/api/stripe-webhook` 405 op GET en
+**400 op een POST zonder geldige handtekening** (de handtekeningcontrole werkt dus) ·
+`/api/hold` 400 · `/tavern/` 200 · `/tavern/book/` 404. De verkoop staat nog dicht.
+
+**Wat er nog moet:**
+1. **Robert:** identiteitscontrole in Stripe afronden, anders blijft iDEAL geblokkeerd. De
+   code vraagt Stripe expliciet om `card`, `ideal` en `bancontact`; zolang iDEAL niet
+   actief is, weigert Stripe de betaalpagina. Alternatief is `ideal` tijdelijk uit de code
+   halen.
+2. **Opruimen in Stripe:** er staan **vier volledige live-sleutels** (`sk_live_…`, één van
+   28 augustus, drie van 12 september). Die mogen alles met het account. Zodra de beperkte
+   sleutel bewezen werkt: laten vervallen. Vervang bij diezelfde ronde ook de zojuist
+   gemaakte beperkte sleutel, want die stond als leesbare tekst op de Stripe-pagina toen
+   Claude de stand controleerde en is daardoor in zijn werkgeheugen terechtgekomen.
+3. **Bij de opening:** `BOOKING_TERMS_VERSION=2026-09-11` toevoegen en
+   `TAVERN_PAYMENTS_ENABLED=true` zetten, na de merge van `verkoop-open`.
+
 ### 2026-09-12 · Claude · Stripe live: account blijkt al actief, webhook aangemaakt, iDEAL wacht op identiteitscontrole · GECONTROLEERD door Claude
 
 Zelf gedaan in het live-dashboard, met Robert ingelogd in de ingebouwde browser.
