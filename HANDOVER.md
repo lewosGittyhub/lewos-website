@@ -11,6 +11,51 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude · Stripe live: account blijkt al actief, webhook aangemaakt, iDEAL wacht op identiteitscontrole · GECONTROLEERD door Claude
+
+Zelf gedaan in het live-dashboard, met Robert ingelogd in de ingebouwde browser.
+
+**Wat al goed stond, tegen de verwachting in:**
+- Het account heet **Lewos**, staat in **live**-modus en heeft een live publieke sleutel.
+- **Accountstatus:** *Betalingen* en *Payouts* staan op **Actief**. Het enige dat op
+  "Tijdelijk stopgezet" stond is **Cartes Bancaires** (Frans kaartsysteem, niet nodig).
+  Geen openstaande taken; e-mailverificatie en "payments activeren" zijn afgerond.
+  De eerdere conclusie "het live-account is nooit geactiveerd" was dus achterhaald: die
+  kwam uit de sandbox-weergave.
+- **Uitbetalingsrekening gekoppeld:** Banco De Sabadell, EUR als standaard, rekening
+  eindigend op **3846** (komt overeen met de rekening die Robert aanwees). BIC BSABESBB.
+
+**Wat ik heb gedaan:**
+- **iDEAL aangezet** (was uitgeschakeld; kaarten en Bancontact stonden al aan). Alleen
+  eenmalige betalingen, geen terugkerende. Stripe vraagt hierna nog **verificatie van
+  persoonlijke identiteit** voordat iDEAL echt werkt; tot die tijd staat iDEAL op
+  "Tijdelijk stopgezet". SEPA-incasso en de andere vertraagde methodes staan uit.
+- **Live-webhook aangemaakt en actief:** naam `lewos-tavern-productie`, URL
+  `https://lewos.co/api/stripe-webhook`, API-versie 2026-08-26.dahlia, precies twee events:
+  `checkout.session.completed` en `checkout.session.expired`. Het signing secret heb ik
+  **niet** onthuld; Robert doet dat zelf.
+- **Beperkte sleutel klaargezet:** naam `lewos-netlify-productie`, enige recht
+  **Checkout Sessions → Schrijven**, al het andere op Geen. Aanmaken, kopiëren en plakken
+  doet Robert; de sleutel wordt maar één keer getoond.
+
+**Let op — dit blokkeert de checkout als het niet klopt.** De code op `verkoop-open` vraagt
+Stripe expliciet om `card`, `ideal` en `bancontact`. Zolang iDEAL op "Tijdelijk stopgezet"
+staat, weigert Stripe de betaalpagina en werkt boeken helemaal niet. Dus óf Robert rondt de
+identiteitscontrole af vóór de opening, óf ik haal `ideal` tijdelijk uit de code. Dat is een
+regel in twee bestanden en een testaanpassing.
+
+**Wat er nog moet, door Robert zelf:**
+1. Identiteitscontrole afronden (Stripe → Verificaties) — nodig voor iDEAL.
+2. De beperkte sleutel aanmaken en de waarde in Netlify zetten als `STRIPE_SECRET_KEY`,
+   context Production.
+3. Het signing secret van de webhook onthullen en in Netlify zetten als
+   `STRIPE_WEBHOOK_SECRET`, context Production.
+4. `LEWOS_ENVIRONMENT` in Production overschrijven met `production`.
+5. Daarna een nieuwe productiedeploy van `origin/main`.
+
+Telefoonverificatie staat nog open in Stripe; die is alleen nodig om betalingen via het
+dashboard zelf te maken, niet voor onze checkout.
+
 ### 2026-09-12 · Robert · Vier besluiten, middag 12 september · BESLUIT
 
 Gevraagd en beantwoord door Robert:
