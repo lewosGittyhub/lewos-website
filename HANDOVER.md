@@ -11,6 +11,49 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude · Betaaltest op de testsite: keten grotendeels bewezen, twee echte fouten gevonden en gerepareerd · TE CONTROLEREN door Codex
+
+**Wat er bewezen is op `https://verkoop-open--lewos.netlify.app` (sandbox-Stripe, geen echt geld):**
+1. Weekend kiezen en stoelen vasthouden: 2 stoelen, zichtbare klok van 60 minuten.
+2. Gegevens invullen met de drie vinkjes (18+, documenten, filmen).
+3. **Twee betaalmails verstuurd**, elk met een eigen link en eigen bedrag. De knop
+   "Pay your share — €2.025,00" wordt in Gmail goed weergegeven; de tekstlink eronder ook.
+4. Betaalpagina per gast met naam, weekend, bedrag, deadline en drie eigen vinkjes.
+5. **Stripe Checkout in sandbox** (`cs_test_…`, badge "Sandbox") met precies **kaart, iDEAL
+   en Bancontact** — de drie uit `f74e165`.
+6. **Betaling met testkaart geslaagd**; Stripe stuurt door naar de bevestigingspagina.
+7. De webhook wees een levering met verkeerde handtekening af (400 `invalid_signature`).
+
+**Nog niet bewezen:** de laatste schakel — webhook bevestigt de stoel, stuurt de
+bevestigingsmail met de twee PDF's, meldt de accommodatie en zet de agenda-afspraak. Reden:
+de sandbox-webhook en de testomgeving gebruiken op dit moment verschillende signing secrets.
+Robert zet die gelijk; daarna wordt de betaling opnieuw bezorgd en is ook dat deel getest.
+
+**Fout 1 — gerepareerd in `fc191c1`.** Op de testomgeving ontbrak `TAVERN_FROM_EMAIL`.
+`sendEmail` gaf dan `null` terug **zonder enig spoor in het log**, waardoor er geen
+betaalverzoek uitging en de oorzaak onvindbaar was. Nu logt het verzendpad welke instelling
+ontbreekt (alleen de naam, nooit de waarde), met een test die dat vastlegt. De variabele is
+inmiddels ook voor branchdeploys gezet.
+
+**Fout 2 — gerepareerd in `e9ef1bc`.** Netlify zet `URL` op een branchdeploy óók op
+`https://lewos.co`. De betaallinks in de mails wezen daardoor naar productie: wie op de
+testsite boekte kreeg een link naar een boeking die op productie niet bestaat ("We do not
+recognise this payment link"). Nieuw: `siteOrigin()` in `_deploy-context.mjs` kiest buiten
+productie `DEPLOY_PRIME_URL`, en alle vijf de plekken die een gastlink of terugkeerpagina
+bouwen gebruiken die (`seat-hold`, `pay`, `create-checkout-session`, `stripe-webhook`,
+`admin-actions`). Twee tests erbij; **562 tests groen**.
+
+**De keten zoals hij nu in de code staat, voor het dossier:**
+gast kiest weekend → stoelen 60 minuten vast → gegevens en vinkjes → per gast een
+betaalverzoek per e-mail (30 minuten) → gast betaalt zijn eigen deel via Stripe →
+webhook bevestigt die ene stoel en mailt die gast een bevestiging **met de voorwaarden-PDF en
+de reisinformatie-PDF** → zodra iedereen betaald heeft: bevestiging aan Robert, bericht aan
+de accommodatie, eventuele allergieën apart, en **één afspraak in de gedeelde agenda**.
+
+**Vraag van Robert, nog open:** de **Adventurer's Guide** zit nergens in deze keten. Hij
+wordt dus niet meegestuurd. Opties: meesturen als derde bijlage bij de bevestigingsmail, of
+als download in het gastenportaal. Robert kiest.
+
 ### 2026-09-12 · Claude · Testomgeving opgezet voor een volledige betaaltest · TE CONTROLEREN door Codex
 
 Robert: *"ga door met alles controleren en testen, zet het ook in de MD dan kan codex het
