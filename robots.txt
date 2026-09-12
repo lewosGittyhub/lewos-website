@@ -8,5 +8,6 @@ Disallow: /.internal/
 Disallow: /terms/
 Disallow: /travel-information/
 Disallow: /standard-information/
+Disallow: /documents/
 
 Sitemap: https://lewos.co/sitemap.xml

@@ -23,7 +23,7 @@
 // keer klikken levert dus één betaling op, niet twee.
 
 import {paymentsAreEnabled} from "./_booking-config.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin,requestOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,
   headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},
@@ -60,6 +60,9 @@ const publiek=r=>({
 const stripeSessie=async({reference,bedragCenten,naam,weekendLabel,basis})=>{
   const form=new URLSearchParams();
   form.set("mode","payment");
+  form.set("payment_method_types[0]","card");
+  form.set("payment_method_types[1]","ideal");
+  form.set("payment_method_types[2]","bancontact");
   form.set("success_url",`${basis}/booking-success/`);
   form.set("cancel_url",`${basis}/booking-cancelled/`);
   form.set("client_reference_id",reference);
@@ -162,7 +165,7 @@ export const handler=async event=>{
     message:"This share has already been paid. Nothing further is due."});
   if(vastgelegdeBevestiging?.status!=="recorded")return json(503,{error:"payment_service_unavailable"});
 
-  const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+  const basis=requestOrigin(event);
   const sessie=await stripeSessie({reference,bedragCenten:gevonden.amountCents,
     naam:gevonden.fullName,weekendLabel:gevonden.weekendLabel,basis});
   if(!sessie?.url)return json(502,{error:"checkout_not_created",

@@ -1,10 +1,10 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {stayLines,STAY_STATUS} from "./_stay.mjs";
-import {bookingDocuments} from "./_booking-config.mjs";
+import {bookingDocuments,PUBLISHED_GUIDE_DOCUMENT} from "./_booking-config.mjs";
 import {escapeHtml,labelledBlock,sendEmail} from "./_email.mjs";
 import {readRecipients} from "./_recipients.mjs";
 import {bookingEvent,calendarConfig,upsertBookingEvent} from "./_calendar.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,isProduction,unsafeEnvironmentBody,siteOrigin,requestOrigin} from "./_deploy-context.mjs";
 
 const response=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const getHeader=(event,name)=>Object.entries(event.headers||{}).find(([key])=>key.toLowerCase()===name.toLowerCase())?.[1]||"";
@@ -40,13 +40,23 @@ const loadAttachment=async(origin,documentPath,filename)=>{
   if(content.length<100||content.length>5_000_000||content.subarray(0,4).toString()!=="%PDF")throw new Error("invalid_booking_document");
   return {filename,content:content.toString("base64")};
 };
-const sendBookingEmail=async booking=>{
+
+// De gids is geen verkoopdocument: ontbreekt hij of is hij stuk, dan gaat de bevestiging
+// gewoon door zonder. Een gast zonder gids is een ongemak; een gast zonder bevestiging na
+// betaling is een incident.
+const laadGids=async origin=>{
+  if(!PUBLISHED_GUIDE_DOCUMENT)return null;
+  try{return await loadAttachment(origin,PUBLISHED_GUIDE_DOCUMENT,"Lewos-Tavern-adventurers-guide.pdf");}
+  catch(error){console.error("Guide attachment error",error);return null;}
+};
+
+const sendBookingEmail=async(booking,origin)=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
-  const origin=process.env.URL||"https://lewos.co";
   const documents=bookingDocuments();
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Booking document attachment error",error);return null;}
+  const gids=await laadGids(origin); if(gids)attachments=[...attachments,gids];
   // De laatste mail vóór aankomst. Wie zijn allergie pas bij de checkout toevoegde, heeft
   // hem nergens anders bevestigd gezien — de ontvangstbevestiging ging al bij de aanmelding
   // de deur uit. Daarom staat hij hier, in beide formaten en met zijn regeleindes.
@@ -89,13 +99,13 @@ const sendBookingEmail=async booking=>{
 // die net €2.025 heeft betaald voor een weekend waar hij naar uitkijkt. De versie wordt nog
 // steeds vastgelegd, in `tavern_booking_participants.terms_version`, want daar hoort het
 // bewijs. De gast krijgt de documenten zelf als bijlage en een zin die hij begrijpt.
-const sendParticipantEmail=async deelnemer=>{
+const sendParticipantEmail=async(deelnemer,origin)=>{
   if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
-  const origin=process.env.URL||"https://lewos.co";
   const documents=bookingDocuments();
   let attachments;
   try{attachments=await Promise.all([loadAttachment(origin,documents.terms,"Lewos-Tavern-booking-terms.pdf"),loadAttachment(origin,documents.travel,"Lewos-Tavern-travel-information.pdf")]);}
   catch(error){console.error("Participant document attachment error",error);return null;}
+  const gids=await laadGids(origin); if(gids)attachments=[...attachments,gids];
   const bedrag=`€${(Number(deelnemer.amountCents)/100).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const kop="Your seat at the table.";
   const regels=[
@@ -302,6 +312,12 @@ export const handler=async event=>{
   if(!validSignature(rawBody,getHeader(event,"stripe-signature"),process.env.STRIPE_WEBHOOK_SECRET))return response(400,{error:"invalid_signature"});
   let stripeEvent;
   try{stripeEvent=JSON.parse(rawBody);}catch{return response(400,{error:"invalid_payload"});}
+  // De bijlagen worden van onze eigen site gehaald. Op een preview is dat de preview zelf.
+  const herkomst=requestOrigin(event);
+  if(isProduction()&&stripeEvent.livemode!==true){
+    console.error("Ignored non-live Stripe event in production");
+    return response(200,{received:true,ignored:true,reason:"test_event_in_production"});
+  }
   const session=stripeEvent.data?.object||{};
   const reference=session.metadata?.payment_reference||session.client_reference_id;
   if(stripeEvent.type==="checkout.session.expired"){
@@ -328,7 +344,7 @@ export const handler=async event=>{
       // Zijn eigen bevestiging, met zijn eigen bedrag. Eén per deelnemer, ook bij een
       // herhaalde webhook: de database houdt bij dat hij weg is.
       if(!deelnemer.confirmationEmailSent){
-        const providerId=await sendParticipantEmail(deelnemer);
+        const providerId=await sendParticipantEmail(deelnemer,herkomst);
         if(!providerId)return response(500,{error:"confirmation_email_pending"});
         const marked=await rpc("mark_participant_confirmation_email_sent",
           {p_payment_reference:reference,p_provider_id:providerId});
@@ -352,7 +368,7 @@ export const handler=async event=>{
       return response(500,{error:"paid_booking_requires_attention"});
     }
     if(!result.confirmationEmailSent){
-      const providerId=await sendBookingEmail(result);
+      const providerId=await sendBookingEmail(result,herkomst);
       if(!providerId)return response(500,{error:"confirmation_email_pending"});
       const marked=await rpc("mark_tavern_confirmation_email_sent",{p_payment_reference:reference,p_provider_id:providerId});
       if(marked.status!=="marked")return response(500,{error:"confirmation_email_mark_failed"});

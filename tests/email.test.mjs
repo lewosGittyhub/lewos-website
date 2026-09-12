@@ -79,8 +79,12 @@ test("dat ene verzendpad gaat door resendPayload",async()=>{
   assert.match(bron,/body:JSON\.stringify\(resendPayload\(/,
     "het verzendpad bouwt zijn payload buiten resendPayload om");
   // Niets versturen is toegestaan; "verstuurd" beweren zonder verzending niet.
-  assert.match(bron,/if\(!process\.env\.RESEND_API_KEY\|\|!process\.env\.TAVERN_FROM_EMAIL\)return null;/,
-    "het verzendpad meldt niet dat er niets is ingesteld");
+  assert.match(bron,/const ontbreekt=\["RESEND_API_KEY","TAVERN_FROM_EMAIL"\]/,
+    "het verzendpad controleert de twee instellingen niet");
+  assert.match(bron,/console\.error\(`Email not sent: missing/,
+    "het verzendpad zwijgt als een instelling ontbreekt, en dan is een stille storing onvindbaar");
+  assert.doesNotMatch(bron,/console\.error\(`Email not sent[^`]*\$\{process\.env/,
+    "het verzendpad zet een instellingswaarde in het log");
 });
 
 // De boekingsflow zelf — betaalbevestiging en herinnering — deelt wél één weg. Dat is de

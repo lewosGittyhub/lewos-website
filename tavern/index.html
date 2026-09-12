@@ -6,17 +6,17 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png" sizes="180x180">
-  <title>The Lewos Tavern | First Access Weekends in Asturias</title>
+  <title>The Lewos Tavern | The Halloween Table in Asturias</title>
   <meta name="description" content="Immersive tabletop roleplaying weekends in Asturias, Spain: featured tables for six guests, plus private experiences for parties of up to twelve.">
   <meta name="theme-color" content="#0F3B35">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="The Lewos Tavern — Be First at the Table">
-  <meta property="og:description" content="Featured Tavern weekends for six guests, plus private and custom experiences for parties of up to twelve. Join the first-access list.">
+  <meta property="og:title" content="The Lewos Tavern — The Halloween Table">
+  <meta property="og:description" content="Featured Tavern weekends for six guests, plus private and custom experiences for parties of up to twelve. The Halloween Table runs from 30 October to 2 November 2026.">
   <meta property="og:url" content="https://lewos.co/tavern/">
-  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-asturias-hero.webp">
-  <meta property="og:image:alt" content="Adventurers travelling through the mountains of Asturias toward The Lewos Tavern">
-  <meta property="og:image:width" content="1983">
-  <meta property="og:image:height" content="793">
+  <meta property="og:image" content="https://lewos.co/tavern/assets/tavern-og-table.jpg">
+  <meta property="og:image:alt" content="A table laid out for tabletop roleplaying at The Lewos Tavern: battle map, miniatures, dice and character sheets">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:locale" content="en">
   <meta property="og:site_name" content="Lewos">
   <meta name="twitter:card" content="summary_large_image">
@@ -467,7 +467,7 @@
       <div class="nav__links">
         <a href="#experience">The experience</a>
         <a href="#details">Details</a>
-        <a class="nav__cta" href="#book">Get first access</a>
+        <a class="nav__cta" href="/tavern/book/">Book your seats</a>
       </div>
     </nav>
   </header>
@@ -490,7 +490,7 @@
             <div><dt>Dates</dt><dd><span class="edition-card__weekend">The Halloween Table</span>30 Oct to 2 Nov<span class="edition-card__weekend">The Autumn Table</span>6 to 9 Nov<small class="edition-card__note">Two separate weekends, booked separately. Choose one, or ask about both.</small></dd></div>
             <div><dt>Location</dt><dd>The misty mountains of Asturias, Spain</dd></div>
             <div><dt>Seats</dt><dd>6 per featured weekend<br><small>Private groups: 4–12 players</small></dd></div>
-            <div><dt>Status</dt><dd data-access-status>First Access now open</dd></div>
+            <div><dt>Status</dt><dd data-access-status>Public booking open</dd></div>
             <div><dt>Price</dt><dd><div class="fx fx--on-dark" data-currency-switch hidden><span class="fx__label" id="fx-label-edition">Approximate price in</span><div class="fx__buttons" role="group" aria-labelledby="fx-label-edition" data-currency-buttons></div></div>€2,025 per person<span class="fx__approx" data-approx="202500"></span><br><small>Total price including taxes. All-in: three nights, every meal, transfers</small><p class="fx__note" data-approx-note hidden>Approximate &mdash; you pay &euro;2,025 in euro.</p></dd></div>
           </dl>
         </aside>
@@ -601,7 +601,7 @@
           <button class="around__nav around__nav--next" type="button" data-next data-glyph="&#8250;" aria-label="Next photograph"></button>
           <div class="around__dots" data-dots role="tablist" aria-label="Choose a photograph"></div>
         </div>
-        <a class="button around__cta" href="#choose-weekend">Choose your weekend →</a>
+        <a class="button around__cta" href="/tavern/book/">Choose your weekend →</a>
       </div>
     </section>
 
@@ -696,7 +696,7 @@
         <div>
           <p class="eyebrow">Your provisions await</p>
           <h2 id="included-title">Bring your character. We take care of the rest.</h2>
-          <a class="button included__cta" href="#choose-weekend">Choose your weekend &rarr;</a>
+          <a class="button included__cta" href="/tavern/book/">Choose your weekend &rarr;</a>
         </div>
         <div>
           <ul class="included__list">
@@ -782,11 +782,11 @@
           <h2 id="book-title">The Tavern is ready.<br>The table is not full yet.</h2>
           <div class="booking__lead">
             <p>Three nights in the Asturian mountains. Around sixteen hours of tabletop roleplaying drawn from the myths of this land. Your own room and every meal.</p>
-            <p>Join First Access to hold your seats. No payment today.</p>
+            <p>Choose your weekend and secure your seats. Your complete party is held together while payment is completed.</p>
             <p><strong>The Autumn Table · 6 November · Six seats</strong><br>The same weekend, one week later.</p>
           </div>
         </div>
-        <form class="signup-form" name="tavern-signup" method="POST" action="/api/first-access" data-first-access-form>
+        <form class="signup-form" name="tavern-signup" method="POST" action="/api/first-access" data-first-access-form hidden>
           <input type="hidden" name="form-name" value="tavern-signup">
           <p class="bot-field" aria-hidden="true"><label for="bot-field">Do not fill this out if you are human</label><input id="bot-field" name="bot-field" type="text" tabindex="-1" autocomplete="off"></p>
           <div class="form-field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" minlength="2" data-limit="name" required></div>
@@ -824,14 +824,15 @@
           <button class="button" type="submit" aria-describedby="booking-terms-note booking-note">Hold my seats →</button>
           <p class="booking__micro" id="booking-note">No payment is due today. If your full party fits, we hold your seats for your chosen weekend. When booking opens, First Access guests get 24 hours to complete payment before the weekend goes public — we email you before that window starts. Seats that are not paid for within those 24 hours are released, and from then on it is first come, first served. Groups stay together.</p>
         </form>
-        <div class="signup-form" data-public-booking-open hidden>
+        <div class="signup-form" data-public-booking-open>
           <p class="eyebrow">Public booking is open</p>
           <h3>Choose your weekend and secure your seats.</h3>
           <p>Your complete party is held together while payment is completed. Six seats per featured weekend. When they are gone, that chapter is full.</p>
-          <!-- "Book" beloven terwijl er niet geboekt kan worden is een belofte die de
-               site niet waarmaakt. De pagina zelf blijft open: prijzen, weekenden en de
-               kalender mogen gelezen worden. -->
-          <a class="button" href="/tavern/book/">See The Halloween Table &mdash; booking opens soon →</a>
+          <!-- Dit blok staat alleen in beeld als de server zegt dat de publieke verkoop open is
+               (first-access.js, showPublicBooking). Dan mag de knop dat ook zeggen. Tot versie
+               2026-09-11 stond hier "booking opens soon", en dat had bij de opening een knop
+               opgeleverd die zichzelf tegensprak. tests/go-live-labels.test.mjs houdt dat vast. -->
+          <a class="button" href="/tavern/book/">Choose your weekend →</a>
           <p class="booking__micro">Planning a private Tavern for 4 to 12 players? <a href="/contact/">Tell Robert what you have in mind.</a></p>
         </div>
         <div class="signup-form" data-first-access-closed hidden>
@@ -855,13 +856,6 @@
             <p>What hasn't happened yet is the first players walking through that door.</p>
             <p>Everything here has been thought about: which chair you sit in, what comes to the table on Saturday night, what's waiting at the end of the story. The Halloween Table is where the Tavern's story begins, and the people who show up still shape what this place turns into.</p>
             <p>You'd be at the first table. There's only one of those.</p>
-          </details>
-          <details>
-            <summary>How does First Access work?</summary>
-            <p>You choose a weekend and we hold your seats. Nothing is paid today.</p>
-            <p>When booking opens, First Access guests get 24 hours to complete payment before the weekend goes public. We email you before that window starts, so you know when it begins.</p>
-            <p>If you do not book within those 24 hours, your seats are released and the weekend opens to everyone — first come, first served.</p>
-            <p>Your whole party is held together, or not at all. We do not split groups.</p>
           </details>
           <details>
             <summary>Do I need to have played before?</summary>

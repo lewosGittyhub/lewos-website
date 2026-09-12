@@ -67,7 +67,14 @@ export const sendEmail=async({to,subject,text,html,idempotencyKey,attachments})=
     console.warn(`Email withheld: deploy context "${deployContext()}" is not marked preview-safe`);
     return null;
   }
-  if(!process.env.RESEND_API_KEY||!process.env.TAVERN_FROM_EMAIL)return null;
+  // 12 september 2026: dit zwijgen kostte een halve testmiddag. Ontbrak op een
+  // branchdeploy alleen TAVERN_FROM_EMAIL, dan ging er geen betaalverzoek uit en stond er
+  // niets in het log. Nu zegt de functie welke instelling ontbreekt; nooit de waarde.
+  const ontbreekt=["RESEND_API_KEY","TAVERN_FROM_EMAIL"].filter(naam=>!process.env[naam]);
+  if(ontbreekt.length){
+    console.error(`Email not sent: missing ${ontbreekt.join(" and ")} in deploy context "${deployContext()}"`);
+    return null;
+  }
   const response=await fetch("https://api.resend.com/emails",{method:"POST",
     headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json",
       ...(idempotencyKey?{"idempotency-key":idempotencyKey}:{})},

@@ -93,17 +93,21 @@ test("payments remain gated on explicit configuration and a reviewed code versio
   const config=await read(path.join(root,"netlify/functions/_booking-config.mjs"));
   assert.match(config,/TAVERN_PAYMENTS_ENABLED/);
   assert.match(config,/PUBLIC_BOOKING_OPENS_AT/);
-  assert.match(config,/PUBLISHED_TERMS_VERSION=""/);
-  assert.match(config,/PUBLISHED_TERMS_DOCUMENT=""/);
-  assert.match(config,/PUBLISHED_TRAVEL_DOCUMENT=""/);
+  // Sinds versie 2026-09-11 gevuld. De poort gaat daar niet van open: dat doen
+  // TAVERN_PAYMENTS_ENABLED en BOOKING_TERMS_VERSION in Netlify.
+  assert.match(config,/PUBLISHED_TERMS_VERSION="\d{4}-\d{2}-\d{2}"/);
+  assert.match(config,/PUBLISHED_TERMS_DOCUMENT="\/documents\/[a-z0-9-]+\.pdf"/);
+  assert.match(config,/PUBLISHED_TRAVEL_DOCUMENT="\/documents\/[a-z0-9-]+\.pdf"/);
   assert.match(config,/BOOKING_TERMS_VERSION/);
 });
 
-test("First Access and paid-booking wording describe the same legal moment",async()=>{
+test("paid-booking wording describes the same legal moment everywhere",async()=>{
   const legal=await read(path.join(root,"legal/index.html"));
   const travel=await read(path.join(root,"travel-information/index.html"));
   const terms=await read(path.join(root,"terms/index.html"));
-  assert.match(legal,/First Access can temporarily set aside the requested seats/);
+  // Sinds de opening bestaat First Access niet meer voor de gast (Robert, 11 september 2026:
+  // "alle first access moet weg"). De juridische kennisgeving noemt het dus ook niet meer.
+  assert.doesNotMatch(legal,/First Access/,"de juridische kennisgeving hoort First Access niet meer te noemen");
   assert.match(legal,/paid booking becomes binding only after successful payment/);
   assert.match(travel,/group booking becomes binding after successful payment/);
   assert.match(terms,/booking becomes binding when payment is successfully accepted/);

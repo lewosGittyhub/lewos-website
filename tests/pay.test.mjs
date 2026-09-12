@@ -123,6 +123,14 @@ test("een kenmerk toont precies één deelnemer",async()=>{
   assert.doesNotMatch(uit.body,/Twee/,"de gegevens van een andere deelnemer lekken mee");
 });
 
+test("deelnemer-checkout beperkt Stripe tot directe EUR-betaalmethodes",async()=>{
+  const uit=await vraag("POST",EEN);
+  assert.equal(uit.statusCode,200);
+  const sent=new URLSearchParams(stripeAanroepen[0].body);
+  assert.deepEqual([0,1,2].map(i=>sent.get(`payment_method_types[${i}]`)),["card","ideal","bancontact"]);
+  assert.equal(sent.get("payment_method_types[3]"),null);
+});
+
 test("het groepstotaal komt er nooit in voor",async()=>{
   const uit=await vraag("GET",EEN);
   assert.doesNotMatch(uit.body,/607500|6075/,"het groepstotaal staat in het antwoord");

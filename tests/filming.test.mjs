@@ -155,12 +155,10 @@ test("internal working documents are never served from the site",async()=>{
   assert.ok(robots.includes("Disallow: /.internal/"),"robots.txt must disallow the internal folder");
 });
 
-test("the filming work leaves the payment gate exactly as it was",async()=>{
-  const config=await read(path.join(root,"netlify/functions/_booking-config.mjs"));
-  // Niets in deze ronde mag een weg naar betalen openen.
-  assert.match(config,/export const PUBLISHED_TERMS_VERSION="";/);
-  assert.match(config,/export const PUBLISHED_TERMS_DOCUMENT="";/);
-  assert.match(config,/export const PUBLISHED_TRAVEL_DOCUMENT="";/);
+test("the filming agreement page leads nowhere near checkout",async()=>{
+  // Tot versie 2026-09-11 stond hier ook dat de drie documentconstanten leeg moesten zijn.
+  // Die zijn nu gevuld; de poort hangt sindsdien aan TAVERN_PAYMENTS_ENABLED en
+  // BOOKING_TERMS_VERSION in Netlify. Wat blijft: de filmovereenkomst leidt nergens naar betalen.
   const agreement=await read(path.join(root,"tavern/filming-agreement/index.html"));
   for(const route of ["/api/checkout","/tavern/book/","/tavern/checkout/"]){
     assert.ok(!agreement.includes(route),`the agreement page may not lead to ${route}`);
@@ -211,10 +209,14 @@ test("no page a guest reads carries a word from our own preparation",async()=>{
   }
 });
 
-test("the sales documents are served, but stay out of search while they are drafts",async()=>{
-  // Robert, 4 september 2026: de drie documenten mogen weer uitgeleverd worden, want de
-  // checkout moet ernaar kunnen verwijzen. Ze zijn nog concept, dus ze blijven uit Google
-  // en uit de sitemap, en ze houden hun eigen concept-aanduiding op de pagina zelf.
+test("the sales documents are served as final documents, and stay out of search",async()=>{
+  // Tot 11 september 2026 droegen de drie documenten een concept-aanduiding. Sinds versie
+  // 2026-09-11 zijn ze definitief: geen "draft" meer op de pagina, wel de versie uit de
+  // config. Uit Google en uit de sitemap blijven ze -- voorwaarden hoeven niet gevonden te
+  // worden, ze moeten gelezen worden door wie boekt.
+  const config=await read(path.join(root,"netlify/functions/_booking-config.mjs"));
+  const versie=(config.match(/PUBLISHED_TERMS_VERSION="([^"]+)"/)||[])[1];
+  assert.ok(versie,"de config hoort een gepubliceerde versie te dragen");
   const redirects=await read(path.join(root,"_redirects"));
   const robots=await read(path.join(root,"robots.txt"));
   const sitemap=await read(path.join(root,"sitemap.xml"));
@@ -222,11 +224,12 @@ test("the sales documents are served, but stay out of search while they are draf
   for(const name of salesDocuments){
     assert.ok(!forced.includes(`/${name}`),`/${name} must no longer be forced to 404: the checkout links to it`);
     assert.ok(!forced.includes(`/${name}/*`),`/${name}/* must no longer be forced to 404`);
-    assert.ok(robots.includes(`Disallow: /${name}/`),`robots.txt must still disallow /${name}/ while it is a draft`);
-    assert.ok(!sitemap.includes(`/${name}`),`/${name} may not appear in the sitemap while it is a draft`);
+    assert.ok(robots.includes(`Disallow: /${name}/`),`robots.txt must disallow /${name}/`);
+    assert.ok(!sitemap.includes(`/${name}`),`/${name} may not appear in the sitemap`);
     const html=await read(path.join(root,name,"index.html"));
-    assert.match(html,/noindex/,`/${name}/ keeps its noindex while it is a draft`);
-    assert.match(html,/[Dd]raft/,`/${name}/ must say on its face that it is a draft`);
+    assert.match(html,/noindex/,`/${name}/ keeps its noindex`);
+    assert.doesNotMatch(visibleText(html),/\bdraft\b|not yet in force/i,`/${name}/ may no longer call itself a draft`);
+    assert.ok(html.includes(`Version ${versie}`),`/${name}/ must show version ${versie}, the one in the config`);
   }
 });
 
@@ -254,8 +257,9 @@ test("de betaalpagina laat de documenten lezen zonder iemand ze te laten aanvaar
   for(const name of salesDocuments){
     assert.ok(html.includes(`href="/${name}/"`),`de betaalpagina moet /${name}/ laten lezen`);
   }
-  assert.match(html,/published as drafts and do not apply yet/,"ook hier hoort te staan dat ze concept zijn");
-  assert.doesNotMatch(html,/I accept the booking terms/,"een concept mag nooit als aanvaard worden voorgelegd");
+  assert.match(html,/apply to your booking/,"de betaalpagina hoort te zeggen dat de documenten gelden");
+  assert.match(html,/I accept the <a href="\/terms\/"/,"de deelnemer aanvaardt de voorwaarden zelf");
+  assert.doesNotMatch(html,/do not apply yet/,"de conceptzin hoort weg te zijn");
   // De drie eigen bevestigingen. Meerderjarigheid en privacy verklaart niemand voor een
   // ander, en dat staat er ook.
   for(const veld of ["eigen-adult","eigen-privacy","eigen-filmen"]){
@@ -264,20 +268,21 @@ test("de betaalpagina laat de documenten lezen zonder iemand ze te laten aanvaar
   assert.match(html,/Nobody else in your party can confirm them for you/);
 });
 
-test("the checkout links to the sales documents without asking anyone to accept them",async()=>{
-  // Zolang de documenten concept zijn, mag een gast wel lezen maar niet aanvaarden. Dat
-  // onderscheid is het hele punt: een vinkje onder een conceptversie bindt niemand.
+test("the booking page lets a guest read the sales documents and accept them",async()=>{
+  // Tot versie 2026-09-11 mocht een gast hier lezen maar niet aanvaarden, omdat een vinkje
+  // onder een concept niemand bindt. Nu de documenten definitief zijn, aanvaardt hij ze met
+  // het vinkje, en die aanvaarding wordt vastgelegd met terms_version.
   const html=await read(path.join(root,"tavern/book/index.html"));
   for(const name of salesDocuments){
     assert.ok(html.includes(`href="/${name}/"`),`the checkout must let a guest read /${name}/ before paying`);
   }
-  assert.match(html,/published as drafts and do not apply yet/,"the checkout must say the documents are drafts");
-  assert.doesNotMatch(html,/I accept the booking terms/,"a draft may never be presented as accepted");
-  assert.match(html,/full booking terms are provided before any payment is requested/,"the checkout must say when the final terms arrive");
-  // De twee openstaande juridische vragen staan als zodanig in het bestand genoteerd, zodat
-  // niemand ze per ongeluk als beantwoord behandelt.
-  assert.match(html,/2026\/1024/,"the open question about Directive (EU) 2026\/1024 must stay recorded");
-  assert.match(html,/registratiecode/,"the open question about the registration code must stay recorded");
+  assert.match(html,/apply to your booking/,"the booking page must say the documents apply");
+  assert.match(html,/I accept the <a href="\/terms\/"/,"the guest accepts the terms with the checkbox");
+  assert.doesNotMatch(html,/full booking terms are provided before any payment is requested/,"that promise belonged to the draft stage");
+  // De twee juridische vragen die hier open stonden zijn beantwoord; het antwoord blijft in
+  // het bestand genoteerd, zodat niemand ze opnieuw als open behandelt.
+  assert.match(html,/2026\/1024[\s\S]*29 maart 2029/,"the answer about Directive (EU) 2026\/1024 must stay recorded");
+  assert.match(html,/registratiecode[\s\S]*23\(m\)/,"the answer about the registration code must stay recorded");
 });
 
 test("the blocked documents are kept in the repository for later",async()=>{

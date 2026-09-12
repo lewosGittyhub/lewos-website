@@ -60,10 +60,16 @@ test("geen enkele datum opent de betaalpoort zolang de documenten leeg zijn",()=
 // dus één lege constante houdt de hele poort dicht. Deze test bewaakt alleen dat
 // ze leeg blijven — het openzetten van de poort hoort een bewuste codewijziging
 // te zijn, niet een omgevingsvariabele in Netlify.
-test("de drie constanten in _booking-config staan nog steeds leeg",async()=>{
+test("de drie constanten in _booking-config dragen één en dezelfde versie",async()=>{
+  // Tot versie 2026-09-11 moesten ze leeg zijn. Nu zijn ze gevuld, en dan is de fout die je
+  // wil vangen dat ze uit de pas lopen: voorwaarden van de ene versie met een reisinformatie
+  // van een andere. Of het echte PDF's zijn bewaakt tests/sales-documents.test.mjs.
   const config=await readFile(new URL("../netlify/functions/_booking-config.mjs",import.meta.url),"utf8");
-  for(const constant of ["PUBLISHED_TERMS_VERSION","PUBLISHED_TERMS_DOCUMENT","PUBLISHED_TRAVEL_DOCUMENT"]){
-    assert.match(config,new RegExp(`export const ${constant}="";`),`${constant} is niet meer leeg`);
+  const versie=(config.match(/export const PUBLISHED_TERMS_VERSION="(\d{4}-\d{2}-\d{2})";/)||[])[1];
+  assert.ok(versie,"PUBLISHED_TERMS_VERSION hoort een datumversie te zijn");
+  for(const constant of ["PUBLISHED_TERMS_DOCUMENT","PUBLISHED_TRAVEL_DOCUMENT"]){
+    const pad=(config.match(new RegExp(`export const ${constant}="([^"]+)";`))||[])[1];
+    assert.ok(pad&&pad.includes(versie),`${constant} hoort versie ${versie} in het pad te dragen`);
   }
 });
 

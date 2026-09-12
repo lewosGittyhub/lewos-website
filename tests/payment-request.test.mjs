@@ -82,6 +82,7 @@ before(async()=>{
   process.env.URL="http://127.0.0.1";
   process.env.TAVERN_PAYMENTS_ENABLED="true";
   process.env.BOOKING_TERMS_VERSION="test-voorwaarden-1";
+  process.env.PUBLIC_BOOKING_OPENS_AT="2026-01-01T00:00:00Z";
   process.env.BOOKING_TERMS_DOCUMENT_URL="http://127.0.0.1/voorwaarden.pdf";
   process.env.TRAVEL_INFORMATION_DOCUMENT_URL="http://127.0.0.1/reisinformatie.pdf";
 });
@@ -226,6 +227,20 @@ test("de melding zegt dat er niets is afgeschreven",async()=>{
   process.env.TAVERN_PAYMENTS_ENABLED=eerder;
   assert.match(message,/not charged/i);
   assert.match(message,/nothing has been confirmed/i);
+});
+
+test("vóór het openingsmoment wordt er niets geboekt, ook als de betaalvariabelen staan",async()=>{
+  // 11 september 2026: seat-hold keek alleen naar de betaalvariabelen, niet naar
+  // PUBLIC_BOOKING_OPENS_AT. Een eigen verzoek kon dan vóór de opening boeken.
+  const eerder=process.env.PUBLIC_BOOKING_OPENS_AT;
+  process.env.PUBLIC_BOOKING_OPENS_AT="2099-01-01T00:00:00Z";
+  rpcAanroepen=[];verstuurd=[];
+  const uit=await boek();
+  process.env.PUBLIC_BOOKING_OPENS_AT=eerder;
+  assert.equal(uit.statusCode,503);
+  assert.equal(JSON.parse(uit.body).error,"booking_not_open");
+  assert.equal(verstuurd.length,0);
+  assert.equal(rpcAanroepen.some(a=>a.url.endsWith("/prepare_seat_hold_payment")),false);
 });
 
 // ── De knop ──────────────────────────────────────────────────────────────────

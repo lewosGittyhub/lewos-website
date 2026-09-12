@@ -6,10 +6,11 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png" sizes="180x180">
+  <link rel="stylesheet" href="/assets/fonts.css">
   <meta name="robots" content="noindex">
   <title>Book your table | The Lewos Tavern</title>
-  <style>
-    :root{--green:#0f3b35;--dark:#092d29;--orange:#ef653b;--cream:#f7f3ec;--beige:#ede6da;--grey:#6b6f72}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font:17px/1.65 Arial,sans-serif}header{padding:24px;color:var(--cream);background:var(--green)}header a{color:inherit;font-weight:700;text-decoration:none}main{width:min(calc(100% - 40px),1040px);margin:0 auto;padding:clamp(56px,8vw,100px) 0}.grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(42px,7vw,90px);align-items:start}.eyebrow{color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}h1{margin:.2em 0;font-size:clamp(3rem,7vw,5.8rem);line-height:1;letter-spacing:-.05em}.lead{font-size:1.08rem}.price{margin-top:28px;padding-top:22px;border-top:1px solid rgba(15,59,53,.2)}form{display:grid;gap:20px;padding:clamp(25px,4vw,42px);border-radius:20px;background:var(--green);color:var(--cream);box-shadow:0 24px 65px rgba(15,59,53,.22)}label{display:block;margin-bottom:7px;font-weight:700}input,select,textarea{width:100%;padding:14px;border:1px solid rgba(247,243,236,.55);border-radius:9px;background:rgba(247,243,236,.12);color:var(--cream);font:inherit}textarea{min-height:96px;resize:vertical;line-height:1.5}textarea[data-limit="dietaryNotes"]{min-height:172px}select option{color:var(--green);background:var(--cream)}input:focus,select:focus,textarea:focus{outline:3px solid #f4a285;outline-offset:2px}[hidden]{display:none!important}.check{display:grid;grid-template-columns:20px 1fr;gap:10px}.check input{width:18px;height:18px;margin-top:5px;accent-color:var(--orange)}.check label{margin:0;font-weight:400}.check a{color:#ff9a78}.notice{padding:16px 18px;border-left:4px solid var(--orange);background:rgba(247,243,236,.1)}button{justify-self:start;padding:16px 25px;border:0;border-radius:10px;background:var(--orange);color:white;font:700 1rem Arial,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.error{padding:14px;border:1px solid #ff9a78;border-radius:8px}small{color:rgba(247,243,236,.74)}.field-hint{display:block;margin-top:6px;font-size:.85rem}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-top:45px}}
+  <style>h1,h2,h3{font-family:Poppins,sans-serif}
+    :root{--green:#0f3b35;--dark:#092d29;--orange:#ef653b;--cream:#f7f3ec;--beige:#ede6da;--grey:#6b6f72}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font:17px/1.65 Inter,sans-serif}header{padding:24px;color:var(--cream);background:var(--green)}header a{color:inherit;font-weight:700;text-decoration:none}main{width:min(calc(100% - 40px),1040px);margin:0 auto;padding:clamp(56px,8vw,100px) 0}.grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(42px,7vw,90px);align-items:start}.eyebrow{color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}h1{margin:.2em 0;font-size:clamp(3rem,7vw,5.8rem);line-height:1;letter-spacing:-.02em}.lead{font-size:1.08rem}.price{margin-top:28px;padding-top:22px;border-top:1px solid rgba(15,59,53,.2)}form{display:grid;gap:20px;padding:clamp(25px,4vw,42px);border-radius:20px;background:var(--green);color:var(--cream);box-shadow:0 24px 65px rgba(15,59,53,.22)}label{display:block;margin-bottom:7px;font-weight:700}input,select,textarea{width:100%;padding:14px;border:1px solid rgba(247,243,236,.55);border-radius:9px;background:rgba(247,243,236,.12);color:var(--cream);font:inherit}textarea{min-height:96px;resize:vertical;line-height:1.5}textarea[data-limit="dietaryNotes"]{min-height:172px}select option{color:var(--green);background:var(--cream)}input:focus,select:focus,textarea:focus{outline:3px solid #f4a285;outline-offset:2px}[hidden]{display:none!important}.check{display:grid;grid-template-columns:20px 1fr;gap:10px}.check input{width:18px;height:18px;margin-top:5px;accent-color:var(--orange)}.check label{margin:0;font-weight:400}.check a{color:#ff9a78}.notice{padding:16px 18px;border-left:4px solid var(--orange);background:rgba(247,243,236,.1)}button{justify-self:start;padding:16px 25px;border:0;border-radius:10px;background:var(--orange);color:white;font:700 1rem Inter,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.error{padding:14px;border:1px solid #ff9a78;border-radius:8px}small{color:rgba(247,243,236,.74)}.field-hint{display:block;margin-top:6px;font-size:.85rem}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-top:45px}}
 
     /* Lengtegrenzen: de teller staat onder het veld, de tekstuele grens gaat naar de
        schermlezer. Zie assets/field-limits.js. */
@@ -24,7 +25,7 @@
     .calendar[data-ready]{display:grid;gap:14px}
     .calendar__months{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
     .calmonth{padding:14px;border:1px solid rgba(247,243,236,.24);border-radius:10px;background:rgba(247,243,236,.07)}
-    .calmonth h4{margin:0 0 10px;font:700 .92rem/1.2 Arial,sans-serif}
+    .calmonth h4{margin:0 0 10px;font:700 .92rem/1.2 Inter,sans-serif}
     .calmonth__dow,.calmonth__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
     .calmonth__dow span{padding-bottom:6px;color:rgba(247,243,236,.6);font-size:.6rem;font-weight:700;letter-spacing:.05em;text-align:center;text-transform:uppercase}
     .calday{aspect-ratio:1;min-width:0;width:auto;display:grid;place-items:center;padding:3px 4px;margin:0;border:1px solid transparent;border-radius:6px;background:none;color:rgba(247,243,236,.45);font:inherit;font-size:.78rem;line-height:1.1;justify-self:auto}
@@ -93,25 +94,21 @@
         <p class="price"><strong>€2,025 per person</strong><span class="fx__approx" data-approx="202500"></span><br>Total price including taxes. Three nights, every meal, non-alcoholic drinks, transfers, the campaign and the professional Game Master. Travel to Asturias is not included.</p>
         <p class="fx__note" data-approx-note hidden>Indicative only &mdash; you are charged &euro;2,025 in euro. European Central Bank rate of <span data-rate-date></span>.</p>
           
-          <!-- JURIDISCHE COPY — CONCEPTVERSIE.
-               De drie documenten dragen nog hun eigen concept-aanduiding en gelden niet.
-               Zolang dat zo is vraagt deze pagina niemand om ze te aanvaarden. Worden ze
-               definitief, dan wordt dit blok in één bewerking vervangen door de bindende
-               formulering; de rest van de verkoopflow hoeft daar niet voor te veranderen.
-               Twee juridische vragen staan open: of Richtlijn (EU) 2026/1024 het
-               genormaliseerde formulier wijzigt, en of de toeristische registratiecode in
-               commerciële uitingen moet worden gevoerd. Beide zijn nog niet beantwoord. -->
-          <p><small>The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> are published as drafts and do not apply yet. The final versions are provided before any payment is requested. A weekend runs with a minimum of four players; if that minimum is not reached, you get every euro back.</small></p>
+          <!-- JURIDISCHE COPY — DEFINITIEF sinds versie 2026-09-11. De drie documenten gelden; de
+               gast aanvaardt ze met het vinkje onderaan, en die aanvaarding wordt vastgelegd met
+               terms_version. Twee juridische vragen die hier open stonden zijn beantwoord. De toeristische
+               registratiecode moet in commerciële uitingen staan (art. 23(m) Ley 7/2001, ingevoegd door
+               Ley 6/2024) en wordt toegevoegd zodra Asturias hem meedeelt. Richtlijn (EU) 2026/1024
+               vervangt het genormaliseerde formulier pas vanaf 29 maart 2029. -->
+          <p><small>The <a href="/terms/">booking terms</a>, the <a href="/travel-information/">pre-contract travel information</a> and the <a href="/standard-information/">standard information form</a> apply to your booking. Please read them before you continue: you accept them below. A weekend runs with a minimum of four players; if that minimum is not reached, you get every euro back.</small></p>
       </section>
       <!-- Zolang de betaalpoort dicht staat kan een bezoeker geen boeking afronden. Dan
            hoort hij dat hier te lezen, en niet pas nadat hij alles heeft ingevuld. Het blok
            wordt zichtbaar gemaakt door booking.js, op gezag van de server. -->
       <div data-booking-closed hidden class="notice">
-        <strong>Booking opens soon.</strong> We are completing the travel-agency registration
-        that Asturias requires before a weekend like this may be sold. Until that is done we
-        cannot take bookings or payments &mdash; nothing on this page will charge you.
-        Want to be told the day it opens? <a href="/contact/">Leave your details</a> and we
-        will write to you.
+        <strong>Booking is closed at the moment.</strong> Nothing on this page will charge
+        you. Want to hear when it opens again? <a href="/contact/">Leave your details</a> and
+        we will write to you.
       </div>
       <form data-public-booking-form>
         <!-- Stap 1. Alleen kijken blokkeert niets; pas deze knop zet stoelen vast. -->
@@ -154,7 +151,7 @@
         <div class="notice" data-filming-notice hidden><strong>Weekend 01 &mdash; The Halloween Table.</strong><br>A professional videographer captures selected parts of this weekend: the game table above all, and also shared activities, meals and the Tavern grounds. The photography, video and accompanying audio may be used to document and promote The Lewos Tavern on Lewos and StoryForgers websites, official organic social-media channels, newsletters, PR and editorial material, and promotional films. There is no filming in bedrooms, bathrooms or changing areas. Paid advertising needs a separate, optional permission. The <a href="/legal/#filming" target="_blank">filming information</a> sets out the whole of it.</div>
         <div class="check" data-filming-check hidden><input id="filming-acknowledged" name="filmingAcknowledged" type="checkbox"><label for="filming-acknowledged">I understand that Weekend 01 is The Lewos Tavern's professionally filmed Halloween Table. Professional photography, video and audio recording will take place during selected parts of the weekend. Each attendee must individually complete the Filming &amp; Media Agreement before attending.<br><small>This is your own confirmation that you have read this. It is not media or privacy permission &mdash; not for you and not for anyone else in your party. Every adult attending gives, or withholds, that permission personally.</small></label></div>
         <div class="check"><input id="adult" name="adultConfirmed" type="checkbox" required><label for="adult">I confirm that every guest included in this booking will be 18 or older when the weekend begins.</label></div>
-        <div class="check"><input id="privacy" name="privacyAccepted" type="checkbox" required><label for="privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I understand that the full booking terms are provided before any payment is requested.</label></div>
+        <div class="check"><input id="privacy" name="privacyAccepted" type="checkbox" required><label for="privacy">I have read the <a href="/privacy/" target="_blank">privacy information</a> and the <a href="/legal/" target="_blank">legal notice</a>. I accept the <a href="/terms/" target="_blank">booking terms</a>, the <a href="/travel-information/" target="_blank">pre-contract travel information</a> and the <a href="/standard-information/" target="_blank">standard information form</a>.</label></div>
         <div data-participants></div>
         <p class="error" data-booking-error hidden></p>
         <button type="submit">Send everyone their payment link &rarr;</button>
@@ -169,6 +166,15 @@
           <span style="font-size:1.5rem;font-weight:700" data-sent-countdown role="timer" aria-live="off">—</span><br>
           <span data-sent-addresses></span><br>
           <small>Please check your spam folder too.</small>
+        </div>
+        <!-- 12 september 2026: loopt de betaaltermijn af, dan bleef de teller op 00:00 staan en
+             kon een gast niets meer. Dit blok zegt wat er gebeurd is en geeft een weg terug. -->
+        <div class="notice" data-sent-expired hidden>
+          <strong>The 30 minutes have passed.</strong><br>
+          Nothing has been charged and the seats have been released. You can choose your weekend again;
+          if a seat was already paid for, keep the confirmation email and <a href="/contact/">get in touch</a>
+          and we will sort it out.<br>
+          <button type="button" data-restart style="margin-top:14px">Start again &rarr;</button>
         </div>
       </form>
     </div>

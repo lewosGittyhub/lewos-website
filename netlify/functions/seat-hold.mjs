@@ -25,10 +25,10 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,stayRequestText,describeStay,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {FILLING_WINDOW_MINUTES,holdState,HOLD_PHASES} from "./_seat-hold.mjs";
 import {sendEmail} from "./_email.mjs";
-import {paymentsAreEnabled} from "./_booking-config.mjs";
+import {publicBookingIsOpen} from "./_booking-config.mjs";
 import {buildPaymentRequestEmail} from "./_payment-request.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin,requestOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const header=(event,naam)=>Object.entries(event.headers||{}).find(([k])=>k.toLowerCase()===naam.toLowerCase())?.[1]||"";
@@ -147,7 +147,10 @@ export const handler=async event=>{
       // `TAVERN_PAYMENTS_ENABLED` uit stond. Stoelen vasthouden mag: dat vervalt vanzelf na
       // zestig minuten en verplicht niemand tot iets. Een boeking afronden en om geld
       // vragen mag niet.
-      if(!paymentsAreEnabled())return json(503,{error:"booking_not_open",
+      // Sinds 11 september 2026 geldt ook hier het openingsmoment (`PUBLIC_BOOKING_OPENS_AT`),
+      // net als in create-checkout-session. Anders kon een eigen verzoek al vóór de opening
+      // boeken zodra alleen de betaalvariabelen stonden.
+      if(!publicBookingIsOpen())return json(503,{error:"booking_not_open",
         message:"Bookings cannot be completed yet. Your seats are not charged and nothing has been confirmed. Leave your details through the contact page and we will let you know the moment booking opens."});
 
       // ── Het eerste betaalverzoek, in drie stappen ────────────────────────
@@ -177,7 +180,7 @@ export const handler=async event=>{
         // deelnemer, niet naar een Stripe-sessie. Zo hoeft er bij het boeken geen betaling
         // te worden aangemaakt, blijft de link stabiel bij een herhaalde poging, en werkt
         // hij zodra de betaalpoort opengaat.
-        const basis=String(process.env.URL||"https://lewos.co").replace(/\/+$/,"");
+        const basis=requestOrigin(event);
         const verzonden=[];
         for(const d of voorbereid.participants||[]){
           const betaalUrl=`${basis}/tavern/pay/?ref=${encodeURIComponent(d.paymentReference)}`;

@@ -207,10 +207,26 @@ const startTikker=()=>{
     stopTikker();
     // Nul op de klok betekent niet vanzelf dat het voorbij is; dat zegt de server.
     await ververs();
+    // Blijft de server bij de betaalfase terwijl de deadline voorbij is, dan is de kous af:
+    // zonder deze stap bleef de gast naar 00:00 kijken zonder enige weg terug.
+    if(hold?.phase==="payment"&&new Date(hold.expiresAt).getTime()<=Date.now())toonVerlopen();
   };
   teken();
   tikker=setInterval(teken,1000);
 };
+
+const toonVerlopen=()=>{
+  stopTikker();
+  const blok=$("[data-sent-expired]");
+  if(!blok)return;
+  verzonden.hidden=true;
+  blok.hidden=false;
+};
+
+$("[data-restart]")?.addEventListener("click",()=>{
+  wisSessie();
+  window.location.reload();
+});
 
 const ververs=async()=>{
   const {ok,body}=await api(`/api/hold?sessionToken=${encodeURIComponent(sessieToken())}`);

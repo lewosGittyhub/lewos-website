@@ -32,6 +32,18 @@ export const previewIsConfigured=()=>String(process.env.LEWOS_PREVIEW_SAFE||"").
 export const environmentIsSafe=()=>isProduction()||previewIsConfigured();
 
 // Welke verklaring er ligt, zonder waarden. Alleen voor de foutmelding en de logregel.
+
+// Het adres waar de site zelf op draait. Op productie is dat URL (lewos.co). Op een
+// branchdeploy of preview zet Netlify URL óók op lewos.co, en dan wezen betaallinks en
+// bevestigingspaginas naar productie: een gast op de testomgeving kreeg een link naar een
+// boeking die daar niet bestaat. Buiten productie gaat DEPLOY_PRIME_URL dus voor.
+export const siteOrigin=()=>{
+  const productie=String(process.env.URL||"").trim();
+  const deploy=String(process.env.DEPLOY_PRIME_URL||"").trim();
+  const gekozen=isProduction()?productie:(deploy||productie);
+  return (gekozen||"https://lewos.co").replace(/\/+$/,"");
+};
+
 export const environmentLabel=()=>
   isProduction()?"production":previewIsConfigured()?"preview-safe":"niet verklaard";
 
@@ -46,3 +58,18 @@ export const unsafeEnvironmentBody=()=>({
     +"Supabase, Resend, Stripe and calendar values and set LEWOS_PREVIEW_SAFE=true. "
     +"Nothing has been charged, sent or stored."
 });
+
+// Netlify geeft DEPLOY_PRIME_URL alleen tijdens de build mee, niet aan de functies zelf. De
+// betrouwbare bron tijdens een verzoek is de host waarop het verzoek binnenkwam. Die is door
+// een aanvaller te vervalsen, dus we vertrouwen alleen ons eigen domein en onze eigen
+// Netlify-adressen; alles anders valt terug op siteOrigin().
+const eigenHost=host=>host==="lewos.co"||host==="www.lewos.co"||host==="lewos.netlify.app"
+  ||/^[a-z0-9-]+--lewos\.netlify\.app$/.test(host)||/^deploy-preview-\d+--lewos\.netlify\.app$/.test(host);
+
+export const requestOrigin=event=>{
+  const kop=event&&event.headers?event.headers:{};
+  const rauw=String(kop["x-forwarded-host"]||kop["host"]||"").split(",")[0].trim().toLowerCase();
+  if(!rauw||!eigenHost(rauw))return siteOrigin();
+  const schema=String(kop["x-forwarded-proto"]||"https").split(",")[0].trim()||"https";
+  return `${schema}://${rauw}`;
+};
