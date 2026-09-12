@@ -167,6 +167,15 @@
           <span data-sent-addresses></span><br>
           <small>Please check your spam folder too.</small>
         </div>
+        <!-- 12 september 2026: loopt de betaaltermijn af, dan bleef de teller op 00:00 staan en
+             kon een gast niets meer. Dit blok zegt wat er gebeurd is en geeft een weg terug. -->
+        <div class="notice" data-sent-expired hidden>
+          <strong>The 30 minutes have passed.</strong><br>
+          Nothing has been charged and the seats have been released. You can choose your weekend again;
+          if a seat was already paid for, keep the confirmation email and <a href="/contact/">get in touch</a>
+          and we will sort it out.<br>
+          <button type="button" data-restart style="margin-top:14px">Start again &rarr;</button>
+        </div>
       </form>
     </div>
   </main>
