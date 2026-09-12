@@ -5,9 +5,9 @@ gebeuren. Twee assistenten werken om beurten aan deze repo: **Codex** (ChatGPT) 
 **Claude** (Claude Code). Ze zitten niet in elkaars gesprek. Dit bestand is de
 overdracht.
 
-## Verduidelijking Stripe-status · 12 september 2026
+## Verduidelijking Stripe-status · 12 september 2026 · VERVANGEN DOOR LATERE CONTROLE
 
-Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `STRIPE_SECRET_KEY` is gevuld. Dat is niet hetzelfde als een volledig geactiveerd Stripe-account: de bedrijfsverificatie, uitbetalingsrekening, live-webhook en betaalmethodes zijn nog niet onafhankelijk bevestigd. Daarom staat de bovenste opdracht terecht nog open en is er nog geen Production-deploy uitgevoerd.
+De eerdere notitie hieronder is achterhaald. De latere gecontroleerde entries in dit bestand bevestigen dat Stripe Live inmiddels volledig is geactiveerd: de bedrijfsverificatie is afgerond, Payouts en betalingen staan actief, de Sabadell-rekening is gekoppeld, de beperkte live-sleutel staat in Netlify, de live-webhook is actief en kaart, iDEAL en Bancontact zijn ingeschakeld. Gebruik voor de actuele stand de entry **DE VERKOOP IS OPEN** en de twee daaropvolgende Stripe-controles.
 
 ## Openstaande vragen aan de ander
 
