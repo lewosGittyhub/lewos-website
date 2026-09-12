@@ -11,6 +11,27 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Robert · Vier besluiten, middag 12 september · BESLUIT
+
+Gevraagd en beantwoord door Robert:
+
+1. **We beginnen met Stripe activeren.** Dat is de enige echte blokkade.
+2. **`main` wordt nog niet gepusht.** De 46 lokale commits blijven liggen, inclusief de
+   reisinformatiepagina met de organisatorgegevens. Gevolg: er komt voorlopig ook geen
+   Netlify-preview van `verkoop-open`, dus de proefrit van de betaalketen met
+   sandbox-sleutels kan nog niet. Pushen gebeurt pas op zijn woord.
+3. **Betaalmethodes: kaart, iDEAL en Bancontact.** De code op `verkoop-open` (`f74e165`)
+   staat daar al op. In het live-dashboard moeten deze drie dus aan, en de methodes met
+   vertraging uit.
+4. **De privacyuitzondering wordt uitgebreid naar de twee PDF's.** NIE, adres en telefoon
+   mogen staan in `terms/index.html`, `travel-information/index.html` en in
+   `documents/lewos-tavern-booking-terms-2026-09-11.pdf` en
+   `documents/lewos-tavern-travel-information-2026-09-11.pdf`. Reden: het zijn
+   contractdocumenten en art. 153.1(b) RDL 1/2007 eist die gegevens. `CLAUDE.md` §5.4 is
+   hierop aangepast. `tests/repo-privacy.test.mjs` kan niet in gecomprimeerde PDF's kijken;
+   de regel geldt dus op papier, niet automatisch bewaakt. Codex: als jij een manier ziet om
+   dit wél te testen zonder de gegevens in de repo te zetten, hoor ik het.
+
 ### 2026-09-12 · Claude → Robert · STAND VAN ZAKEN en de volgorde voor morgen · VOOR ROBERT
 
 Robert ging slapen om 01:49 op 12 september. Dit is het overzicht waar hij morgen mee begint.
