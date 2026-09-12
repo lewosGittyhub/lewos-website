@@ -5,7 +5,13 @@
 - A Tavern booking always includes the fixed Tavern weekend (Friday–Monday).
 - Optional extended stay runs from Monday 15:00 before the weekend until Friday 10:00 after it.
 - The accommodation capacity is capped at 12 guests at the same time.
-- If no suitable accommodation is available, show “Request availability”; do not take payment until confirmed.
+- Extra nights can be selected together with the Tavern weekend. The site checks the shared
+  calendar at submission and confirms them immediately when every selected night is free.
+- Extra nights are not part of the Tavern price and are not charged through Stripe. The guest
+  pays the accommodation separately upon arrival.
+- If the shared calendar cannot be read, or a selected night is occupied, the site does not
+  confirm those extra nights. The weekend booking may continue without them and the guest is
+  told to choose another range or contact Lewos.
 
 ### Noted, but deliberately not built (Robert, 7 September 2026)
 
@@ -13,10 +19,10 @@ The cabin layout (Dobra, Bulnes, Covadonga, Astur), letting guests pick bedrooms
 extra-night rates of 100 EUR per apartment and 130 EUR for an alternative house are recorded
 here as the intended direction. **None of it is implemented, and none of it should be.**
 
-The rule that is built, and that stays: an extra night is `on request` and carries no price
-until the accommodation confirms it. Introducing a per-room inventory or a published
-extra-night rate is a separate decision, and one that touches money — so it does not happen
-as a side effect of a booking change.
+The old `on request` rule remains only for historic/open requests already in the database.
+New bookings use the shared calendar check described above. No per-room inventory is
+invented: the calendar is the availability source, and the accommodation still collects
+the separate arrival payment.
 
 ## Email and calendar direction
 

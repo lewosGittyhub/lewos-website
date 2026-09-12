@@ -109,7 +109,7 @@ erna"* is een normaal antwoord en een getal zou de helft daarvan weggooien.
 Het veld belooft niets. Zichtbaar onder het veld staat, op alle drie de formulieren en
 letterlijk zoals Robert hem heeft vastgelegd:
 
-> Extra nights are available on request only and depend on accommodation availability.
+> Extra nights can be booked together with your stay, subject to accommodation availability. They are not included in the Tavern price and are paid separately to the accommodation upon arrival.
 
 Die zin staat er als `<small class="field-hint">` en niet als placeholder: een placeholder
 verdwijnt zodra iemand begint te typen, precies op het moment dat het voorbehoud telt. Een

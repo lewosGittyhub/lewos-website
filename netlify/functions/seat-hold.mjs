@@ -237,6 +237,27 @@ export const handler=async event=>{
           try{await rpc("set_tavern_stay_request",{p_claim_id:uitkomst.claimId,p_arrival:null,p_departure:null});}
           catch(error){console.error("Stay rollback error",error);}
           stayStored=null;
+        }else if(vrij.known){
+          // Vrije extra nachten worden meteen bevestigd. Ze worden niet toegevoegd aan
+          // Stripe: de accommodatiebetaling blijft een aparte betaling bij aankomst.
+          try{
+            const bevestigd=await rpc("confirm_tavern_stay_request",{p_claim_id:uitkomst.claimId});
+            if(bevestigd?.status==="ok")stayStored={...stayStored,...bevestigd,
+              extraNightsStatus:"confirmed",confirmedArrival:bevestigd.confirmedArrival,
+              confirmedDeparture:bevestigd.confirmedDeparture};
+          }catch(error){
+            console.error("Stay confirmation error",error);
+            try{await rpc("set_tavern_stay_request",{p_claim_id:uitkomst.claimId,p_arrival:null,p_departure:null});}
+            catch(rollbackError){console.error("Stay confirmation rollback error",rollbackError);}
+            stayStored=null;
+          }
+        }else{
+          // Zonder een leesbare agenda kunnen we niet eerlijk zeggen dat een kamer vrij
+          // is. Laat de weekendboeking doorgaan, maar bewaar deze extra nachten niet als
+          // aanvraag die de nieuwe tekst ten onrechte als geboekt zou tonen.
+          try{await rpc("set_tavern_stay_request",{p_claim_id:uitkomst.claimId,p_arrival:null,p_departure:null});}
+          catch(error){console.error("Stay availability rollback error",error);}
+          stayStored=null;
         }
       }
       const stayNote=stayStored?.status==="ok"

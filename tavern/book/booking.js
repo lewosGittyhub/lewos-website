@@ -89,15 +89,16 @@ const onthoudVerblijf=stand=>{
 };
 
 // Stap 2 herhaalt wat er in stap 1 is aangeklikt, want daar is de kalender niet meer te
-// zien. De aangevraagde nachten staan er als aanvraag, niet als onderdeel van de boeking.
+// zien. De extra nachten staan er als onderdeel van de boeking; hun accommodatiebetaling
+// blijft apart van de online Tavern-betaling en gebeurt bij aankomst.
 const tekenSamenvatting=stand=>{
   if(!verblijfSamenvatting)return;
   if(!stand?.valid){verblijfSamenvatting.hidden=true;return;}
   verblijfSamenvatting.hidden=false;
   $("[data-stay-recap-line]").textContent=staySentence(stand);
   $("[data-stay-recap-note]").textContent=stand.extraNights
-    ?"The weekend itself is held and priced. The extra nights are a request: the accommodation has to confirm them, and they are not included in the amount above."
-    :"Only the weekend itself. You can still ask for extra nights later by email.";
+    ?"Extra nights are booked together with your stay, subject to availability. They are not included in the Tavern price and are paid separately upon arrival."
+    :"Only the weekend itself is included in the Tavern price.";
 };
 
 const kiesWeekend=slug=>{

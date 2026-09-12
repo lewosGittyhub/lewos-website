@@ -185,6 +185,42 @@ begin
     'extraNightsStatus',case when voor+na>0 then 'requested' else 'none' end);
 end $$;
 
+-- De site roept dit alleen aan nadat zij de gedeelde accommodatieagenda heeft gelezen en
+-- alle gevraagde nachten vrij blijken. Daardoor is de gastkeuze meteen bevestigd, zonder
+-- dat de extra accommodatiekosten in de online Tavern-betaling terechtkomen. De aparte
+-- betaling gebeurt rechtstreeks bij aankomst. Oude aanvragen blijven via de beheeractie
+-- hieronder beslisbaar; deze functie is uitsluitend voor nieuwe, gecontroleerd vrije data.
+create or replace function public.confirm_tavern_stay_request(p_claim_id uuid)
+returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare claim public.tavern_seat_claims%rowtype;
+begin
+  select * into claim from public.tavern_seat_claims where id=p_claim_id for update;
+  if not found then return jsonb_build_object('status','not_found'); end if;
+  if claim.extra_nights_status='none' then return jsonb_build_object('status','nothing_requested'); end if;
+  if claim.requested_arrival is null or claim.requested_departure is null
+    then return jsonb_build_object('status','missing_requested_dates'); end if;
+
+  update public.tavern_seat_claims set
+    extra_nights_status='confirmed',
+    arrival_date=requested_arrival,
+    departure_date=requested_departure,
+    extra_nights_decided_at=now(),
+    extra_nights_decided_by='availability-check'
+  where id=p_claim_id;
+
+  insert into public.lewos_admin_actions(actor_email,action,claim_id,reason)
+  values('availability-check','extra_nights_confirmed',p_claim_id,
+    'Confirmed automatically after the shared accommodation calendar reported all requested nights free.');
+
+  return jsonb_build_object('status','ok','claimId',p_claim_id,
+    'extraNightsStatus','confirmed','confirmedArrival',claim.requested_arrival,
+    'confirmedDeparture',claim.requested_departure);
+end $$;
+
+revoke all on function public.confirm_tavern_stay_request(uuid) from public, anon, authenticated;
+grant execute on function public.confirm_tavern_stay_request(uuid) to service_role;
+
 -- Het oordeel van de accommodatie. Alleen een beheerder mag dit zetten, en de beslissing
 -- wordt vastgelegd: over een half jaar wil je kunnen zien wie welke nacht heeft toegezegd.
 create or replace function public.admin_decide_extra_nights(

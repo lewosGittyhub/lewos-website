@@ -7,23 +7,33 @@ zijn aankomst en vertrek aan in dezelfde kalender waarin hij zijn weekend kiest.
 
 ---
 
-## De regel waar alles aan hangt
+## De regel waar alles aan hangt — bijgewerkt na Roberts besluit
 
-**Het weekend is geboekt. De extra nachten zijn aangevraagd.**
+**Het weekend en vrije extra nachten worden samen geboekt.**
 
-Wij hebben geen beschikbaarheidsagenda van de accommodatie. Een aangeklikte nacht is dus
-een vraag, geen reservering — en tot Fontecha hem bevestigt telt hij nergens mee als
-verblijf: niet in de prijs, niet in Google Agenda, niet in de bevestiging aan de gast, niet
-in het balkje in de maandkalender van de beheeromgeving.
+De kalender controleert de gedeelde accommodatieagenda op het moment dat de gast de
+boekingsstap verstuurt. Als alle aangeklikte extra nachten vrij zijn, worden ze meteen als
+bevestigd verblijf opgeslagen en loopt de agenda-afspraak over de volledige periode.
+
+De extra nachten zitten bewust niet in de Tavern-prijs en niet in de online Stripe-betaling.
+De gast betaalt de accommodatiekosten afzonderlijk bij aankomst. De website moet dit op
+elk moment duidelijk zeggen: *"Extra nights can be booked together with your stay, subject
+to accommodation availability. They are not included in the Tavern price and are paid
+separately to the accommodation upon arrival."*
+
+Kan de gedeelde agenda niet worden gelezen, dan bevestigt de site geen extra nachten. De
+boeking kan voor het weekend zelf doorgaan; de gekozen extra nachten worden niet stilletjes
+als aanvraag of als beschikbaarheid opgeslagen. Bij een conflict worden ze eveneens niet
+toegevoegd en meldt de flow dat de gast andere nachten moet kiezen.
 
 Daarom staan `requested` en `confirmed` als twee aparte dingen naast elkaar in de database,
 en niet als één veld dat van betekenis verandert.
 
 | Kolom | Wat het is |
 | --- | --- |
-| `requested_arrival` / `requested_departure` | wat de gast heeft aangeklikt |
-| `extra_nights_status` | `none` · `requested` · `confirmed` · `declined` |
-| `arrival_date` / `departure_date` | wat de accommodatie heeft toegezegd. **Leeg = het weekend zelf.** |
+| `requested_arrival` / `requested_departure` | tussenstap: wat de gast heeft aangeklikt vóór de beschikbaarheidscontrole |
+| `extra_nights_status` | `none` · `requested` · `confirmed` · `declined`; nieuwe vrije keuzes gaan direct naar `confirmed` |
+| `arrival_date` / `departure_date` | het bevestigde verblijf, inclusief direct geboekte extra nachten. **Leeg = het weekend zelf.** |
 | `extra_nights_decided_at` / `_by` | wie wanneer heeft beslist |
 | `extra_nights` (bestond al) | vrije tekst van oudere boekingen; wordt niet gewist en niet meer ingetypt |
 
@@ -59,7 +69,7 @@ mail waarin er twee staan, is erger dan geen kalender.
    vertrek staan op de weekenddatums.
 2. **Klik op een dag ervóór** → dat wordt de aankomstdag. **Erná** → de vertrekdag. Het
    bereik ertussen kleurt in.
-3. **Klik nog eens op diezelfde dag**, of op *Only the weekend* → de aanvraag gaat weg.
+3. **Klik nog eens op diezelfde dag**, of op *Only the weekend* → de extra nachten gaan weg.
 
 De weekendnachten van het gekozen weekend zijn niet uit te zetten. Dat is het product.
 
@@ -72,13 +82,11 @@ moesten "dit is een aanvraag" zeggen, maar stonden ook op alles wat niemand had 
 **Wat je aanwijst wordt alvast getoond.** Ga je over een dag vóór het weekend, dan kleurt
 het hele bereik tot daar in vóórdat je klikt.
 
-**De nachten die je aanvraagt kleuren mee in hetzelfde oranje als het weekend**, zodat het
-verblijf als één reeks leest — Robert, 5 september 2026. **Een tint lichter**, want ze zijn
-aangevraagd en niet geboekt; dat verschil mag de kalender niet wegpoetsen. Verder staat het
-in woorden: *Extra night — on request, not confirmed* in de legenda, *on request, subject to
-availability* in het voorleeslabel van elk vakje, en onder de kalender:
+**De extra nachten kleuren mee in hetzelfde oranje als het weekend**, zodat het verblijf als
+één reeks leest. In de legenda staat dat ze bij het verblijf horen en bij aankomst apart
+worden betaald. Onder de kalender staat de beschikbaarheids- en betaalmededeling nogmaals:
 
-> Extra nights are available on request only and depend on accommodation availability.
+> Extra nights can be booked together with your stay, subject to accommodation availability. They are not included in the Tavern price and are paid separately to the accommodation upon arrival.
 
 Die zin is letterlijk zoals Robert hem heeft vastgelegd en staat zichtbaar op de pagina,
 niet in een placeholder — een placeholder verdwijnt zodra iemand begint te typen, precies
@@ -115,13 +123,20 @@ De maandnavigatie bladert onbeperkt vooruit en niet verder terug dan de huidige 
 
 ## Wat er waar terechtkomt
 
-**Google Agenda.** De afspraak loopt van het *bevestigde* verblijf. Staat er een aanvraag
-open, dan blijft de afspraak op de weekenddatums en staat de aanvraag alleen als regel in
-de omschrijving: *"NOT part of this entry — extra nights still to be confirmed: …"* Een
-agenda die een nacht toont die niemand heeft toegezegd, is een kamer die op de verkeerde
-dag klaarstaat.
+**Google Agenda.** De afspraak loopt van het volledige bevestigde verblijf zodra de
+beschikbaarheidscontrole alle gekozen nachten vrij meldt. Een onleesbare agenda of conflict
+voegt geen extra nachten toe; zo wordt nooit een kamer als geboekt gepresenteerd zonder
+controle.
 
-**De mail aan de accommodatie.** Twee blokken, en dat is het hele punt:
+**De mail aan de accommodatie.** Bij een direct bevestigde keuze staat één blok met de
+volledige aankomst- en vertrekdatum. Er staat geen verzoek om nog te beslissen. De mail
+maakt duidelijk dat de accommodatiebetaling afzonderlijk bij aankomst gebeurt; de Tavern-
+prijs en de online betaling blijven daarvan gescheiden.
+
+Oude boekingen met `requested` houden hun tweede blok en blijven via de beheeromgeving
+beslisbaar. Dat pad is alleen voor historische/open aanvragen, niet voor nieuwe boekingen.
+
+De oude tweedeling was:
 
 - *Confirmed booking / Reserva confirmada* — naam, aantal gasten, weekend, aankomst,
   vertrek, kenmerk.

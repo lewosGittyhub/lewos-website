@@ -6,17 +6,17 @@
 //
 // De kern is één onderscheid, en dat loopt door alles heen:
 //
-//   **Het weekend is geboekt. De extra nachten zijn aangevraagd.**
+//   **Het weekend en vrije extra nachten worden samen geboekt.**
 //
 // Wij hebben geen beschikbaarheidsagenda van de accommodatie. Een aangeklikte nacht is
-// dus een vraag, geen reservering — en tot Fontecha hem bevestigt telt hij nergens mee
-// als bevestigd verblijf: niet in de prijs, niet in Google Agenda, niet in de bevestiging
-// aan de gast. Daarom staan `requested` en `confirmed` hieronder als twee aparte dingen
-// naast elkaar en niet als één veld dat van betekenis verandert.
+// De site controleert de gedeelde accommodatieagenda voordat de boeking wordt afgerond.
+// Zijn de extra nachten vrij, dan worden ze meteen bevestigd en in de agenda opgenomen.
+// Ze blijven wel een aparte accommodatiebetaling die de gast bij aankomst voldoet; ze
+// worden niet aan de Tavern-prijs of online Stripe-betaling toegevoegd.
 
 export const STAY_STATUS={
   none:"none",           // alleen het weekend, niets aangevraagd
-  requested:"requested", // gast heeft extra nachten aangeklikt, accommodatie moet nog kijken
+  requested:"requested", // oudere/open aanvraag die nog door de accommodatie moet worden beslist
   confirmed:"confirmed", // accommodatie heeft ze bevestigd
   declined:"declined"    // accommodatie kan ze niet leveren
 };
@@ -170,8 +170,8 @@ export const shortDate=(waarde,locale=LANG)=>{
 
 const nachten=n=>`${n} night${n===1?"":"s"}`;
 
-// De zin die de gast onder de kalender leest. Hij noemt de aangevraagde nachten altijd
-// als aanvraag; er staat nergens dat ze vrij zijn.
+// De zin die de gast onder de kalender leest. Extra nachten zijn onderdeel van de
+// boekingskeuze, maar hun accommodatiebetaling staat los van de Tavern-prijs.
 export const staySentence=stay=>{
   if(!stay?.valid)return "";
   const kern=`Arrival ${longDate(stay.arrival)} · Departure ${longDate(stay.departure)}`;
@@ -179,7 +179,7 @@ export const staySentence=stay=>{
   const delen=[];
   if(stay.nightsBefore)delen.push(`${nachten(stay.nightsBefore)} before`);
   if(stay.nightsAfter)delen.push(`${nachten(stay.nightsAfter)} after`);
-  return `${kern} — ${nachten(stay.weekendNights)} included in the weekend, plus ${delen.join(" and ")} requested.`;
+  return `${kern} — ${nachten(stay.weekendNights)} included in the weekend, plus ${delen.join(" and ")} booked with your stay. Extra nights are paid separately upon arrival.`;
 };
 
 // De tekst die in `extra_nights` terechtkomt en die de accommodatie te lezen krijgt.

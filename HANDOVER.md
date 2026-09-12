@@ -11,6 +11,68 @@ De eerdere notitie hieronder is achterhaald. De latere gecontroleerde entries in
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Codex · Extra nachten direct geboekt, aparte betaling bij aankomst · TE CONTROLEREN
+
+Robert heeft bevestigd dat extra nachten direct samen met het Tavern-weekend mogen worden
+geboekt. De Tavern-prijs en de online Stripe-betaling blijven uitsluitend voor het weekend;
+de accommodatiekosten voor extra nachten worden afzonderlijk bij aankomst betaald.
+
+De wijziging staat op feature-branch `codex-extra-nights-copy` in de werkboom
+`work/lewos-site` en is nog niet naar `main` gepusht.
+
+**Nieuwe flow**
+
+1. De gast kiest weekend, aankomst en vertrek in dezelfde kalender.
+2. De server schrijft de gekozen datums tijdelijk als `requested_arrival` /
+   `requested_departure` en controleert daarna de gedeelde accommodatieagenda.
+3. Alleen wanneer de agenda leesbaar is en geen enkele nacht bezet is, roept de server de
+   nieuwe RPC `confirm_tavern_stay_request` aan. Die zet `extra_nights_status` op
+   `confirmed`, vult `arrival_date` en `departure_date`, en legt
+   `extra_nights_decided_by='availability-check'` vast.
+4. Bij een agenda-conflict worden de extra datums ingetrokken; de gast kan het weekend
+   zonder extra nachten boeken of een andere periode kiezen. Bij een onleesbare agenda
+   worden extra nachten niet als aanvraag of als geboekt bewaard.
+5. De Stripe-flow verandert niet: er wordt geen extra line item en geen extra bedrag aan
+   de online betaling toegevoegd. Zodra de Tavern-boeking betaald is, gebruikt de mail- en
+   agendaflow de bevestigde aankomst- en vertrekdatum. De accommodatie ontvangt geen
+   open beslisvraag voor nieuwe boekingen.
+
+**Gewijzigde bestanden**
+
+- `assets/stay.js`, `assets/weekend-calendar.js` en `tavern/book/booking.js`: publieke tekst
+  en samenvatting zeggen dat extra nachten samen worden geboekt en apart bij aankomst worden
+  betaald.
+- `tavern/index.html` en `tavern/book/index.html`: de zichtbare hint en het kaartje
+  “Staying longer” gebruiken dezelfde bewoording.
+- `netlify/functions/seat-hold.mjs`: na een succesvolle agenda-check wordt de nieuwe
+  bevestigings-RPC aangeroepen; onbekende beschikbaarheid wordt niet als vrije kamer
+  behandeld. `first-access.mjs` blijft bewust de historische aanvraagroute, omdat First
+  Access nog geen definitieve boeking is.
+- `database/stay-dates.sql`: nieuwe service-role RPC `confirm_tavern_stay_request(uuid)`.
+- `operations/verblijf-en-extra-nachten.md` en `operations/accommodation-booking-notes.md`:
+  volledige beleids- en gegevensstroom, inclusief de historische `requested`-route.
+
+**Voor productie vóór push/deploy**
+
+1. Draai `database/stay-dates.sql` in de Supabase-productiedatabase (na de bestaande
+   migraties en in een transactie die eindigt op `rollback` voor de controleomgeving).
+2. Controleer de acht regels uit `operations/verificatie-groepsbetaling.sql` plus een nieuwe
+   RPC-check: een testclaim met vrije nachten gaat van `requested` naar `confirmed`, vult de
+   twee bevestigde datums, en schrijft geen extra Stripe-bedrag.
+3. Voer `node --test tests/*.test.mjs` uit. De volledige suite kan in deze sandbox falen op
+   tests die een lokale luisterpoort openen (`EPERM`); dat is een omgevingbeperking en moet
+   op een normale testomgeving opnieuw worden gecontroleerd.
+4. Controleer op de branchdeploy de kalenderconflict-, agenda-onleesbaar- en vrije-nachten-
+   scenario’s. Pas daarna committen en naar `main` pushen.
+
+**Lokale controle tot nu toe.** `node --check` slaagt voor de gewijzigde Netlify-modules.
+De gerichte suite `node --test tests/stay.test.mjs tests/site.test.mjs` slaagt volledig (61
+tests). De volledige suite is in deze sandbox niet bruikbaar: de tests die een lokale
+luisterpoort openen krijgen `Error: listen EPERM: operation not permitted 127.0.0.1`; dat is
+dezelfde omgevingbeperking die eerder is vastgelegd en geen inhoudelijke assertion-fout in
+deze wijziging.
+
+
 ### 2026-09-12 · Claude + Robert · DE VERKOOP IS OPEN · GEDAAN
 
 Om 16:38 is `main` gepusht en gepubliceerd (`main@d7edc3d`). De verkoop op `lewos.co` staat

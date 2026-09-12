@@ -167,10 +167,11 @@ test("de accommodatie mag minder bevestigen dan er gevraagd is",()=>{
 
 // ── De teksten worden afgeleid, niet ingetypt ───────────────────────────────
 
-test("de zin onder de kalender noemt inbegrepen en aangevraagd apart",()=>{
+test("de zin onder de kalender noemt inbegrepen en apart betaalde extra nachten",()=>{
   const zin=staySentence(describeStay({...WEEKEND,arrival:"2026-11-04",departure:"2026-11-10"}));
   assert.match(zin,/3 nights included in the weekend/);
-  assert.match(zin,/2 nights before and 1 night after requested/);
+  assert.match(zin,/2 nights before and 1 night after booked with your stay/);
+  assert.match(zin,/paid separately upon arrival/);
   assert.doesNotMatch(zin,/6 nights included/,"de aangevraagde nachten zijn bij het weekend opgeteld");
 });
 
@@ -254,16 +255,15 @@ test("de wisseldag telt mee: vertrekken kan op de ochtend dat de volgende groep 
   assert.match(component,/the next Tavern group arrives in the afternoon/);
 });
 
-test("een aangevraagde nacht ziet er anders uit dan een geboekte nacht",async()=>{
+test("een extra nacht is zichtbaar als onderdeel van de boeking",async()=>{
   // Robert, 5 september 2026: de aangevraagde nachten moeten mee oranje kleuren met het
   // weekend, zodat het verblijf als één reeks leest. Dat mag — als het verschil maar
   // blijft bestaan. Ze zijn aangevraagd en niet geboekt, en dat mag de kalender niet
   // wegpoetsen. Het verschil zit nu in de tint, niet meer in een streepjesrand.
   const component=await lees("assets/weekend-calendar.js");
   assert.match(component,/is-requested/);
-  // Kleur alleen is geen mededeling: het voorleeslabel zegt het ook.
-  assert.match(component,/on request, subject to availability/i);
-  assert.match(component,/on request, not confirmed/i,"de legenda noemt de aanvraag niet als aanvraag");
+  // Kleur alleen is geen mededeling: het voorleeslabel zegt de nieuwe betaalwijze ook.
+  assert.match(component,/booked with your stay, paid on arrival/i,"de legenda noemt de betaalwijze niet");
   for(const pagina of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(pagina);
     const regel=naam=>{

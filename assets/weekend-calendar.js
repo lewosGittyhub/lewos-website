@@ -140,8 +140,8 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
         if(inAanvraagNu)kl.push("is-requested");
         if(gekozenRand)kl.push("is-edge");
         const uitleg=rol==="arrival"
-          ?`${iso} — you can arrive on this day: the previous Tavern group leaves in the morning. On request, subject to availability.`
-          :`${iso} — you can leave on this morning: the next Tavern group arrives in the afternoon. On request, subject to availability.`;
+          ?`${iso} — you can arrive on this day: the previous Tavern group leaves in the morning. Booked with your stay, subject to availability; paid separately upon arrival.`
+          :`${iso} — you can leave on this morning: the next Tavern group arrives in the afternoon. Booked with your stay, subject to availability; paid separately upon arrival.`;
         return `<button type="button" class="${kl.join(" ")}" data-extra="${rol}" data-day="${iso}"`
           +` aria-pressed="${inAanvraagNu?"true":"false"}" aria-label="${uitleg}" title="${uitleg}">`
           +`<span class="calday__n">${dagnummer}</span></button>`;
@@ -192,7 +192,7 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     const rol=voor?"arrival":"departure";
     const label=inAanvraag
       ?`${iso} — extra night on request, currently in your request. Click to remove.`
-      :`${iso} — request this as an extra ${rol==="arrival"?"night before":"night after"} the weekend. On request, subject to availability.`;
+      :`${iso} — request this as an extra ${rol==="arrival"?"night before":"night after"} the weekend. Booked with your stay, subject to availability; paid separately upon arrival.`;
     return `<button type="button" class="${klassen.join(" ")}" data-extra="${rol}" data-day="${iso}"`
       +` aria-pressed="${inAanvraag?"true":"false"}" aria-label="${label}" title="${label}">`
       +`<span class="calday__n">${dagnummer}</span></button>`;
@@ -244,7 +244,7 @@ export const createWeekendCalendar=({mount,summary,onChange,monthsVisible=2}={})
     const ruimte="";
     return `<div class="callegend">`
       +`<span class="callegend__item"><span class="callegend__swatch is-chosen"></span>Your weekend &mdash; included</span>`
-      +`<span class="callegend__item"><span class="callegend__swatch is-requested"></span>Extra night &mdash; on request, not confirmed</span>`
+      +`<span class="callegend__item"><span class="callegend__swatch is-requested"></span>Extra night &mdash; booked with your stay, paid on arrival</span>`
       +`<span class="callegend__item"><span class="callegend__swatch is-unavailable"></span>Not available</span>`
       +(verblijf.extraNights?`<button type="button" class="callegend__clear" data-clear>Only the weekend</button>`:"")
       +`</div>`+ruimte;
