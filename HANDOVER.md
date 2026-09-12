@@ -11,6 +11,50 @@ Er bestaan inmiddels Stripe **Live API-sleutels** en de Production-variabele `ST
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Claude + Robert · DE VERKOOP IS OPEN · GEDAAN
+
+Om 16:38 is `main` gepusht en gepubliceerd (`main@d7edc3d`). De verkoop op `lewos.co` staat
+sinds 16:40 open.
+
+**Volgorde die is aangehouden:**
+1. **Productiedatabase gemigreerd.** Robert draaide `database/group-payment-confirmation.sql`
+   in de SQL-editor van Supabase (branch `main`, PRODUCTION); Claude mag zo'n migratie niet
+   zelf uitvoeren. Vooraf gaf de controle 4 van de 8 regels fout (kolommen, functies,
+   opruimgrens, verblijf). **Ná de migratie: alle acht regels `ok`.**
+2. **Drie instellingen in Netlify, context Production:**
+   `FONTECHA_ACCOMMODATION_EMAIL` (alleen Production, zodat een preview nooit de accommodatie
+   mailt), `BOOKING_TERMS_VERSION=2026-09-11`, `TAVERN_PAYMENTS_ENABLED=true`.
+   Het adres van de accommodatie is bevestigd via de gastenlijst van Roberts agenda-afspraak.
+3. **`main` gepusht**, inclusief de merge van `verkoop-open` (564 tests groen).
+4. **Live gecontroleerd:** `/`, `/tavern/`, `/tavern/book/`, `/terms/`,
+   `/travel-information/`, `/standard-information/` en de voorwaarden-PDF geven alle 200;
+   `/api/first-access` meldt `publicBookingOpen:true` met 6/6 plaatsen per weekend en €2.025.
+5. **Productiedatabase bewezen in bedrijf:** via de API één stoel vastgehouden (5/6 vrij) en
+   meteen weer vrijgegeven (6/6 vrij). Geen mail, geen betaling, geen spoor.
+
+**Fout van Claude, binnen twee minuten hersteld.** Bij het terugzetten van de
+previewbeveiliging stond "Applies to" op *Production and previews*, waardoor `lewos.co` zelf
+even op Private kwam te staan. Direct teruggezet naar *Previews only*: productie is weer
+Public, de branchdeploy geeft weer 401. Leerpunt voor het dossier: bij Netlify's
+projectzichtbaarheid altijd eerst "Applies to" controleren, dan pas opslaan.
+
+**Wat nog openstaat, geen van alle blokkerend:**
+- De **vier volledige `sk_live`-sleutels** in Stripe laten vervallen (productie draait op de
+  beperkte sleutel `rk_live`, eindigend op `3jie`). Doen zodra de eerste echte betaling is
+  binnengekomen, zodat er tijdens de omslag geen twijfel is.
+- De beperkte sleutel van vandaag vervangen; hij stond kort als leesbare tekst op het scherm
+  toen Claude de stand controleerde.
+- In de branchcontext staan nog testwaarden (`TAVERN_PAYMENTS_ENABLED=true`,
+  `BOOKING_TERMS_VERSION`), en branchdeploys staan nog aan voor `verkoop-open`. De testsite
+  is wel weer privé.
+- **De eerste echte boeking meekijken:** bevestigingsmail met de drie PDF's, bericht aan de
+  accommodatie en de agenda-afspraak zijn op de testsite bewezen, maar op productie nog niet
+  gezien — het agenda-deel kón daar niet getest worden omdat `LEWOS_CALENDAR_ID` alleen in
+  Production bestaat.
+- **Codex** heeft de samengevoegde code nog niet nagekeken.
+- Het **registratienummer** ontbreekt nog op de site; dat is Roberts besluit en staat
+  vastgelegd.
+
 ### 2026-09-12 · Claude · Betaalketen volledig bewezen op de testsite — en één instelling die live alles zou blokkeren · TE CONTROLEREN door Codex
 
 **De hele keten is doorlopen op `verkoop-open--lewos.netlify.app`, met sandbox-Stripe:**
