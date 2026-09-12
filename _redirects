@@ -10,6 +10,7 @@
 /api/admin/bookings/*  /.netlify/functions/admin-bookings  200
 /api/admin/participants/*  /.netlify/functions/admin-actions  200
 /HANDOVER.md  /404.html  404!
+/ADMIN-AUTH-FIX.md  /404.html  404!
 /AGENTS.md  /404.html  404!
 /CLAUDE.md  /404.html  404!
 /operations/*  /404.html  404!
