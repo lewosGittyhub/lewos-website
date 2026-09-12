@@ -72,6 +72,24 @@ luisterpoort openen krijgen `Error: listen EPERM: operation not permitted 127.0.
 dezelfde omgevingbeperking die eerder is vastgelegd en geen inhoudelijke assertion-fout in
 deze wijziging.
 
+### Adminomgeving — gecontroleerd bij deze wijziging
+
+De gesloten omgeving blijft beschikbaar op `/admin/`. De toegang loopt via een ondertekende
+login-token, `LEWOS_ADMIN_EMAILS` en daarna nogmaals via `public.lewos_admins` in de database.
+De browser krijgt nooit de servicesleutel of het JWT-geheim. Het maandoverzicht laat geen
+allergieën of dieetwensen zien; die verschijnen alleen in het beveiligde detail van één
+boeking.
+
+Robert en Nadine behouden hun bestaande rechten: boekingen en details bekijken, betaalstatus
+en deelnemers zien, herinneringen sturen en betaaltermijnen verlengen. Alleen Robert kan een
+stoel vrijgeven. De oude actie voor `extra_nights` blijft bestaan voor historische/open
+aanvragen. Bij nieuwe boekingen met vrije extra nachten is die knop niet nodig, omdat de
+beschikbaarheidscontrole ze al direct op `confirmed` zet.
+
+De admincode is door deze wijziging niet verwijderd of omzeild. De lokale admin-tests kunnen
+hier niet starten omdat de sandbox geen `127.0.0.1`-luisterpoort toestaat (`EPERM`); de
+beveiligings- en RPC-gedragingen staan wel expliciet vast in `tests/admin.test.mjs`.
+
 
 ### 2026-09-12 · Claude + Robert · DE VERKOOP IS OPEN · GEDAAN
 
