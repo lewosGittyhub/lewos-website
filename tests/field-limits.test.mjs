@@ -620,25 +620,59 @@ test("de datums worden aangeklikt, niet ingetypt",async()=>{
   assert.match(browser,/extraNights:500/,"de browser kent de grens niet");
 });
 
-test("het veld belooft niets: extra nachten blijven op aanvraag",async()=>{
-  // Zolang er niets vastligt over beschikbaarheid mag het formulier geen toezegging doen.
-  // Robert heeft deze zin op 5 september 2026 letterlijk vastgelegd; hij staat zichtbaar
-  // onder het veld en niet in een placeholder, want een placeholder verdwijnt zodra iemand
-  // begint te typen — precies op het moment dat het voorbehoud telt.
-  const zin="Extra nights are available on request only and depend on accommodation availability.";
+test("het veld belooft precies wat er geldt: extra nachten zijn geboekt, kosten €115 en worden bij aankomst betaald",async()=>{
+  // Deze test bewaakte tot 12 september 2026 de zin "Extra nights are available on request
+  // only". Die belofte is die dag door Robert vervangen: *"mensen klikken ze wel aan maar
+  // kunnen niet boeken dat is wel al een fout"*, en daarna *"115 euro per nacht"*. Sindsdien
+  // leest de site de gedeelde accommodatieagenda vóór het afronden van de boeking en bevestigt
+  // vrije nachten meteen, dus "alleen op aanvraag" zou nu een onwaarheid zijn.
+  //
+  // Wat wél bewaakt moet blijven is dat de gast alle drie de dingen leest die geld of een
+  // belofte raken: dat de nachten onder voorbehoud van beschikbaarheid gaan, wat ze kosten, en
+  // dat hij ze bij aankomst aan de accommodatie betaalt en niet online. Zichtbaar op de pagina
+  // en niet in een placeholder — die verdwijnt zodra iemand begint te typen, precies op het
+  // moment dat het voorbehoud telt.
   for(const pagina of ["tavern/index.html","tavern/book/index.html","tavern/checkout/index.html"]){
     const html=await lees(pagina);
-    assert.ok(html.includes(zin),`${pagina} draagt het voorbehoud niet letterlijk`);
-    assert.doesNotMatch(html,/placeholder="[^"]*available on request/,`${pagina} verstopt het voorbehoud in een placeholder`);
+    assert.match(html,/€115 per night/,`${pagina} noemt de prijs van een extra nacht niet`);
+    assert.match(html,/paid to the accommodation on arrival/,
+      `${pagina} zegt niet dat de gast de extra nachten bij aankomst aan de accommodatie betaalt`);
+    assert.match(html,/subject to (accommodation )?availability/,
+      `${pagina} laat het voorbehoud op beschikbaarheid weg`);
+    assert.doesNotMatch(html,/placeholder="[^"]*(€115|on arrival)/,
+      `${pagina} verstopt de prijs of de betaalafspraak in een placeholder`);
   }
-  // En de kalender zelf mag een aangevraagde nacht nergens als beschikbaar of inbegrepen
-  // tonen. Hij zegt "on request", en het bedrag gaat alleen over het weekend.
+  // De kalenderlegenda hoort de prijs ook te noemen: daar kijkt een gast terwijl hij klikt.
   const kalender=await lees("assets/weekend-calendar.js");
-  assert.match(kalender,/on request/i,"de kalender noemt extra nachten niet als aanvraag");
+  assert.match(kalender,/€115/,"de legenda van de kalender noemt de prijs niet");
+
+  // Eén bron voor het bedrag. Staat het los op twee plekken, dan lopen ze uit elkaar zodra
+  // de prijs verandert.
   const rekenwerk=await lees("assets/stay.js");
-  assert.match(rekenwerk,/requested\./,"de zin onder de kalender presenteert extra nachten niet als aanvraag");
-  assert.match(rekenwerk,/Not confirmed — subject to accommodation availability\./,
-    "de tekst voor de accommodatie zegt niet dat er nog niets vastligt");
+  assert.match(rekenwerk,/export const EXTRA_NIGHT_PRICE_EUR=115;/,
+    "de prijs van een extra nacht hoort als enige bron in stay.js te staan");
+  assert.match(rekenwerk,/\$\{EXTRA_NIGHT_PRICE_TEXT\}/,
+    "de zin onder de kalender hoort de prijs uit die ene bron te halen, niet uitgeschreven");
+  // En de accommodatie moet weten wat zij mag rekenen, anders staat de gast bij aankomst
+  // met een bedrag dat niemand heeft afgesproken.
+  assert.match(rekenwerk,/Rate agreed with Lewos: \$\{EXTRA_NIGHT_PRICE_TEXT\}/,
+    "de regel voor de accommodatie noemt het afgesproken tarief niet");
+});
+
+test("de extra nachten komen nooit in de online betaling terecht",async()=>{
+  // De harde grens onder de afspraak van 12 september 2026. Het Tavern-weekend is een viaje
+  // combinado dat Lewos verkoopt, met een caución, een boekingscontract en annulerings-
+  // voorwaarden die allemaal over drie nachten en één bedrag gaan. Zou Lewos ook de extra
+  // nachten innen, dan trekt die vierde nacht die documenten in. De gast betaalt ze daarom
+  // rechtstreeks aan de accommodatie, en geen enkel bedrag voor een extra nacht mag langs
+  // Stripe.
+  for(const functie of ["netlify/functions/create-checkout-session.mjs","netlify/functions/pay.mjs"]){
+    const bron=await lees(functie);
+    assert.doesNotMatch(bron,/EXTRA_NIGHT_PRICE/,
+      `${functie} rekent met de prijs van een extra nacht; die hoort buiten de online betaling te blijven`);
+    assert.doesNotMatch(bron,/line_items\[1\]/,
+      `${functie} zet een tweede regel op de Stripe-sessie; de betaling gaat alleen over het weekend`);
+  }
 });
 
 test("de database bewaart extra nachten in een eigen kolom met een eigen grens",async()=>{

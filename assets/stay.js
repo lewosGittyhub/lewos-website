@@ -14,6 +14,18 @@
 // Ze blijven wel een aparte accommodatiebetaling die de gast bij aankomst voldoet; ze
 // worden niet aan de Tavern-prijs of online Stripe-betaling toegevoegd.
 
+// De prijs van zo'n nacht staat hieronder, op één plek. Robert heeft hem op 12 september
+// 2026 vastgesteld op €115 per nacht: de accommodatie rekent 100 per appartement en 130
+// voor het alternatieve huis, en dit is de ene prijs die beide dekt, zodat een gast niet
+// hoeft te weten in welk gebouw hij slaapt. Het bedrag gaat nooit naar Stripe — Lewos int
+// het niet en het valt buiten het pakket. De gast betaalt het bij aankomst aan de
+// accommodatie.
+
+export const EXTRA_NIGHT_PRICE_EUR=115;
+// Eén zin, overal gelijk. Staat hij op twee plekken los, dan lopen ze uit elkaar zodra de
+// prijs verandert.
+export const EXTRA_NIGHT_PRICE_TEXT=`€${EXTRA_NIGHT_PRICE_EUR} per night, paid to the accommodation on arrival`;
+
 export const STAY_STATUS={
   none:"none",           // alleen het weekend, niets aangevraagd
   requested:"requested", // oudere/open aanvraag die nog door de accommodatie moet worden beslist
@@ -179,7 +191,8 @@ export const staySentence=stay=>{
   const delen=[];
   if(stay.nightsBefore)delen.push(`${nachten(stay.nightsBefore)} before`);
   if(stay.nightsAfter)delen.push(`${nachten(stay.nightsAfter)} after`);
-  return `${kern} — ${nachten(stay.weekendNights)} included in the weekend, plus ${delen.join(" and ")} booked with your stay. Extra nights are paid separately upon arrival.`;
+  return `${kern} — ${nachten(stay.weekendNights)} included in the weekend, plus ${delen.join(" and ")} booked with your stay. `
+    +`Extra nights are ${EXTRA_NIGHT_PRICE_TEXT}.`;
 };
 
 // De tekst die in `extra_nights` terechtkomt en die de accommodatie te lezen krijgt.
@@ -191,5 +204,6 @@ export const stayRequestText=stay=>{
   if(stay.nightsAfter)delen.push(`${nachten(stay.nightsAfter)} after the weekend`);
   return `Requested: ${delen.join(" and ")}. `
     +`Arrival ${longDate(stay.arrival)}, departure ${longDate(stay.departure)}. `
+    +`Rate agreed with Lewos: ${EXTRA_NIGHT_PRICE_TEXT}. `
     +`Not confirmed — subject to accommodation availability.`;
 };

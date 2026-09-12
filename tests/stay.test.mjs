@@ -171,7 +171,9 @@ test("de zin onder de kalender noemt inbegrepen en apart betaalde extra nachten"
   const zin=staySentence(describeStay({...WEEKEND,arrival:"2026-11-04",departure:"2026-11-10"}));
   assert.match(zin,/3 nights included in the weekend/);
   assert.match(zin,/2 nights before and 1 night after booked with your stay/);
-  assert.match(zin,/paid separately upon arrival/);
+  // Sinds 12 september 2026 noemt de zin ook wat een nacht kost. Zonder bedrag weet de gast
+  // wel dat hij apart betaalt, maar niet hoeveel — en dan is "geboekt" een lege belofte.
+  assert.match(zin,/Extra nights are €115 per night, paid to the accommodation on arrival\./);
   assert.doesNotMatch(zin,/6 nights included/,"de aangevraagde nachten zijn bij het weekend opgeteld");
 });
 
@@ -263,7 +265,8 @@ test("een extra nacht is zichtbaar als onderdeel van de boeking",async()=>{
   const component=await lees("assets/weekend-calendar.js");
   assert.match(component,/is-requested/);
   // Kleur alleen is geen mededeling: het voorleeslabel zegt de nieuwe betaalwijze ook.
-  assert.match(component,/booked with your stay, paid on arrival/i,"de legenda noemt de betaalwijze niet");
+  assert.match(component,/€115, paid to the accommodation on arrival/i,
+    "de legenda noemt de prijs en de betaalwijze niet");
   for(const pagina of ["tavern/index.html","tavern/book/index.html"]){
     const html=await lees(pagina);
     const regel=naam=>{

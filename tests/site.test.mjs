@@ -67,8 +67,16 @@ test("consumer price remains consistent and banned sales wording is absent",asyn
   const publicHtml=(await Promise.all(htmlFiles.filter(file=>!file.includes(`${path.sep}terms${path.sep}`)&&!file.includes(`${path.sep}travel-information${path.sep}`)).map(read))).join("\n");
   assert.match(publicHtml,/€2[.,]025/);
   for(const banned of ["excl","VAT","Book now","Buy"])assert.doesNotMatch(publicHtml,new RegExp(`\\b${banned}\\b`,"i"));
+  // Precies twee bedragen mogen op de publieke pagina's staan, en geen derde. Deze lijst is
+  // de vangnet tegen een vervallen prijs die ergens blijft hangen: €1.675, €1.600 en €1.300
+  // zijn sinds 16 augustus 2026 vervallen en mogen nergens meer opduiken.
+  //
+  //   2025 — het weekend, €2.025 per persoon all-in, drie nachten.
+  //    115 — een extra nacht, sinds 12 september 2026. Die gaat niet langs Stripe: de gast
+  //          betaalt hem bij aankomst aan de accommodatie. Zie tests/field-limits.test.mjs,
+  //          "de extra nachten komen nooit in de online betaling terecht".
   const displayedPrices=[...publicHtml.matchAll(/€\s*([0-9][0-9.,]*)/g)].map(match=>match[1].replace(/[.,]/g,""));
-  assert.deepEqual([...new Set(displayedPrices)],["2025"]);
+  assert.deepEqual([...new Set(displayedPrices)].sort(),["115","2025"]);
 });
 
 test("sitemap includes privacy but excludes transactional and draft pages",async()=>{

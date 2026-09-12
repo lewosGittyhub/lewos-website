@@ -97,7 +97,7 @@ const tekenSamenvatting=stand=>{
   verblijfSamenvatting.hidden=false;
   $("[data-stay-recap-line]").textContent=staySentence(stand);
   $("[data-stay-recap-note]").textContent=stand.extraNights
-    ?"Extra nights are booked together with your stay, subject to availability. They are not included in the Tavern price and are paid separately upon arrival."
+    ?"Extra nights are booked together with your stay, subject to availability. They are €115 per night, not included in the Tavern price, and are paid to the accommodation on arrival."
     :"Only the weekend itself is included in the Tavern price.";
 };
 
