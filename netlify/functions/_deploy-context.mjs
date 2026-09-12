@@ -58,3 +58,18 @@ export const unsafeEnvironmentBody=()=>({
     +"Supabase, Resend, Stripe and calendar values and set LEWOS_PREVIEW_SAFE=true. "
     +"Nothing has been charged, sent or stored."
 });
+
+// Netlify geeft DEPLOY_PRIME_URL alleen tijdens de build mee, niet aan de functies zelf. De
+// betrouwbare bron tijdens een verzoek is de host waarop het verzoek binnenkwam. Die is door
+// een aanvaller te vervalsen, dus we vertrouwen alleen ons eigen domein en onze eigen
+// Netlify-adressen; alles anders valt terug op siteOrigin().
+const eigenHost=host=>host==="lewos.co"||host==="www.lewos.co"||host==="lewos.netlify.app"
+  ||/^[a-z0-9-]+--lewos\.netlify\.app$/.test(host)||/^deploy-preview-\d+--lewos\.netlify\.app$/.test(host);
+
+export const requestOrigin=event=>{
+  const kop=event&&event.headers?event.headers:{};
+  const rauw=String(kop["x-forwarded-host"]||kop["host"]||"").split(",")[0].trim().toLowerCase();
+  if(!rauw||!eigenHost(rauw))return siteOrigin();
+  const schema=String(kop["x-forwarded-proto"]||"https").split(",")[0].trim()||"https";
+  return `${schema}://${rauw}`;
+};

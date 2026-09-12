@@ -180,7 +180,8 @@ test("alle plekken die een link naar onszelf bouwen gebruiken siteOrigin",async(
     "netlify/functions/create-checkout-session.mjs","netlify/functions/stripe-webhook.mjs",
     "netlify/functions/admin-actions.mjs"]){
     const bron=await lees(pad);
-    assert.match(bron,/siteOrigin\(\)/,`${pad} bouwt zijn eigen adres in plaats van siteOrigin()`);
+    assert.match(bron,/siteOrigin\(\)|requestOrigin\(/,
+      `${pad} bouwt zijn eigen adres in plaats van siteOrigin() of requestOrigin()`);
     assert.doesNotMatch(bron,/process\.env\.URL\|\|"https:\/\/lewos\.co"/,
       `${pad} gebruikt process.env.URL nog rechtstreeks`);
   }

@@ -3,7 +3,7 @@ import {mergeLegacyDietary} from "./_dietary.mjs";
 import {readStayRequest,houseNightsFree,STAY_ERRORS} from "./_stay.mjs";
 import {CHECKOUT_HOLD_MINUTES,paymentsAreEnabled,publicBookingIsOpen} from "./_booking-config.mjs";
 import {NAME_MIN,tooLongFields} from "./_field-limits.mjs";
-import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin} from "./_deploy-context.mjs";
+import {environmentIsSafe,unsafeEnvironmentBody,siteOrigin,requestOrigin} from "./_deploy-context.mjs";
 
 const json=(statusCode,body)=>({statusCode,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body:JSON.stringify(body)});
 const tokenHash=token=>createHash("sha256").update(token).digest("hex");
@@ -34,8 +34,7 @@ const priceFromHold=hold=>{
   return Number.isInteger(cents)&&cents>=MIN_PRICE_CENTS&&cents<=MAX_PRICE_CENTS?cents:null;
 };
 
-const createStripeSession=async({reference,name,email,seats,weekendLabel,unitAmount})=>{
-  const origin=siteOrigin();
+const createStripeSession=async({reference,name,email,seats,weekendLabel,unitAmount,origin})=>{
   const form=new URLSearchParams();
   form.set("mode","payment");
   form.set("payment_method_types[0]","card");
@@ -166,7 +165,7 @@ export const handler=async event=>{
   if(hold.checkoutUrl)return json(200,{status:"checkout_ready",checkoutUrl:hold.checkoutUrl,holdExpiresAt:hold.holdExpiresAt,resumed:true});
   let session;
   try{
-    session=await createStripeSession({reference,name:hold.name,email:hold.email,seats:hold.seats,weekendLabel:hold.weekendLabel,unitAmount});
+    session=await createStripeSession({origin:requestOrigin(event),reference,name:hold.name,email:hold.email,seats:hold.seats,weekendLabel:hold.weekendLabel,unitAmount});
   }catch(error){
     console.error("Stripe checkout error",error);
     try{await rpc("release_tavern_checkout",{p_payment_reference:reference});}catch(releaseError){console.error("Checkout release error",releaseError);}
