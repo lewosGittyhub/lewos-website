@@ -1,3 +1,9 @@
+> **Verplaatst op 12 september 2026.** Dit stond als `ADMIN-AUTH-FIX.md` in de hoofdmap en
+> was daardoor publiek te lezen op `lewos.co/ADMIN-AUTH-FIX.md` (HTTP 200), inclusief twee
+> echte e-mailadressen waarvan één van de accommodatie. Werkdocumenten horen in
+> `operations/`; die map heeft een 404-regel in `_redirects`. De adressen zijn eruit;
+> ze staan alleen in Netlify. Zie CLAUDE.md §5.4.
+
 # Lewos admin-auth fix — 12 September 2026
 
 ## Aanleiding
@@ -8,8 +14,8 @@ Op `https://lewos.co/admin/` verscheen bij het aanvragen van een magic sign-in l
 
 De Supabase Auth-gebruikers bestonden nog niet. Daarom zijn eerst de twee beheerders uit `public.lewos_admins` als Supabase Auth-gebruikers uitgenodigd:
 
-- `lewos.co@gmail.com` — rol `admin`
-- `accomodation.fontecha@gmail.com` — rol `accommodation`
+- het adres van Robert — rol `admin`
+- het adres van de accommodatie — rol `accommodation`
 
 Beide uitnodigingen zijn in Supabase Dashboard → Authentication → Users verstuurd. Controlequery bevestigde voor beide gebruikers een `invited_at`-tijdstip. `email_confirmed_at` en `last_sign_in_at` blijven leeg totdat de uitnodigingslink wordt geopend.
 
