@@ -18,7 +18,7 @@ geboekt. De Tavern-prijs en de online Stripe-betaling blijven uitsluitend voor h
 de accommodatiekosten voor extra nachten worden afzonderlijk bij aankomst betaald.
 
 De wijziging staat op feature-branch `codex-extra-nights-copy` in de werkboom
-`work/lewos-site` en is nog niet naar `main` gepusht.
+`work/lewos-site` en is naar `origin` gepusht voor een preview. `main` is niet gewijzigd.
 
 **Nieuwe flow**
 
