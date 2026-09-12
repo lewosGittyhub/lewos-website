@@ -214,15 +214,47 @@ begin
   select * into w from public.tavern_weekends where id=c.assigned_weekend_id;
 
   -- Al vastgelegd: dezelfde uitkomst, met de melding dat de mail al is afgevinkt.
+  --
+  -- **Inclusief het boekingsblok als de boeking rond is.** Dat ontbrak hier tot 12 september
+  -- 2026. Een tweede levering van Stripe -- en die komt zodra er ná het vastleggen iets
+  -- mislukt: Resend hapert, Google Agenda is traag, een instelling ontbreekt -- kreeg dan
+  -- `bookingComplete: true` zonder `booking`. `stripe-webhook.mjs` antwoordt daarop met 500,
+  -- Stripe probeert het opnieuw, en elke poging loopt op hetzelfde gat vast. De accommodatie
+  -- kreeg haar mail nooit en de agenda-afspraak kwam er nooit -- stil, want de gast had zijn
+  -- eigen bevestiging al wel. Zie `database/group-payment-repeat-webhook.sql`.
   if p.status='paid' then
+    v_rond := c.status='paid';
+    select count(*)::integer into v_open from public.tavern_booking_participants
+      where claim_id=c.id and status<>'paid';
     return jsonb_build_object('status','paid','participantId',p.id,'claimId',c.id,
       'name',p.full_name,'email',p.email,'amountCents',p.amount_cents,
       'weekend',w.slug,'weekendLabel',w.label||' · '||w.date_label,
       'arrivalDate',coalesce(c.arrival_date,w.starts_on),
       'departureDate',coalesce(c.departure_date,w.ends_on),
       'termsVersion',p.terms_version,'paidAt',p.paid_at,
-      'bookingComplete',c.status='paid',
-      'confirmationEmailSent',p.confirmation_email_sent_at is not null);
+      'bookingComplete',v_rond,'outstanding',v_open,
+      'filmingRequired',coalesce(public.tavern_media_agreement_required(w.slug),false),
+      'confirmationEmailSent',p.confirmation_email_sent_at is not null,
+      'booking',case when v_rond then jsonb_build_object(
+      'status','paid','claimId',c.id,'name',c.name,'email',c.email,'seats',c.party_size,
+      'weekendLabel',w.label||' · '||w.date_label,
+      -- `arrivalDate` en `departureDate` zijn het BEVESTIGDE verblijf, precies zoals in
+      -- `stay-dates.sql`. Leeg betekent: het weekend zelf. Stonden hier de weekenddatums
+      -- plat, dan verdween een door de accommodatie toegezegde extra nacht uit de mail
+      -- aan de accommodatie en uit de agenda -- een gast die maandag aankomt bij een
+      -- kamer die pas vrijdag klaarstaat.
+      'arrivalDate',coalesce(c.arrival_date,w.starts_on),
+      'departureDate',coalesce(c.departure_date,w.ends_on),
+      'weekendStart',w.starts_on,'weekendEnd',w.ends_on,
+      'requestedArrival',c.requested_arrival,'requestedDeparture',c.requested_departure,
+      'extraNightsStatus',c.extra_nights_status,
+      -- Dezelfde terugval als in `first-access.sql`: staat de dieetwens nog in de oude
+      -- kolommen `allergies` en `dietary_requirements`, dan komt hij daaruit. Plat
+      -- `c.dietary_notes` liet bij een oudere boeking een allergie weg.
+      'dietaryNotes',coalesce(nullif(trim(coalesce(c.dietary_notes,'')),''),
+        private.merged_dietary_text(c.allergies,c.dietary_requirements)),
+      'notes',c.message,'extraNights',c.extra_nights,
+      'termsVersion',p.terms_version) else null end);
   end if;
   if p.status='cancelled' then return jsonb_build_object('status','cancelled','participantId',p.id); end if;
 
@@ -246,6 +278,9 @@ begin
     update public.tavern_seat_claims
       set status='paid', hold_phase='confirmed', hold_expires_at=null
       where id=c.id;
+    -- Opnieuw inlezen, zodat het boekingsblok hieronder dezelfde rij ziet als het blok op
+    -- de korte uitgang. Anders verschillen ze bij een herhaalde levering in `status`.
+    select * into c from public.tavern_seat_claims where id=c.id;
   end if;
 
   -- Twee lagen, en dat is met opzet. `name` en `email` zijn van de deelnemer: die krijgt

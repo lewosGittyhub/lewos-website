@@ -11,6 +11,312 @@ De eerdere notitie hieronder is achterhaald. De latere gecontroleerde entries in
 
 ## Openstaande vragen aan de ander
 
+### 2026-09-12 · Robert + Claude · De Adventurer's Guide in de mail is een rasterkopie · MOET GEFIXT
+
+**Robert, na de testboeking:** *"de pdf van de tavern adventure guid is niet orgineel hij is
+gekropt."* Klopt, en het is erger dan een snijrand.
+
+| | Afbeeldingen | Lettertypen | Producer | Grootte |
+| --- | --- | --- | --- | --- |
+| Origineel (Canva) | 86 | **78** | Canva | 16,8 MB |
+| `documents/lewos-tavern-adventurers-guide-2026-09-12.pdf` | 13 | **0** | macOS | 3,9 MB |
+
+Nul lettertypen en dertien afbeeldingen op dertien pagina's: elke pagina is platgeslagen tot
+één JPEG. Het is geen document meer maar een foto per bladzijde — vandaar zacht beeld,
+geen selecteerbare tekst, en een zichtbare verschuiving. De MediaBox ging daarbij van
+`0 8 596 850` naar `0 0 596 842`: dezelfde afmeting, maar acht punten opgeschoven zonder dat
+de inhoud meeging, dus de bovenrand valt eraf.
+
+**Oorzaak.** Claude heeft de 16,8 MB op 12 september teruggebracht naar 3,9 MB met het
+macOS-filter *Reduce File Size*. Dat filter rastert. Op deze Mac staat geen Ghostscript,
+qpdf, pikepdf of Pillow, dus er was geen manier om alleen de foto's te verkleinen en de
+tekst te laten staan — en dat is niet gecontroleerd voordat het bestand de mail in ging.
+
+**Waarom de 16,8 MB niet zomaar als bijlage kan.** De bevestigingsmail draagt drie bijlagen.
+Met de originele gids wordt dat ~17 MB, en base64 maakt daar ~23 MB van. Resend haalt dat
+(limiet 40 MB), maar veel ontvangende servers niet. Die mail draagt ook de wettelijk
+verplichte boekingsvoorwaarden; die mag nooit stranden op een extraatje.
+
+**De oplossing, in volgorde van voorkeur:**
+
+1. **Opnieuw exporteren uit Canva als *PDF Standard*** (niet *PDF Print*), zonder snijtekens
+   en afloop. Dat houdt tekst tekst en levert voor dertien pagina's doorgaans 2–5 MB. Het
+   bestand komt dan weer uit de bron in plaats van uit een filter.
+2. Lukt dat niet onder ~5 MB: de gids **niet meer als bijlage** maar als downloadlink in de
+   bevestigingsmail, met het volledige origineel op `/documents/`. De twee juridische PDF's
+   blijven wel bijlage.
+
+`tests/sales-documents.test.mjs` eist een echte PDF onder 5 MB. Die grens blijft; er komt een
+test bij die eist dat het bestand **lettertypen bevat**, zodat een rasterkopie er nooit meer
+ongemerkt in kan.
+
+### 2026-09-12 · Claude + Robert · De bugfix staat op productie; previewbeveiliging hersteld · GEDAAN
+
+`database/group-payment-repeat-webhook.sql` is door Robert gedraaid op **main / PRODUCTION**:
+`Success. No rows returned`. Daarmee is de fout uit de entry hieronder ook op lewos.co weg.
+
+**Previewzichtbaarheid hersteld.** Terug op Production **Public** / Deploy Previews
+**Private**. Let op voor wie dit later doet: kies je *Private*, dan springt "Applies to"
+vanzelf naar **Production and previews** — precies de val waar lewos.co op 12 september even
+op Private kwam te staan. Hij moet handmatig terug naar **Previews only** vóór het opslaan.
+
+**Controle na de migratie, alles goed:**
+
+```
+/                 HTTP 200      /tavern/book/   HTTP 200
+/tavern/          HTTP 200      /terms/         HTTP 200
+/api/first-access  publicBookingOpen: true
+                   The Halloween Table · 30 Oct to 2 Nov 2026 · 6 van 6 vrij · EUR 2025
+                   The Autumn Table   · 6 to 9 Nov 2026       · 6 van 6 vrij · EUR 2025
+/api/house-availability  {"configured":true,...,"busyNights":[]}
+testsite           HTTP 401  (weer afgeschermd)
+```
+
+**Wat er bewust blijft staan.** De testwaarden op context **Branch deploys** —
+`FONTECHA_ACCOMMODATION_EMAIL` (Roberts eigen inbox), `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+(de sleutel van 12 september) en de agendavariabelen die naar de testagenda wijzen. Eerder
+stond hier dat ze opgeruimd moesten worden; dat advies is ingetrokken. De testomgeving
+loopt nu voor het eerst de hele keten door — klik, betaling, webhook, mail, agenda — en dat
+is te waardevol om weg te gooien, zeker met de extra nachten nog te bouwen. Alle drie wijzen
+naar testbestemmingen, en de testsite zelf staat weer achter de previewbeveiliging.
+
+**Eén ding dat Robert nog moet bevestigen:** de Google-sleutel van 5 september
+(`2933bbee…`) mag weg — het JSON-bestand ervan bestaat niet meer, dus niemand kan hem nog
+gebruiken. Verwijderen is onomkeerbaar, dus dat gebeurt pas op zijn woord.
+
+### 2026-09-12 · Claude + Robert · De hele keten bewezen op de testomgeving, mét agenda · GEDAAN
+
+Vervolg op de bugentry hieronder. Na het draaien van
+`database/group-payment-repeat-webhook.sql` op de previewdatabase **rece-migratie-test**
+(`Success. No rows returned`) is de vastgelopen Stripe-levering opnieuw verstuurd.
+
+**`checkout.session.completed` → HTTP 200, "alsnog geslaagd"**, met in het antwoord de hele
+boeking: `status:"paid"`, 1 stoel, weekend 6–9 november, claim `07ac1db1-…`. De fix werkt:
+een tweede levering kan een groepsboeking nu wél afmaken.
+
+**En de agenda-afspraak staat er, in de juiste agenda:**
+
+```
+Agendatest Neugebauer — 1 guest
+6 november 2026 16:00 – 9 november 2026 09:30
+Weekend: The Autumn Table · 6 to 9 Nov 2026
+Booking reference: 07ac1db1-0314-477c-b25b-c2fe361cbf7b
+Agenda: Lewos test (niet gebruiken)
+Gemaakt door: lewos-calendar@lewos-automation.iam.gserviceaccount.com
+```
+
+Daarmee is in één keer bewezen: de **nieuwe sleutel van 12 september werkt in beide
+richtingen** (lezen was al aangetoond, schrijven nu ook), en de `LEWOS_CALENDAR_ID` op
+Branch deploys wijst naar de **testagenda**, niet naar de gedeelde agenda. Dat laatste was de
+open vraag; hij is beantwoord door te kijken waar de afspraak landde, zonder dat er ergens
+een waarde in beeld hoefde te komen.
+
+**Wat hierna nog moet, op volgorde:**
+
+1. **`database/group-payment-repeat-webhook.sql` op PRODUCTIE draaien.** De fout zit daar
+   ook, en lewos.co verkoopt sinds vanmiddag. Zolang dit niet gedraaid is kan één hapering
+   in Resend of Google Agenda een betaalde boeking stilzwijgend nooit bij de accommodatie
+   laten aankomen.
+2. **Previewzichtbaarheid terug naar Private** (Project configuration → Visitor access →
+   Edit visibility → Private, "Applies to" op *Previews only*). Staat nu op Public omdat
+   Stripe anders een 401 krijgt.
+3. **Branchwaarden opruimen:** `FONTECHA_ACCOMMODATION_EMAIL`,
+   `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` en de agendavariabelen op context Branch deploys,
+   plus `TAVERN_PAYMENTS_ENABLED` en `BOOKING_TERMS_VERSION` als die daar nog staan.
+4. **Google Cloud:** de sleutel van 5 september (`2933bbee…`) verwijderen; het JSON-bestand
+   daarvan bestaat niet meer. Die van 9 september draait productie en blijft.
+5. Nakijken of de bevestigingsmail met drie PDF's en de mail naar het testadres echt zijn
+   aangekomen in Roberts inbox.
+
+### 2026-09-12 · Claude · ECHTE BUG gevonden met een testbetaling: een herhaalde webhook kon een groepsboeking nooit afmaken · MOET OP PRODUCTIE
+
+**Hoe hij boven kwam.** Robert vroeg om nog een Stripe-testbetaling. Die liep vast, en het
+uitzoeken daarvan legde drie dingen bloot — twee testomgevingsdingen en één echte fout in
+code die **nu op productie draait**.
+
+#### 1. De testsite was onbereikbaar voor Stripe (testomgeving)
+
+`POST https://verkoop-open--lewos.netlify.app/api/stripe-webhook` gaf **401**. Bij de
+livegang is de previewbeveiliging teruggezet op Private, en "Private" betekent bij Netlify
+*alleen zichtbaar voor je team*. Stripe heeft geen team-sessie, dus kwam hij de deur niet
+door: in het Stripe-dashboard stond het endpoint op **75% foutpercentage**, met een
+Netlify-inlogpagina als antwoordtekst. Tijdelijk opgelost door de previewzichtbaarheid op
+Public te zetten (Production stond en blijft Public). **Moet na het testen terug naar
+Private.**
+
+#### 2. De branch had geen accommodatieadres (testomgeving)
+
+Daarna gaf de webhook **500 `accommodation_recipient_not_configured`**. Bij de livegang is
+`FONTECHA_ACCOMMODATION_EMAIL` bewust alleen op Production gezet, zodat een testomgeving
+nooit de accommodatie mailt. Nu staat er op **Branch deploys** een testadres
+(een testadres in Roberts eigen inbox). Production is niet aangeraakt.
+
+#### 3. De echte fout: een tweede levering van Stripe loopt altijd vast
+
+Toen kwam **500 `paid_booking_requires_attention`**, met in het log van de branch:
+
+```
+ERROR Booking complete but no booking payload returned
+  claimId: 07ac1db1-0314-477c-b25b-c2fe361cbf7b
+```
+
+`confirm_participant_payment` heeft twee uitgangen. De normale uitgang geeft, zodra de
+laatste deelnemer betaald heeft, een `booking`-blok terug — alles wat de webhook nodig heeft
+voor de mail aan de accommodatie en voor de agenda. De tweede uitgang, *"deze deelnemer
+stond al op betaald"*, gaf `bookingComplete: true` terug **maar geen `booking`**. En
+`stripe-webhook.mjs:357` doet dan:
+
+```js
+if(!deelnemer.booking){ console.error("Booking complete but no booking payload returned");
+  return response(500,{error:"paid_booking_requires_attention"}); }
+```
+
+**Wat dat op productie betekent.** Mislukt er ná het vastleggen van de betaling één ding —
+Resend hapert, Google Agenda is traag, een instelling ontbreekt — dan antwoordt de webhook
+met 500 en levert Stripe opnieuw. Bij die tweede levering staat de deelnemer al op `paid`,
+komt de korte uitgang terug, en loopt het op hetzelfde gat vast. **Elke volgende poging ook.**
+De accommodatie krijgt haar mail dan nooit, de agenda-afspraak wordt nooit geschreven, en de
+gast merkt er niets van: die heeft zijn eigen bevestiging allang.
+
+Het is geen theoretisch geval. Vandaag gebeurde het meteen: om 17:55 is de betaling écht
+vastgelegd, maar struikelde de webhook over punt 2 — en daarna kwam hij er niet meer
+doorheen.
+
+**De fix.** `database/group-payment-repeat-webhook.sql`. De korte uitgang geeft nu hetzelfde
+boekingsblok terug als de normale, plus `outstanding` en `filmingRequired` die er ook al
+hoorden te staan. Na het op `paid` zetten van de boeking wordt de rij opnieuw ingelezen,
+zodat beide uitgangen van dezelfde gegevens uitgaan. Geen kolommen, geen rechten, geen ander
+gedrag bij een eerste betaling — veilig om opnieuw te draaien.
+
+Bewust **géén** hulpfunctie voor het gedeelde blok, hoewel dat netter zou zijn: dit is het
+geldpad van een site die vandaag live is gegaan, en een nieuwe functie met samengestelde
+parameters is een nieuw ding dat stuk kan. In plaats daarvan bewaakt
+`tests/group-payment-database.test.mjs` dat de twee kopieën woordelijk gelijk blijven, en
+dat `group-payment-repeat-webhook.sql` en `group-payment-confirmation.sql` dezelfde functie
+beschrijven.
+
+**Tests: 564 → 567 groen.** Drie nieuwe: de korte uitgang geeft een boeking terug; de rij
+wordt opnieuw ingelezen; de twee migratiebestanden zijn woordelijk gelijk.
+
+**Wat er nu moet gebeuren, in deze volgorde:**
+1. Robert draait `database/group-payment-repeat-webhook.sql` op de **preview-database**.
+2. De vastgelopen levering in Stripe opnieuw versturen; de keten hoort dan af te lopen —
+   stoel bevestigd, bevestigingsmail met drie PDF's, mail naar het testadres, agenda-afspraak.
+3. Controleren in wélke agenda die afspraak landt (testagenda of de gedeelde).
+4. **Daarna op productie draaien.** De fout zit daar ook.
+5. Previewzichtbaarheid terug naar Private, en de branchwaarden opruimen.
+
+### 2026-09-12 · Claude + Robert · Nieuwe agendasleutel; de testomgeving leest de agenda · TE CONTROLEREN
+
+**Waarom.** De agendatest op de testsite kon niet draaien: `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+stond alleen op Production. Het JSON-bestand van de sleutel van 9 september was niet meer op de
+Mac, en Google laat een sleutel maar één keer downloaden.
+
+**Wat er gedaan is.** In Google Cloud (IAM → Serviceaccounts → `Lewos Calendar` → Keys) een
+**derde** sleutel aangemaakt, JSON. De twee oudere zijn niet aangeraakt en blijven Active, dus
+de agenda op productie is geen seconde gestopt.
+
+| Sleutel-id (openbaar, geen geheim) | Gemaakt | Waarvoor |
+| --- | --- | --- |
+| `2933bbee2f278e0aecc7997b0c685c798d8c1fd9` | 5 sept | JSON is weg, voor niemand meer bruikbaar. **Mag weg** |
+| `cebf89a68c58062a076b0253603e31e8755e3f35` | 9 sept | draait productie. **Blijft** |
+| `3dd88221c75860fac46223084f8351a0c401f26a` | 12 sept | de testomgeving. Nieuw |
+
+**In Netlify** staat de nieuwe waarde op `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, context
+**Branch deploys**, met het secret-vinkje aan vóór het plakken. Production is niet aangeraakt:
+de variabele staat nu op *2 values in 2 deploy contexts*, Deploy Previews en de rest blijven
+leeg. De waarde is nooit getoond — hij is met `pbcopy` rechtstreeks van het bestand naar het
+klembord gegaan en daarna is het klembord leeggemaakt. Gecontroleerde vorm: 1732 tekens, nul
+echte regeleindes, 28 letterlijke `\n`, geen aanhalingstekens — hetzelfde formaat als de
+waarde die op Production werkt.
+
+**Bewijs dat de sleutel werkt.** De branch opnieuw gebouwd (zonder cache, via *Retry with
+latest branch commit* op de branchdeploy zelf — níét via *Trigger deploy*, want dat deployt
+productie). Daarna:
+
+```
+GET https://verkoop-open--lewos.netlify.app/api/house-availability?from=2026-10-26&to=2026-11-13
+{"configured":true,"from":"2026-10-26","to":"2026-11-13","busyNights":[]}
+```
+
+`configured:true` komt in `house-availability.mjs` pas terug **nadat `listEvents` geslaagd is**;
+mislukt het lezen, dan is het antwoord `configured:false,reason:"unavailable"`. De testomgeving
+ondertekent dus een JWT met de nieuwe sleutel, Google accepteert hem, en de agenda wordt echt
+gelezen. `busyNights:[]` klopt met een verse testagenda.
+
+**Ook vastgesteld:** de previewbeveiliging staat goed — Production **Public**, Deploy Previews
+**Private**. "Private" is bij Netlify *alleen zichtbaar voor je team*, dus de testsite is via een
+ingelogde browser bereikbaar zonder dat er iets opengezet hoeft te worden. `curl` krijgt 401; dat
+is geen storing. De branch draait bovendien op een eigen database (3 van 6 vrij, waar productie
+6 van 6 heeft).
+
+**Wat nog open staat.**
+1. **De schrijfrichting is nog niet bewezen.** Lezen werkt; of een boeking ook een afspraak
+   *schrijft* in "Lewos test (niet gebruiken)" blijkt pas na een boeking met een testbetaling.
+2. **Nog te bevestigen door Robert:** dat de `LEWOS_CALENDAR_ID` op Branch deploys inderdaad de
+   testagenda is en niet de gedeelde agenda. Die waarde is 24 minuten vóór deze entry gezet.
+   Zolang dat niet bevestigd is, geen boeking doen: een testafspraak in de gedeelde agenda ziet
+   Nadine ook.
+3. Na de test opruimen: de sleutel van 5 september verwijderen, en de branchwaarden weghalen.
+
+### 2026-09-12 · Robert + Claude · BESLUIT: extra nachten kosten €115 per nacht · OPEN
+
+**Robert, 12 september 2026, over de kalender op `/tavern/book/`:** *"mensen klikken ze wel
+aan maar kunnen niet boeken dat is wel al een fout! (…) 115 euro per nacht omdat de duurste
+130 is en de goedkoopste 100. klaar dan hebben we dat ook weer staan 115 euro per nacht."*
+
+Daarmee vervalt de laatste regel van `operations/accommodation-booking-notes.md` ("an extra
+night carries no price until the accommodation confirms it (…) a published extra-night rate
+is a separate decision") en de slotregel van
+`operations/verblijf-en-extra-nachten.md` ("Er komt geen prijs bij een bevestigde extra
+nacht"). **De prijs staat nu vast: €115 per nacht.** De 100 en de 130 uit de notities zijn
+de inkoopkant (100 per appartement, 130 voor het alternatieve huis); 115 is de ene prijs die
+de gast ziet, ongeacht welke eenheid de accommodatie inzet.
+
+**Wat er vandaag gebeurt (de fout die Robert zag).** De kalender laat een gast nachten
+aanklikken, `set_tavern_stay_request` slaat ze op als `requested_arrival` /
+`requested_departure` met `extra_nights_status='requested'`, en daarna gebeurt er met geld
+niets: `create-checkout-session.mjs` rekent `priceCents × seats` — alléén het weekend. De
+accommodatie krijgt het blok *NOT YET CONFIRMED* in de mail, Robert of Nadine drukt in de
+beheeromgeving op **Confirm as requested**, `admin_decide_extra_nights` zet de datums vast,
+en er is nergens een moment waarop de gast voor die nachten betaalt. De gast klikt dus wel,
+maar boekt niets — precies wat Robert benoemt.
+
+**Wat er sinds die notitie veranderd is en de oplossing mogelijk maakt.** De aanname waarop
+"alleen op aanvraag" rustte — *"Wij hebben geen beschikbaarheidsagenda van de accommodatie"*
+— klopt niet meer. Er is één gedeelde agenda (`operations/werkafspraak-gedeelde-agenda.md`),
+Nadine schrijft haar eigen gasten erin, en `houseNightsFree()` in `_stay.mjs` leest hem
+**rechtstreeks op het moment van de aanvraag**, zonder vertraging. De beschikbaarheid is dus
+bekend; alleen de prijs ontbrak nog.
+
+**Voorgestelde bouw (wacht op twee antwoorden van Robert, zie onderaan):**
+
+1. `_booking-config.mjs`: `EXTRA_NIGHT_PRICE_CENTS=11500`, één plek, net als de weekendprijs.
+2. `houseNightsFree()` zegt `known:true, conflicts:[]` → de nachten zijn te koop. De kalender
+   toont de prijs mee, de knop gaat van *aanvragen* naar *boeken*.
+3. `create-checkout-session.mjs` en `pay.mjs` krijgen een tweede regel in de Stripe-sessie:
+   `Extra night(s) · <datums>`, €115 × aantal nachten. De webhook zet bij `paid` de status
+   meteen op `confirmed` in plaats van `requested`, dus de agenda-afspraak loopt van de
+   echte aankomst en de accommodatiemail zegt *confirmed* in plaats van *NOT YET CONFIRMED*.
+4. `known:false` (agenda onleesbaar) of een conflict → **exact het gedrag van vandaag**:
+   aanvraag, geen bedrag, geen belofte. Liever geen nacht verkocht dan een bed dat er niet is.
+5. `/terms/` en `/travel-information/`: de annuleringsvoorwaarden moeten iets zeggen over
+   extra nachten, want er wordt nu geld voor gerekend. Dit is het enige juridische stuk.
+
+**Twee vragen aan Robert voordat er één regel code omgaat** (het raakt geld en een belofte
+aan de gast, CLAUDE.md §7):
+
+- **Waar geldt €115 voor?** Per nacht voor de hele boeking, of per nacht per kamer/eenheid,
+  of per nacht per persoon? Zes gasten passen niet in één appartement, dus bij een groep
+  loopt dat uiteen. De inkoopnotitie spreekt van 100 per **appartement**.
+- **Wanneer betaalt de gast?** Meteen bij de checkout wanneer de agenda de nachten vrij
+  meldt (voorstel van Claude — één betaling, geen tweede keten), of pas een aparte
+  betaallink nadat de accommodatie heeft bevestigd (veiliger tegen terugbetalen, maar dat is
+  een hele nieuwe betaalketen: tweede Stripe-sessie, tweede webhookpad, tweede mail).
+
+Zolang deze twee niet beantwoord zijn blijft de site staan zoals hij nu live is: extra
+nachten zijn een aanvraag en kosten niets.
+
 ### 2026-09-12 · Claude + Robert · DE VERKOOP IS OPEN · GEDAAN
 
 Om 16:38 is `main` gepusht en gepubliceerd (`main@d7edc3d`). De verkoop op `lewos.co` staat

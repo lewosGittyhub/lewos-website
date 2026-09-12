@@ -65,3 +65,22 @@ test("de bevestigingsmails sturen de gids mee, maar vallen er niet over",async()
   assert.equal((bron.match(/const gids=await laadGids\(origin\)/g)||[]).length,2,
     "beide bevestigingsmails horen de gids mee te sturen");
 });
+
+test("de gids is een echt document en geen rasterkopie",async()=>{
+  // Robert, 12 september 2026, na de eerste testboeking: "de pdf van de tavern adventure guid
+  // is niet orgineel hij is gekropt." Het bestand dat toen meeging had nul lettertypen en
+  // dertien afbeeldingen op dertien pagina's — elke pagina platgeslagen tot één JPEG door het
+  // macOS-filter *Reduce File Size*, dat rastert. Zacht beeld, geen selecteerbare tekst, en de
+  // MediaBox acht punten verschoven zonder dat de inhoud meeging, dus een afgesneden bovenrand.
+  //
+  // Een gids van 16,8 MB kan niet als bijlage: met base64 wordt de mail ~23 MB en die draagt
+  // ook de wettelijk verplichte boekingsvoorwaarden. De uitweg is een export uit Canva als
+  // *PDF Standard* — die houdt tekst tekst en blijft klein. Deze test houdt vast dat er weer
+  // een rastercopie ingeslopen kan zijn.
+  const {PUBLISHED_GUIDE_DOCUMENT}=await import("../netlify/functions/_booking-config.mjs");
+  const bytes=await readFile(path.join(root,PUBLISHED_GUIDE_DOCUMENT.replace(/^\//,"")));
+  const fonts=(bytes.toString("latin1").match(/\/Type\s*\/Font/g)||[]).length;
+  assert.ok(fonts>0,
+    `de gids bevat ${fonts} lettertypen: dit is een afbeelding per pagina, geen document. `+
+    "Exporteer opnieuw uit Canva als PDF Standard (niet PDF Print, geen snijtekens).");
+});

@@ -283,10 +283,13 @@ test("het verblijf in de groepsboeking is het bevestigde verblijf, niet het week
     "arrivalDate mag niet plat het weekend zijn: dan verdwijnt een bevestigde extra nacht");
   assert.equal(fn.body.match(/'departureDate',w\.ends_on/g),null,
     "departureDate mag niet plat het weekend zijn");
-  assert.equal((fn.body.match(/'arrivalDate',coalesce\(c\.arrival_date,w\.starts_on\)/g)||[]).length,3,
-    "alle drie de teruggaven horen het bevestigde verblijf te geven");
-  assert.equal((fn.body.match(/'departureDate',coalesce\(c\.departure_date,w\.ends_on\)/g)||[]).length,3,
-    "alle drie de teruggaven horen het bevestigde vertrek te geven");
+  // Vier, sinds 12 september 2026. De korte uitgang -- "deze deelnemer stond al op betaald"
+  // -- geeft nu óók het boekingsblok terug, en daar staat het verblijf een tweede keer in.
+  // Zie `database/group-payment-repeat-webhook.sql`.
+  assert.equal((fn.body.match(/'arrivalDate',coalesce\(c\.arrival_date,w\.starts_on\)/g)||[]).length,4,
+    "alle vier de teruggaven horen het bevestigde verblijf te geven");
+  assert.equal((fn.body.match(/'departureDate',coalesce\(c\.departure_date,w\.ends_on\)/g)||[]).length,4,
+    "alle vier de teruggaven horen het bevestigde vertrek te geven");
   // En het weekend zelf blijft apart meereizen, want `stayLines` heeft beide nodig om
   // aangevraagd van bevestigd te kunnen onderscheiden.
   assert.match(fn.body,/'weekendStart',w\.starts_on,'weekendEnd',w\.ends_on/,
@@ -306,4 +309,54 @@ test("de dieetwens van een groepsboeking valt terug op de oude kolommen",async()
   assert.match(fn.body,
     /'dietaryNotes',coalesce\(nullif\(trim\(coalesce\(c\.dietary_notes,''\)\),''\),\s*private\.merged_dietary_text\(c\.allergies,c\.dietary_requirements\)\)/,
     "de dieetwens hoort dezelfde terugval te hebben als in first-access.sql");
+});
+
+test("een herhaalde webhook krijgt de boeking nog steeds terug",async()=>{
+  // Gevonden op 12 september 2026 met een echte testbetaling. Stripe levert een event
+  // opnieuw zodra de webhook geen 2xx geeft, en dat gebeurt bij elke hapering ná het
+  // vastleggen van de betaling. Bij die tweede levering staat de deelnemer al op `paid`,
+  // dus antwoordt de korte uitgang van `confirm_participant_payment`. Die gaf
+  // `bookingComplete: true` terug zonder `booking`, en `stripe-webhook.mjs` valt daarop
+  // terug met 500 — waarna Stripe opnieuw levert en op precies hetzelfde gat vastloopt.
+  //
+  // Het gevolg was onzichtbaar en blijvend: de accommodatie krijgt haar mail nooit, de
+  // agenda-afspraak wordt nooit geschreven, en de gast merkt niets omdat zijn eigen
+  // bevestiging allang verstuurd is.
+  const fn=byName("confirm_participant_payment");
+  const kort=fn.body.slice(0,fn.body.indexOf("if p.status='cancelled'"));
+  assert.ok(kort.includes("if p.status='paid' then"),"de korte uitgang staat er nog");
+  assert.match(kort,/'booking',case when v_rond then jsonb_build_object\(/,
+    "wie al betaald had hoort de boeking terug te krijgen, anders kan de webhook nooit afmaken");
+  assert.match(kort,/'bookingComplete',v_rond/,
+    "bookingComplete en booking horen uit dezelfde bron te komen");
+  assert.match(kort,/'outstanding',v_open/,
+    "ook de korte uitgang hoort te zeggen hoeveel deelnemers er nog openstaan");
+  assert.match(kort,/'filmingRequired',coalesce\(public\.tavern_media_agreement_required\(w\.slug\),false\)/,
+    "een gefilmd weekend blijft een gefilmd weekend, ook bij een tweede levering");
+});
+
+test("de boeking wordt opnieuw ingelezen nadat hij op betaald is gezet",async()=>{
+  // Anders leest het boekingsblok op de normale uitgang een rij waarvan `status` nog op de
+  // oude waarde staat, terwijl de korte uitgang dezelfde boeking wél als `paid` ziet. Twee
+  // uitgangen die iets anders zeggen over dezelfde boeking is precies waar dit bestand
+  // tegen bewaakt.
+  const fn=byName("confirm_participant_payment");
+  assert.match(fn.body,
+    /set status='paid', hold_phase='confirmed', hold_expires_at=null\s*\n\s*where id=c\.id;\s*\n(\s*--[^\n]*\n)*\s*select \* into c from public\.tavern_seat_claims where id=c\.id;/,
+    "na het bijwerken hoort de rij opnieuw ingelezen te worden");
+});
+
+test("de losse migratie en de volledige migratie beschrijven dezelfde functie",async()=>{
+  // `database/group-payment-repeat-webhook.sql` bestaat zodat Robert op productie niet het
+  // hele bestand opnieuw hoeft te draaien. Twee plekken met dezelfde functie lopen vroeg of
+  // laat uit elkaar; deze test is de enige reden dat dat niet gebeurt.
+  const los=await readFile(path.join(root,"database/group-payment-repeat-webhook.sql"),"utf8");
+  const pak=tekst=>{
+    const start=tekst.indexOf("create or replace function public.confirm_participant_payment(");
+    const eind=tekst.indexOf("end; $$;",start);
+    assert.ok(start>=0&&eind>start,"de functie staat in beide bestanden");
+    return tekst.slice(start,eind);
+  };
+  assert.equal(pak(los),pak(source),
+    "group-payment-repeat-webhook.sql hoort woordelijk dezelfde functie te bevatten als group-payment-confirmation.sql");
 });
